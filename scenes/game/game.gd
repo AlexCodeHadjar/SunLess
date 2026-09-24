@@ -585,7 +585,14 @@ func think(trigger: String, event_id: String = "", who: String = "P01") -> void:
 	if anchor.size == Vector2.ZERO:
 		return
 	move_child(_bubble, get_child_count() - 1)
-	_bubble.say(line, anchor)
+	_bubble.say(line, anchor, _in_combat())
+
+
+func _in_combat() -> bool:
+	for ch in get_children():
+		if ch is CombatScreen:
+			return true
+	return false
 
 
 func _hero_rect(who: String) -> Rect2:

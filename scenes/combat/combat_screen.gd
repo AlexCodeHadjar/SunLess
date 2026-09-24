@@ -1,14 +1,23 @@
 class_name CombatScreen
 extends Control
 ## Бой «Столкновение» (docs/12 §5): отдельная карта-поле битвы. Сверху — карты врага и его намерение,
-## снизу — мои карты. Симбиозы и конфликты — световые нити между картами, отражающиеся от «стёкол»;
-## числа сил и полоса шанса меняются прямо на глазах. Теги — гиперссылки; Shift — сетка связей.
+## снизу — мои карты. Симбиозы и конфликты — световые нити от тега к тегу, отражающиеся от «стёкол»;
+## числа сил и полоса шанса меняются прямо на глазах. Теги — чипы с карточкой; Shift — сетка связей.
 
 signal closed
 
 enum Phase { PREP, SELECT, RESULT, DONE }
 
-const BOARD := Rect2(150, 70, 1620, 710)
+const BOARD := Rect2(150, 64, 1620, 736)
+# вертикальная раскладка поля (координаты внутри BOARD)
+const MID_X := 810.0
+const ENEMY_Y := 18.0
+const FIELD_Y := 300.0
+const SCALE_Y := 330.0
+const HERO_Y := 428.0
+const SIDE_Y := 448.0
+const HERO_SIZE := Vector2(126, 216)
+const SIDE_SIZE := Vector2(104, 178)
 
 var event_id := ""
 var option_id := ""
@@ -22,9 +31,11 @@ var _anim_token := 0
 var _board: Control
 var _board_layer: Control
 var _hero_card: CardView
-var _carriers: Array = []        # [{node, side, tags}]
-var _field_plaque: RichTextLabel
+var _carriers: Array = []        # [{node, side, tags, chips:{тег: TagChip}, name}]
+var _field_row: HFlowContainer
 var _round_box: PanelContainer
+var _round_title: Label
+var _round_tags: HFlowContainer
 var _round_label: RichTextLabel
 var _intent_card: IntentCard
 var _scale: ScaleBar
@@ -81,10 +92,11 @@ class ScaleBar extends Control:
 		marker = v
 		queue_redraw()
 
+	## Сверху: сила героя — шанс — сила врага; ниже полоса долей; подпись под ней. Всё в 84 px высоты.
 	func _draw() -> void:
 		var w := size.x
 		var y := 46.0
-		var h := 18.0
+		var h := 16.0
 		var share := hero / maxf(1.0, hero + enemy)
 		draw_rect(Rect2(0, y, w, h), Color("#0B0C11"))
 		draw_rect(Rect2(0, y, w * share, h), Palette.SILVER.darkened(0.1))
@@ -96,9 +108,9 @@ class ScaleBar extends Control:
 		var f := UITheme.font("sans")
 		draw_string(fb, Vector2(0, 34), "%d" % int(round(hero)), HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SILVER)
 		draw_string(fb, Vector2(0, 34), "%d" % int(round(enemy)), HORIZONTAL_ALIGNMENT_RIGHT, w, 36, Palette.STAT_DOWN)
-		draw_string(f, Vector2(0, 34), "сила героя · шанс раунда · сила врага", HORIZONTAL_ALIGNMENT_CENTER, w, 13, Palette.TEXT_DIM)
-		draw_string(fb, Vector2(0, y + h + 44), "%d%%" % chance, HORIZONTAL_ALIGNMENT_CENTER, w, 40,
+		draw_string(fb, Vector2(0, 36), "%d%%" % chance, HORIZONTAL_ALIGNMENT_CENTER, w, 40,
 			Palette.chance_color(chance, SettingsService.get_value("chance_monochrome")))
+		draw_string(f, Vector2(0, y + h + 18), "сила героя · шанс раунда · сила врага", HORIZONTAL_ALIGNMENT_CENTER, w, 13, Palette.TEXT_DIM)
 		if marker >= 0:
 			var mx := w * marker / 100.0
 			draw_line(Vector2(mx, y - 10), Vector2(mx, y + h + 10), Palette.TEXT, 3.0)
@@ -169,26 +181,26 @@ func _ready() -> void:
 
 	_hand_box = HBoxContainer.new()
 	_hand_box.add_theme_constant_override("separation", 22)
-	_hand_box.position = Vector2(170, 800)
+	_hand_box.position = Vector2(170, 812)
 	add_child(_hand_box)
 	_ledger_btn = Button.new()
 	_ledger_btn.text = "ЛЕТОПИСЬ СИЛЫ"
-	_ledger_btn.position = Vector2(1180, 830)
+	_ledger_btn.position = Vector2(1180, 842)
 	_ledger_btn.custom_minimum_size = Vector2(230, 46)
 	_ledger_btn.tooltip_text = "Пошаговый расчёт обеих сторон"
 	_ledger_btn.pressed.connect(_toggle_ledger)
 	add_child(_ledger_btn)
 	_no_tactic_btn = Button.new()
 	_no_tactic_btn.text = "Без приёма"
-	_no_tactic_btn.position = Vector2(1180, 890)
+	_no_tactic_btn.position = Vector2(1180, 902)
 	_no_tactic_btn.custom_minimum_size = Vector2(230, 46)
 	_no_tactic_btn.pressed.connect(_pick_tactic.bind(""))
 	add_child(_no_tactic_btn)
 	_action_btn = Button.new()
-	_action_btn.position = Vector2(1450, 850)
-	_action_btn.custom_minimum_size = Vector2(300, 84)
+	_action_btn.position = Vector2(1430, 862)
+	_action_btn.custom_minimum_size = Vector2(340, 84)
 	_action_btn.add_theme_font_override("font", UITheme.font("caps"))
-	_action_btn.add_theme_font_size_override("font_size", 28)
+	_action_btn.add_theme_font_size_override("font_size", 24)
 	_action_btn.pressed.connect(_on_action)
 	add_child(_action_btn)
 
@@ -207,7 +219,7 @@ func _ready() -> void:
 	add_child(_ledger_panel)
 
 	_banner = UITheme.label("", "title_bold", 50, Palette.TEXT)
-	_banner.position = Vector2(0, 395)
+	_banner.position = Vector2(0, 250)
 	_banner.custom_minimum_size = Vector2(1920, 0)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 10)
@@ -252,9 +264,9 @@ func _build_board() -> void:
 	_board_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_board_layer.mouse_filter = Control.MOUSE_FILTER_PASS
 	_board.add_child(_board_layer)
-	_field_plaque = _rich(700, 16)
-	_field_plaque.position = Vector2(460, 300)
-	_board.add_child(_field_plaque)
+	_field_row = _flow(760)
+	_field_row.position = Vector2(MID_X - 380, FIELD_Y)
+	_board.add_child(_field_row)
 	_round_box = PanelContainer.new()
 	_round_box.position = Vector2(26, 300)
 	_round_box.custom_minimum_size = Vector2(340, 150)
@@ -262,13 +274,19 @@ func _build_board() -> void:
 	_round_box.add_theme_stylebox_override("panel", UITheme.box(Color(0.1, 0.09, 0.07, 0.95), Palette.GOLD.darkened(0.2), 1, 4, 12))
 	_board.add_child(_round_box)
 	var rv := VBoxContainer.new()
+	rv.add_theme_constant_override("separation", 3)
 	_round_box.add_child(rv)
 	rv.add_child(UITheme.label("КАРТА РАУНДА", "caps", 13, Palette.GOLD))
+	_round_title = UITheme.label("", "sans_bold", 21, Palette.TEXT)
+	rv.add_child(_round_title)
+	_round_tags = _flow(310)
+	_round_tags.alignment = FlowContainer.ALIGNMENT_BEGIN
+	rv.add_child(_round_tags)
 	_round_label = _rich(310, 15)
 	rv.add_child(_round_label)
 	_scale = ScaleBar.new()
-	_scale.position = Vector2(420, 360)
-	_scale.size = Vector2(780, 120)
+	_scale.position = Vector2(MID_X - 390, SCALE_Y)
+	_scale.size = Vector2(780, 84)
 	_board.add_child(_scale)
 	_intent_card = IntentCard.new()
 	_intent_card.position = Vector2(1380, 30)
@@ -292,8 +310,8 @@ func _draw_frame(c: Control) -> void:
 	c.draw_rect(r.grow(-10), Palette.GOLD.darkened(0.55), false, 1.0)
 	for corner: Vector2 in [Vector2(18, 18), Vector2(r.size.x - 18, 18), Vector2(18, r.size.y - 18), r.size - Vector2(18, 18)]:
 		c.draw_colored_polygon(PackedVector2Array([corner + Vector2(0, -9), corner + Vector2(9, 0), corner + Vector2(0, 9), corner + Vector2(-9, 0)]), Palette.GOLD.darkened(0.2))
-	c.draw_line(Vector2(40, 470), Vector2(r.size.x - 40, 470), Color(Palette.GOLD, 0.15), 1.0)
-	c.draw_line(Vector2(40, 290), Vector2(r.size.x - 40, 290), Color(Palette.STAT_DOWN, 0.15), 1.0)
+	c.draw_line(Vector2(40, HERO_Y - 8), Vector2(r.size.x - 40, HERO_Y - 8), Color(Palette.GOLD, 0.15), 1.0)
+	c.draw_line(Vector2(40, FIELD_Y - 5), Vector2(r.size.x - 40, FIELD_Y - 5), Color(Palette.STAT_DOWN, 0.15), 1.0)
 
 
 func _rich(width: float, fs: int = 16) -> RichTextLabel:
@@ -311,27 +329,28 @@ func _rich(width: float, fs: int = 16) -> RichTextLabel:
 
 # --- карты на поле -----------------------------------------------------------------
 
-## Раскладывает карты сторон: враги сверху, мои снизу; под каждой — её теги.
+## Раскладывает карты сторон: враги сверху, мои снизу; под каждой — ряд её тегов-чипов.
 func _layout(cs: CombatSession) -> void:
 	for ch in _board_layer.get_children():
 		ch.queue_free()
 	_carriers.clear()
 	var n := cs.enemies.size()
-	var esz := Vector2(140, 240) if n <= 3 else Vector2(112, 192)
-	var total_w := n * esz.x + (n - 1) * 30
-	var x := 790.0 - total_w / 2.0
+	var esz := Vector2(112, 192) if n <= 3 else Vector2(96, 165)
+	var gap := 100.0 if n <= 2 else (64.0 if n == 3 else 40.0)
+	var total_w := n * esz.x + (n - 1) * gap
+	var x := MID_X - total_w / 2.0
 	for e: Dictionary in cs.enemies:
 		var cv := CardView.make(str(e["id"]), esz, false)
-		cv.position = Vector2(x, 24)
+		cv.position = Vector2(x, ENEMY_Y)
 		cv.sway = true
 		cv.set_process(true)
 		_board_layer.add_child(cv)
-		_add_tags_under(cv, e.get("tags", []), "enemy")
-		x += esz.x + 30
-	_carriers.append({"node": _intent_card, "side": "intent", "tags": [str(cs.intent.get("name", ""))]})
-	var hero_x := 720.0
-	_hero_card = CardView.make(cs.hero, Vector2(150, 257), false)
-	_hero_card.position = Vector2(hero_x, 440)
+		_add_tags_under(cv, e.get("tags", []), "enemy", esz.x + gap - 8, FIELD_Y - 6)
+		x += esz.x + gap
+	_carriers.append({"node": _intent_card, "side": "intent", "tags": [str(cs.intent.get("name", ""))], "chips": {}})
+	var hero_x := MID_X - HERO_SIZE.x / 2.0
+	_hero_card = CardView.make(cs.hero, HERO_SIZE, false)
+	_hero_card.position = Vector2(hero_x, HERO_Y)
 	_board_layer.add_child(_hero_card)
 	var cdef: Dictionary = ContentDB.data.characters.get(cs.hero, {})
 	var stage: String = cs.state.character(cs.hero).get("stage", "")
@@ -339,46 +358,177 @@ func _layout(cs: CombatSession) -> void:
 	for t: String in cs.hero_extra_tags + Array(cs.mods.get("hero_tags", [])):
 		if not htags.has(t):
 			htags.append(t)
-	_add_tags_under(_hero_card, htags, "hero")
-	var ex := hero_x + 190
+	_add_tags_under(_hero_card, htags, "hero", HERO_SIZE.x + 44, BOARD.size.y - 10)
+	var ex := hero_x + HERO_SIZE.x + 44
 	for e: String in cs.enh:
-		var ec := CardView.make(e, Vector2(112, 192), false)
-		ec.position = Vector2(ex, 470)
+		var ec := CardView.make(e, SIDE_SIZE, false)
+		ec.position = Vector2(ex, SIDE_Y)
 		_board_layer.add_child(ec)
-		_add_tags_under(ec, ContentDB.data.enhancements.get(e, {}).get("tags", []), "hero")
-		ex += 150
-	var ax := hero_x - 160
+		_add_tags_under(ec, ContentDB.data.enhancements.get(e, {}).get("tags", []), "hero", SIDE_SIZE.x + 34, BOARD.size.y - 10)
+		ex += SIDE_SIZE.x + 42
+	var ax := hero_x - 44 - SIDE_SIZE.x
 	for a: String in cs.allies:
-		var ac := CardView.make(a, Vector2(112, 192), false)
-		ac.position = Vector2(ax, 470)
+		var ac := CardView.make(a, SIDE_SIZE, false)
+		ac.position = Vector2(ax, SIDE_Y)
 		_board_layer.add_child(ac)
-		_add_tags_under(ac, ContentDB.data.characters.get(a, {}).get("support_tags", []), "hero")
-		ax -= 150
-	_carriers.append({"node": _field_plaque, "side": "env", "tags": cs.field.get("tags", [])})
-	_carriers.append({"node": _round_box, "side": "env", "tags": cs.round_card.get("tags", [])})
-	_field_plaque.text = "[center][color=#B89A5E]ПОЛЕ БОЯ[/color]  [b]%s[/b]   %s[/center]" % [cs.field.get("name", ""), TagText.links(cs.field.get("tags", []), "  ", 14)]
+		_add_tags_under(ac, ContentDB.data.characters.get(a, {}).get("support_tags", []), "hero", SIDE_SIZE.x + 34, BOARD.size.y - 10)
+		ax -= SIDE_SIZE.x + 42
+	_fill_field(cs.field)
+	_fill_round(cs.round_card)
 	_intent_card.ability = cs.intent
 	_intent_card.negated_by = ""
 	_intent_card.queue_redraw()
 
 
-func _add_tags_under(card: Control, tags: Array, side: String) -> void:
-	var l := _rich(card.size.x + 80, 12)
-	l.text = "[center]%s[/center]" % TagText.links(tags, " ", 13)
-	l.position = card.position + Vector2(-40, card.size.y + 4)
-	_board_layer.add_child(l)
-	_carriers.append({"node": card, "side": side, "tags": tags})
+## Табличка поля боя: подпись, название (якорь лучей поля) и теги-чипы.
+func _fill_field(field: Dictionary) -> void:
+	for ch in _field_row.get_children():
+		ch.queue_free()
+	_field_row.add_child(UITheme.label("ПОЛЕ БОЯ", "caps", 14, Palette.GOLD))
+	var name_l := UITheme.label(str(field.get("name", "")), "sans_bold", 17, Palette.TEXT)
+	_field_row.add_child(name_l)
+	var tags: Array = field.get("tags", [])
+	var chips := _add_chips(_field_row, tags, 14, false)
+	_carriers.append({"node": name_l, "side": "env", "tags": tags, "chips": chips, "name": str(field.get("name", ""))})
 
 
-## Центр карты-носителя тега на нужной стороне (или на поле).
-func _anchor_for(tag: String, prefer: String) -> Vector2:
-	var order := [prefer, "hero" if prefer == "enemy" else "enemy", "env", "intent"]
-	for side: String in order:
+## Содержимое карты раунда; её название — якорь лучей раунда.
+func _fill_round(card: Dictionary) -> void:
+	for ch in _round_tags.get_children():
+		ch.queue_free()
+	if card.is_empty():
+		_round_title.text = ""
+		_round_tags.visible = false
+		_round_label.text = "[color=#9A9CA6]Откроется в начале раунда[/color]"
+		return
+	var stat: String = card.get("stat", "")
+	var stat_name: String = EffectApplier.STAT_NAMES.get(stat, "по кругу")
+	_round_title.text = str(card.get("name", ""))
+	var tags: Array = card.get("tags", [])
+	_round_tags.visible = not tags.is_empty()
+	var chips := _add_chips(_round_tags, tags, 14, false)
+	_round_label.text = "[color=#9A9CA6]%s[/color]\n[color=#C9CED6]Характеристика: %s[/color]" % [card.get("text", ""), stat_name]
+	_carriers.append({"node": _round_title, "side": "env", "tags": tags, "chips": chips, "name": str(card.get("name", ""))})
+
+
+func _flow(width: float) -> HFlowContainer:
+	var f := HFlowContainer.new()
+	f.alignment = FlowContainer.ALIGNMENT_CENTER
+	f.custom_minimum_size = Vector2(width, 0)
+	f.size = Vector2(width, 0)
+	f.mouse_filter = Control.MOUSE_FILTER_PASS
+	f.add_theme_constant_override("h_separation", 9)
+	f.add_theme_constant_override("v_separation", 1)
+	return f
+
+
+func _add_chips(parent: Control, tags: Array, fs: int, icon_only: bool) -> Dictionary:
+	var chips := {}
+	for t: Variant in tags:
+		var c := TagChip.make(str(t), fs, icon_only)
+		c.hovered.connect(_on_chip_hover)
+		parent.add_child(c)
+		chips[str(t)] = c
+	return chips
+
+
+## Ряд тегов под картой: переносится по ширине, не ниже max_y. Не влезает — мельче шрифт, затем только иконки.
+func _add_tags_under(card: Control, tags: Array, side: String, width: float, max_y: float) -> void:
+	var top := card.position.y + card.size.y + 4
+	var fs := 13
+	var icon_only := false
+	for opt: Array in [[13, false], [12, false], [11, false], [16, true]]:
+		fs = opt[0]
+		icon_only = opt[1]
+		if top + _rows_needed(tags, width, fs, icon_only) * (fs + 7) <= max_y:
+			break
+	var row := _flow(width)
+	if icon_only:
+		row.add_theme_constant_override("h_separation", 5)
+	row.position = Vector2(card.position.x + card.size.x / 2.0 - width / 2.0, top)
+	_board_layer.add_child(row)
+	var chips := _add_chips(row, tags, fs, icon_only)
+	_carriers.append({"node": card, "side": side, "tags": tags, "chips": chips})
+
+
+func _rows_needed(tags: Array, width: float, fs: int, icon_only: bool) -> int:
+	var sep := 5.0 if icon_only else 9.0
+	var rows := 1
+	var x := 0.0
+	for t: Variant in tags:
+		var w := TagChip.width_of(str(t), fs, icon_only)
+		if x > 0.0 and x + sep + w > width:
+			rows += 1
+			x = w
+		else:
+			x += (sep if x > 0.0 else 0.0) + w
+	return rows
+
+
+## Узел, в который бьёт луч тега: сам чип на нужной стороне, иначе карта этой стороны.
+func _tag_node(tag: String, sides: Array) -> Control:
+	for side: String in sides:
+		for c: Dictionary in _carriers:
+			if c["side"] == side and c["chips"].has(tag) and is_instance_valid(c["chips"][tag]):
+				return c["chips"][tag]
+	for side: String in sides:
 		for c: Dictionary in _carriers:
 			if c["side"] == side and Array(c["tags"]).has(tag) and is_instance_valid(c["node"]):
-				var nd: Control = c["node"]
-				return nd.get_global_rect().get_center()
-	return Vector2()
+				return c["node"]
+	if sides[0] == "hero":
+		return _hero_card
+	for c: Dictionary in _carriers:
+		if c["side"] == sides[0] and is_instance_valid(c["node"]):
+			return c["node"]
+	return null
+
+
+## Источник луча поля или раунда — их название на табличке.
+func _env_node(src_name: String) -> Control:
+	for c: Dictionary in _carriers:
+		if c["side"] == "env" and str(c.get("name", "")) == src_name and is_instance_valid(c["node"]):
+			return c["node"]
+	return _field_row
+
+
+func _tactic_node() -> Control:
+	for c in _hand_box.get_children():
+		if c is TacticCard and c.tactic_id == _selected:
+			return c
+	return _hero_card
+
+
+## Отрезки лучей связи [[откуда, куда], …] — от тега к тегу, с которым он взаимодействует.
+func _link_segments(l: Dictionary, kind: String) -> Array:
+	var tags: Array = l["tags"]
+	var side: String = l["side"]
+	var other := "enemy" if side == "hero" else "hero"
+	var id := str(l["id"])
+	match kind:
+		"env":
+			return [[_env_node(str(tags[0])), _tag_node(str(tags[1]), [side])]]
+		"intent":
+			if str(tags[1]) == "герой":
+				return [[_intent_card, _hero_card]]
+			return [[_tag_node(str(tags[0]), ["hero"]), _intent_card]]
+		"synergy":
+			var segs: Array = []
+			for j in range(tags.size() - 1):
+				segs.append([_tag_node(str(tags[j]), [side, "env"]), _tag_node(str(tags[j + 1]), [side, "env"])])
+			return segs
+	# конфликт: луч летит от победившего тега к проигравшему
+	if id.begins_with("tac:"):
+		return [[_tactic_node(), _tag_node(str(tags[1]), ["enemy"])]]
+	var c: Dictionary = ContentDB.data.conflicts.get(id, {})
+	var loser := str(c.get("a", "")) if c.get("loser", "b") == "a" else str(c.get("b", ""))
+	var winner := str(tags[1]) if str(tags[0]) == loser else str(tags[0])
+	return [[_tag_node(winner, [other, "env"]), _tag_node(loser, [side])]]
+
+
+static func _anchor_of(node: Control) -> Vector2:
+	if node is TagChip:
+		return (node as TagChip).anchor()
+	return node.get_global_rect().get_center()
 
 
 # --- поток боя ---------------------------------------------------------------------
@@ -424,7 +574,6 @@ func _build_prep() -> void:
 	var preview := _preview_session()
 	_pips.text = "Подготовка · %s" % preview.rounds_total_label()
 	_layout(preview)
-	_round_label.text = "[color=#9A9CA6]Откроется в начале раунда[/color]"
 	_intent_card.ability = {}
 	_intent_card.queue_redraw()
 	_play_links(preview, preview.ledger({}), true)
@@ -462,7 +611,7 @@ func _next_round() -> void:
 	phase = Phase.SELECT
 	_selected = ""
 	_layout(cs)
-	_show_round_card(cs.round_card)
+	_reveal_round_card()
 	for note: String in cs.intent_notes:
 		EventBus.toast.emit(note)
 	_build_hand()
@@ -525,32 +674,42 @@ func _play_links(cs: CombatSession, led: Dictionary, from_base: bool) -> void:
 		if token != _anim_token or not is_inside_tree():
 			return
 		var l: Dictionary = links[i]
-		var tags: Array = l["tags"]
-		var side: String = l["side"]
 		var kind := "synergy" if l["type"] == "synergy" else "conflict"
 		if str(l["id"]).begins_with("env:"):
 			kind = "env"
 		elif bool(l.get("intent", false)):
 			kind = "intent"
-		var a := _anchor_for(str(tags[0]), side)
-		var b := _anchor_for(str(tags[1]) if tags.size() > 1 else str(tags[0]), "enemy" if (kind == "conflict" and side == "hero") else side)
-		if kind == "intent":
-			a = _anchor_for(str(tags[0]), "hero")
-			b = _intent_card.get_global_rect().get_center()
-		if a == Vector2():
-			a = _hero_card.get_global_rect().get_center() if is_instance_valid(_hero_card) else Vector2(960, 540)
-		if b == Vector2() or a.distance_to(b) < 30:
-			b = a + Vector2(0, -160)
-		var dur := _beams.fire(a, b, kind, i, _glass)
+		var col: Color = Beams.COLORS[kind]
+		var dur := 0.0
+		var hit: Array = []
+		var land := Vector2()
+		for seg: Array in _link_segments(l, kind):
+			var na: Control = seg[0]
+			var nb: Control = seg[1]
+			if not is_instance_valid(na) or not is_instance_valid(nb):
+				continue
+			var a := _anchor_of(na)
+			var b := _anchor_of(nb)
+			if a.distance_to(b) < 30:
+				b = a + Vector2(0, -120)
+			dur = maxf(dur, _beams.fire(a, b, kind, i, _glass))
+			if na is TagChip:
+				(na as TagChip).flash(col)
+			hit.append(nb)
+			land = b
 		AudioManager.play("tick", -14.0, 1.2 + i * 0.05)
 		await get_tree().create_timer(dur).timeout
 		if token != _anim_token or not is_inside_tree():
 			return
+		for nb: Control in hit:
+			if nb is TagChip and is_instance_valid(nb):
+				(nb as TagChip).flash(col)
 		var known := ProfileService.is_known(str(l["id"])) or kind in ["env", "intent"]
 		var v := float(l["value"])
 		var txt := ("%+d%%" % int(round(v * 100))) if absf(v) > 0.001 else "✦"
 		var label_name: String = str(l["name"]) if known else "???"
-		Beams.popup(self, b, "%s  %s" % [txt, label_name], Beams.COLORS[kind])
+		if land != Vector2():
+			Beams.popup(self, land, "%s  %s" % [txt, label_name], col)
 		var k := float(i + 1) / n
 		_scale.set_values(lerpf(h0, h1, k), lerpf(e0, e1, k), 0, 0.22)
 		await get_tree().create_timer(0.12).timeout
@@ -684,11 +843,8 @@ func _update_pips() -> void:
 	_pips.text = "РАУНД %d  ·  %s  ·  %s" % [cs.round_no, marks if marks != "" else "—", cs.rounds_total_label()]
 
 
-func _show_round_card(card: Dictionary) -> void:
-	var stat: String = card.get("stat", "")
-	var stat_name: String = EffectApplier.STAT_NAMES.get(stat, "по кругу")
-	_round_label.text = "[font_size=21][b]%s[/b][/font_size]\n%s\n[color=#9A9CA6]%s[/color]\n[color=#C9CED6]Характеристика: %s[/color]" % [
-		card.get("name", ""), TagText.links(card.get("tags", []), " ", 14), card.get("text", ""), stat_name]
+## Карта раунда разворачивается (содержимое уже заполнено в _layout).
+func _reveal_round_card() -> void:
 	if not Vfx.reduced():
 		_round_box.scale.x = 0.0
 		var tw := create_tween()
@@ -746,6 +902,13 @@ func _on_meta_hover(meta: Variant) -> void:
 		return
 	_hover_tag = m.substr(4)
 	_info.show_tag(_hover_tag, get_global_mouse_position(), _contribution(_hover_tag))
+
+
+func _on_chip_hover(tag: String, on: bool) -> void:
+	if on:
+		_on_meta_hover("tag:" + tag)
+	elif _hover_tag == tag:
+		_on_meta_unhover(null)
 
 
 func _on_meta_unhover(_meta: Variant) -> void:
