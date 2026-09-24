@@ -220,7 +220,10 @@ func _alive_characters() -> Array:
 func _build_art(ev: Dictionary) -> void:
 	for c in _art_holder.get_children():
 		c.queue_free()
-	var art: String = ev.get("art", "")
+	# своя карта события из дизайна (art/cards/<ID>.webp), иначе арт из данных
+	var art: String = "res://art/cards/%s.webp" % ev.get("id", "")
+	if not ResourceLoader.exists(art):
+		art = ev.get("art", "")
 	if art != "" and ResourceLoader.exists(art):
 		var tr := TextureRect.new()
 		tr.texture = _crop_band(load(art))

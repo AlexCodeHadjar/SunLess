@@ -358,7 +358,6 @@
   "danger": true,
   "trauma_pool": "physical",
   "enemy": "M02",
-  "art": "res://art/cards/M02.png",
   "map_pos": [
    0.55,
    0.36

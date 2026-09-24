@@ -475,10 +475,17 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 		else:
 			_draw_plain_stats(r, ch, k)
 		var traumas: Array = ch.get("traumas", [])
+		# травмы: серебряная эмблема травмы (Игра/assets/icons) с багровым кольцом
+		var ti := UITheme.emblem("trauma")
 		for i in traumas.size():
-			var tr := Rect2(r.position + Vector2(6 * k + i * 16 * k, 6 * k), Vector2(13 * k, 20 * k))
-			draw_rect(tr, Palette.TRAUMA)
-			draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
+			var ts := 22.0 * k
+			var tr := Rect2(r.position + Vector2(6 * k + i * (ts + 3 * k), 6 * k), Vector2(ts, ts))
+			if ti:
+				draw_texture_rect(ti, tr, false)
+				draw_arc(tr.get_center(), ts / 2.0, 0, TAU, 24, Palette.TRAUMA_BRIGHT, 1.5 * k)
+			else:
+				draw_rect(tr, Palette.TRAUMA)
+				draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
 		var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 		if dc > 0 and TraumaRules.counted(traumas) >= 2:
 			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "☠ %d%%" % dc, 11 * k, Palette.TRAUMA_BRIGHT, true)
