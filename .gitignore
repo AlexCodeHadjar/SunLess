@@ -1,0 +1,10 @@
+# Godot 4
+.godot/
+/android/
+export/
+*.tmp
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

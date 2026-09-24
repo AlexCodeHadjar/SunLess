@@ -1,0 +1,9 @@
+[
+  {
+    "id": "mountain_pass",
+    "name": "Горный путь",
+    "arc": "nightmare",
+    "arc_name": "Первый Кошмар",
+    "random_pool": ["SE01", "RE_SEARCH", "RE_PRAYER", "RE_HEALER", "RE_TRADER", "RE_QUARREL", "RE_COLD"]
+  }
+]

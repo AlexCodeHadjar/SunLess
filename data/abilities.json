@@ -1,0 +1,9 @@
+[
+  {"id": "A01", "name": "Контроль Теней", "owner": "P01", "bonuses": [{"stat": "cunning", "value": 3, "tags": []}], "reveal": 1, "text": "+3 Хитрость; раскрывает последствия одного варианта."},
+  {"id": "A02", "name": "Теневое усиление", "owner": "P01", "bonuses": [], "modes": [{"stat": "power", "value": 3}, {"stat": "cunning", "value": 2}], "text": "Перед проверкой: +3 Сила или +2 Хитрость."},
+  {"id": "A03", "name": "Бессмертное Пламя", "owner": "P02", "bonuses": [], "modes": [{"stat": "power", "value": 4}], "text": "Раз за событие: +4 Сила или снять физическую травму; цена — Боль."},
+  {"id": "A04", "name": "Пророческое Видение", "owner": "P03", "bonuses": [{"stat": "cunning", "value": 3, "tags": []}], "reveal": 1, "text": "+3 Хитрость; раскрывает награду и штраф."},
+  {"id": "A05", "name": "Вспышка Скорости", "owner": "P04", "bonuses": [{"stat": "power", "value": 4, "tags": ["chase", "first_strike"]}, {"stat": "cunning", "value": 2, "tags": ["chase", "first_strike"]}], "text": "+4 Сила и +2 Хитрость в погоне и первом ударе."},
+  {"id": "A06", "name": "Благословение Теней", "owner": "P01", "bonuses": [{"stat": "will", "value": 1, "tags": []}, {"stat": "cunning", "value": 1, "tags": []}], "text": "+1 Воля, +1 Хитрость."},
+  {"id": "A07", "name": "Плетение Крови", "owner": "P01", "bonuses": [{"stat": "will", "value": 2, "tags": []}], "soften_physical": true, "text": "+2 Воля; физические травмы смягчаются."}
+]

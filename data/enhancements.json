@@ -1,0 +1,87 @@
+[
+  {
+    "id": "U01",
+    "name": "Импровизированное оружие",
+    "origin": "improvised",
+    "rarity": "common",
+    "wears": true,
+    "bonuses": [
+      {"stat": "power", "value": 2, "tags": []},
+      {"stat": "cunning", "value": 1, "tags": ["survival"]}
+    ],
+    "text": "+2 Сила; в выживании ещё +1 Хитрость.",
+    "canon": "адаптация",
+    "source": "«Дитя Теней», гл. 5–7"
+  },
+  {
+    "id": "U02",
+    "name": "Серебряный Колокольчик",
+    "origin": "memory",
+    "rarity": "rare",
+    "wears": true,
+    "wear_exempt_arcs": ["nightmare"],
+    "art": "res://art/cards/U02.png",
+    "art_has_frame": true,
+    "bonuses": [
+      {"stat": "cunning", "value": 2, "tags": ["lure", "stealth"]}
+    ],
+    "text": "+2 Хитрость в приманке и скрытности. Дальний звон слышен за километры. Не изнашивается до конца Первого Кошмара.",
+    "canon": "канон",
+    "source": "«Дитя Теней», гл. 8, 13–14"
+  },
+  {
+    "id": "U06",
+    "name": "Саван Кукловода",
+    "origin": "memory",
+    "rarity": "rare",
+    "wears": true,
+    "art": "res://art/cards/U06.png",
+    "art_has_frame": true,
+    "soften_first_physical": true,
+    "bonuses": [
+      {"stat": "will", "value": 1, "tags": []}
+    ],
+    "text": "+1 Воля; первая физическая травма события смягчается на ступень.",
+    "canon": "канон",
+    "source": "«Дитя Теней», гл. 16, 83"
+  },
+  {
+    "id": "K01",
+    "name": "Природа Заклинания",
+    "origin": "knowledge",
+    "rarity": "common",
+    "wears": false,
+    "bonuses": [
+      {"stat": "cunning", "value": 1, "tags": ["knowledge", "ritual"]}
+    ],
+    "text": "Знание: +1 Хитрость в знаниях и ритуалах.",
+    "canon": "адаптация",
+    "source": "«Дитя Теней», гл. 1"
+  },
+  {
+    "id": "K02",
+    "name": "Горные тропы",
+    "origin": "knowledge",
+    "rarity": "common",
+    "wears": false,
+    "bonuses": [
+      {"stat": "cunning", "value": 2, "tags": ["survival", "weather", "climb"]}
+    ],
+    "text": "Знание: +2 Хитрость в пути, непогоде и подъёме.",
+    "canon": "адаптация",
+    "source": "«Дитя Теней», гл. 8–9"
+  },
+  {
+    "id": "K03",
+    "name": "Устройство Аспекта",
+    "origin": "knowledge",
+    "rarity": "rare",
+    "wears": false,
+    "bonuses": [
+      {"stat": "will", "value": 1, "tags": []}
+    ],
+    "text": "Знание: +1 Воля.",
+    "canon": "адаптация",
+    "source": "«Дитя Теней», гл. 15–16"
+  }
+]

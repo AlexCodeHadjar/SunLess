@@ -1,0 +1,17 @@
+[
+  {"id": "combat", "name": "Бой"},
+  {"id": "duel", "name": "Дуэль"},
+  {"id": "chase", "name": "Погоня"},
+  {"id": "first_strike", "name": "Первый удар"},
+  {"id": "stealth", "name": "Скрытность"},
+  {"id": "lure", "name": "Приманка"},
+  {"id": "survival", "name": "Выживание"},
+  {"id": "weather", "name": "Погода"},
+  {"id": "climb", "name": "Подъём"},
+  {"id": "social", "name": "Общение"},
+  {"id": "lie", "name": "Ложь"},
+  {"id": "knowledge", "name": "Знание"},
+  {"id": "ritual", "name": "Ритуал"},
+  {"id": "tyrant", "name": "Тиран"},
+  {"id": "charm_source", "name": "Источник чар"}
+]

@@ -1,0 +1,12 @@
+[
+  {"id": "T01", "name": "Переохлаждение", "short": "Холод", "mods": {"will": -1}, "category": "environment", "severity": "light", "random": true},
+  {"id": "T02", "name": "Рваная рана", "short": "Рана", "mods": {"power": -1}, "category": "physical", "severity": "light", "random": true},
+  {"id": "T03", "name": "Перелом", "short": "Перелом", "mods": {"power": -2}, "category": "physical", "severity": "heavy", "random": true},
+  {"id": "T04", "name": "Истощение", "short": "Истощение", "mods": {"power": -1, "will": -1}, "category": "environment", "severity": "heavy", "random": true},
+  {"id": "T05", "name": "Паника", "short": "Паника", "mods": {"will": -2}, "category": "mental", "severity": "light", "random": true},
+  {"id": "T06", "name": "Сотрясение", "short": "Сотрясение", "mods": {"cunning": -1, "will": -1}, "category": "mental", "severity": "heavy", "random": true},
+  {"id": "T07", "name": "Очарованный", "short": "Чары", "mods": {"will": -3}, "context_tag": "charm_source", "category": "mental", "severity": "heavy", "random": false},
+  {"id": "T08", "name": "Тяжёлая рана груди", "short": "Рана груди", "mods": {"power": -1}, "category": "physical", "severity": "heavy", "random": true},
+  {"id": "T09", "name": "Боль", "short": "Боль", "mods": {"will": -1}, "category": "mental", "severity": "light", "random": false},
+  {"id": "T10", "name": "Критическая рана", "short": "Крит. рана", "mods": {"power": -2}, "category": "physical", "severity": "critical", "random": true}
+]
