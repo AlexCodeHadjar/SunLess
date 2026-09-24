@@ -5,7 +5,7 @@
     "status": "playable",
     "rarity": "legendary",
     "role": "разведчик / интриган / выживальщик",
-    "art": "res://art/cards/P01.png",
+    "art": "res://art/cards/P01.webp",
     "art_has_frame": true,
     "start_stage": "slave",
     "start_abilities": [],

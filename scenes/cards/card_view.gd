@@ -53,9 +53,18 @@ func _init_card() -> void:
 		kind = "event"
 	var def := _def()
 	var art: String = def.get("art", "")
+	var auto := false
+	if art == "" or not ResourceLoader.exists(art):
+		# готовая карта из дизайна (art/cards/<ID>.webp) — с рамкой и названием в рисунке
+		for ext: String in ["webp", "png"]:
+			var p := "res://art/cards/%s.%s" % [card_id, ext]
+			if ResourceLoader.exists(p):
+				art = p
+				auto = true
+				break
 	if art != "" and ResourceLoader.exists(art):
 		_tex = load(art)
-		_art_framed = bool(def.get("art_has_frame", kind == "enemy"))
+		_art_framed = bool(def.get("art_has_frame", auto or kind == "enemy"))
 	tooltip_text = " "  # включает кастомную подсказку-увеличение
 	mouse_entered.connect(_on_hover.bind(true))
 	mouse_exited.connect(_on_hover.bind(false))
@@ -336,36 +345,44 @@ func _border_color(d: Dictionary) -> Color:
 	return Palette.LINE
 
 
+static var _blank: Texture2D
+
+
+## Карта без готового рисунка: пустой шаблон из дизайна (Игра/assets/cards/templates),
+## в окне арта — иллюстрация или эмблема типа, в плашке — имя и подпись.
 func _draw_procedural(r: Rect2, d: Dictionary, k: float) -> void:
-	var paper := Color("#1B1C23") if kind != "trauma" else Color("#1A0E11")
-	draw_rect(r, paper)
-	var inset := 7.0 * k
-	var inner := r.grow(-inset)
-	draw_rect(inner, _border_color(d).darkened(0.55), false, 1.0)
-	# верхний маркер: римская цифра события или самоцвет редкости
-	var top := inner.position.y + 4 * k
-	if kind == "event" and d.has("numeral"):
-		_text(UITheme.font("title_bold"), Vector2(r.position.x, top + 18 * k), str(d["numeral"]), 20 * k, Palette.GOLD, r.size.x)
+	if _blank == null:
+		_blank = load("res://art/ui/card_blank.webp")
+	var tint := Color.WHITE
+	match kind:
+		"trauma": tint = Color(1.0, 0.55, 0.55)
+		"initiator": tint = Color(0.86, 0.8, 1.0)
+	if _blank:
+		draw_texture_rect(_blank, r, false, tint)
 	else:
-		var gem: Color = Palette.RARITY.get(d.get("rarity", "common"), Palette.RARITY["common"])
-		var c := Vector2(r.get_center().x, top + 8 * k)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6 * k), c + Vector2(6 * k, 0), c + Vector2(0, 6 * k), c + Vector2(-6 * k, 0)]), gem)
-	# поле иллюстрации
-	var art := Rect2(inner.position + Vector2(0, 24 * k), Vector2(inner.size.x, inner.size.y * 0.56))
+		draw_rect(r, Color("#1B1C23"))
+	# окно арта и плашка имени — по разметке шаблона
+	var art := Rect2(r.position + Vector2(r.size.x * 0.038, r.size.y * 0.021), Vector2(r.size.x * 0.924, r.size.y * 0.698))
+	var plate := Rect2(r.position + Vector2(r.size.x * 0.04, r.size.y * 0.732), Vector2(r.size.x * 0.92, r.size.y * 0.245))
 	if _tex:
 		_draw_cover(_tex, art, 0.0, 0.72)
 	else:
 		_draw_art_placeholder(art, d, k)
-	draw_rect(art, Palette.LINE, false, 1.0)
-	# плашка имени
-	var plate := Rect2(Vector2(inner.position.x, art.end.y + 4 * k), Vector2(inner.size.x, inner.end.y - art.end.y - 4 * k))
-	draw_rect(plate, Color(0, 0, 0, 0.35))
+	# верхний маркер: римская цифра события или самоцвет редкости
+	var top := art.position.y + 6 * k
+	if kind == "event" and d.has("numeral"):
+		draw_rect(Rect2(Vector2(r.get_center().x - 16 * k, top - 2 * k), Vector2(32 * k, 24 * k)), Color(0.04, 0.04, 0.06, 0.75))
+		_text(UITheme.font("title_bold"), Vector2(r.position.x, top + 17 * k), str(d["numeral"]), 20 * k, Palette.GOLD, r.size.x)
+	else:
+		var gem: Color = Palette.RARITY.get(d.get("rarity", "common"), Palette.RARITY["common"])
+		var c := Vector2(r.get_center().x, top + 8 * k)
+		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6 * k), c + Vector2(6 * k, 0), c + Vector2(0, 6 * k), c + Vector2(-6 * k, 0)]), gem)
 	var name := str(d.get("name", d.get("title", card_id)))
 	var title_size := (14.0 if name.length() > 16 else 16.0) * k
-	_text_multi(UITheme.font("title"), Vector2(plate.position.x + 2, plate.position.y + title_size + 3 * k), name, title_size, Palette.TEXT, plate.size.x - 4, 2)
+	_text_multi(UITheme.font("title"), Vector2(plate.position.x + 2, plate.position.y + title_size + 6 * k), name, title_size, Palette.TEXT, plate.size.x - 4, 2)
 	var sub := _subtitle(d)
 	if sub != "":
-		_text(UITheme.font("sans"), Vector2(plate.position.x + 3, plate.end.y - 5 * k), sub, 10.5 * k, Palette.TEXT_DIM, plate.size.x - 6)
+		_text(UITheme.font("sans"), Vector2(plate.position.x + 3, plate.end.y - 7 * k), sub, 10.5 * k, Palette.TEXT_DIM, plate.size.x - 6)
 
 
 func _subtitle(d: Dictionary) -> String:
@@ -410,13 +427,18 @@ func _draw_art_placeholder(art: Rect2, d: Dictionary, k: float) -> void:
 		var pts := PackedVector2Array([c + Vector2(-art.size.x * 0.35, -art.size.y * 0.2), c + Vector2(-8 * k, -4 * k), c + Vector2(6 * k, 10 * k), c + Vector2(art.size.x * 0.3, art.size.y * 0.25)])
 		draw_polyline(pts, Palette.TRAUMA_BRIGHT, 2.0 * k)
 		return
-	var glyph := ""
+	var em := ""
 	match kind:
-		"initiator": glyph = "🕯"
-		"event": glyph = "✦"
-		_:
-			var n := str(d.get("name", d.get("title", "?")))
-			glyph = n.substr(0, 1)
+		"character": em = "character"
+		"enhancement": em = "enhancement"
+		"enemy": em = "monster"
+		"event": em = "story" if d.get("type", "") in ["story", "reward"] else ""
+	var tex := UITheme.emblem(em) if em != "" else null
+	if tex:
+		var es := minf(art.size.x, art.size.y) * 0.62
+		draw_texture_rect(tex, Rect2(art.get_center() - Vector2(es, es) / 2, Vector2(es, es)), false, Color(1, 1, 1, 0.8))
+		return
+	var glyph := "🕯" if kind == "initiator" else "✦"
 	_text(UITheme.font("title"), Vector2(art.position.x, art.get_center().y + 20 * k), glyph, 54 * k, Palette.SILVER.darkened(0.35), art.size.x)
 
 
@@ -474,6 +496,15 @@ func _draw_framed_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 		var v := int(base.get(st, 0)) + int(perm.get(st, 0))
 		var c := Vector2(r.position.x + r.size.x * xs[st], r.position.y + r.size.y * 0.935)
 		var rad := 9.0 * k
+		var em := UITheme.emblem(st)
+		if em:
+			# серебряная эмблема характеристики, число — в тёмном кружке справа снизу
+			draw_texture_rect(em, Rect2(c - Vector2(rad, rad) * 1.25, Vector2(rad, rad) * 2.5), false)
+			var nc := c + Vector2(rad * 0.95, rad * 0.55)
+			draw_circle(nc, rad * 0.72, Color(0.04, 0.04, 0.06, 0.95))
+			draw_arc(nc, rad * 0.72, 0, TAU, 16, Palette.SILVER.darkened(0.2), 1.0)
+			_text(UITheme.font("title_bold"), Vector2(nc.x - rad, nc.y + 4 * k), str(v), 11 * k, Palette.TEXT, rad * 2)
+			continue
 		draw_circle(c, rad, Color(0.05, 0.05, 0.07, 0.92))
 		draw_arc(c, rad, 0, TAU, 20, Palette.SILVER.darkened(0.2), 1.0)
 		_text(UITheme.font("title_bold"), Vector2(c.x - rad, c.y + 5 * k), str(v), 14 * k, Palette.TEXT, rad * 2)
@@ -491,7 +522,11 @@ func _draw_plain_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 		draw_circle(c, rad, Color(0.05, 0.05, 0.07, 0.9))
 		draw_arc(c, rad, 0, TAU, 20, Palette.SILVER.darkened(0.3), 1.0)
 		_text(UITheme.font("title_bold"), Vector2(c.x - rad, c.y + 5 * k), str(v), 14 * k, Palette.TEXT, rad * 2)
-		_text(UITheme.font("sans"), Vector2(c.x - rad, c.y - 12 * k), Palette.STAT_SHORT[st], 9 * k, Palette.TEXT_DIM, rad * 2)
+		var em2 := UITheme.emblem(st)
+		if em2:
+			draw_texture_rect(em2, Rect2(c + Vector2(-rad * 0.7, -rad * 2.5), Vector2(rad, rad) * 1.4), false)
+		else:
+			_text(UITheme.font("sans"), Vector2(c.x - rad, c.y - 12 * k), Palette.STAT_SHORT[st], 9 * k, Palette.TEXT_DIM, rad * 2)
 		i += 1
 
 

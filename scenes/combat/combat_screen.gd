@@ -217,6 +217,9 @@ class IntentCard extends Control:
 		draw_rect(inner, Palette.TRAUMA, false, 1.0)
 		var f := UITheme.font("sans")
 		draw_string(UITheme.font("caps"), inner.position + Vector2(0, 26), "НАМЕРЕНИЕ ВРАГА", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 16, Palette.STAT_DOWN)
+		var em := UITheme.emblem("monster")
+		if em:
+			draw_texture_rect(em, Rect2(inner.end - Vector2(44, 44), Vector2(38, 38)), false, Color(1, 1, 1, 0.85))
 		if ability.is_empty():
 			draw_string(f, inner.position + Vector2(0, 140), "раскроется в раунде", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 19, Palette.TEXT_DIM)
 			return

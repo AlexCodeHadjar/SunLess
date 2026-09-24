@@ -247,6 +247,12 @@ func _build_bottom() -> void:
 		b.add_theme_font_override("font", UITheme.font("caps"))
 		b.add_theme_font_size_override("font_size", 18)
 		b.set_meta("tab", t[1])
+		var em := UITheme.emblem(t[1])
+		if em:
+			b.icon = em
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 30)
+			b.custom_minimum_size.x = 200
 		b.pressed.connect(_on_tab.bind(t[1]))
 		_tabs.add_child(b)
 	var scroll := ScrollContainer.new()

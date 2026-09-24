@@ -107,5 +107,17 @@ static func label(text: String, kind: String = "sans", size: int = 18, color: Co
 	return l
 
 
+static var _emblems := {}
+
+
+## Серебряные эмблемы из дизайна (Игра/assets/icons): power, will, cunning, monster, enhancement, character, story.
+static func emblem(name: String) -> Texture2D:
+	if not _emblems.has(name):
+		var p := "res://art/ui/emblems/%s.png" % name
+		_emblems[name] = load(p) if ResourceLoader.exists(p) else null
+	return _emblems[name]
+
+
 static func stat_icon(stat: String) -> Texture2D:
-	return load("res://art/ui/icon_%s.png" % stat)
+	var e := emblem(stat)
+	return e if e else load("res://art/ui/icon_%s.png" % stat)
