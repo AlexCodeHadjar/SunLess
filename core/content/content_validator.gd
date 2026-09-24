@@ -4,10 +4,10 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "add_trauma", "remove_trauma", "clear_traumas",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "reveal", "add_codex",
-	"set_region", "remove_temporaries", "end_demo", "text"]
+	"set_region", "remove_temporaries", "end_demo", "text", "combat_mod"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_has_trauma"]
-const CHECKS := ["stat", "gate_stat", "auto"]
+const CHECKS := ["stat", "gate_stat", "auto", "combat"]
 const POOLS := ["all", "physical", "environment", "mental"]
 const EVENT_TYPES := ["story", "reward", "side", "random"]
 const STATS := ["power", "will", "cunning"]
@@ -34,6 +34,8 @@ static func validate(c: Content) -> Array[String]:
 
 	for eid: String in c.events:
 		_validate_event(c, eid, errors)
+
+	_validate_combat(c, errors)
 
 	# Сюжетная цепочка от E01 должна дойти до конца без обрывов и циклов.
 	var seen := {}
@@ -90,6 +92,15 @@ static func _validate_event(c: Content, eid: String, errors: Array[String]) -> v
 			if not STATS.has(s):
 				errors.append("%s: неизвестная характеристика «%s»" % [ow, s])
 			sum += int(o["req"][s])
+		if check == "combat":
+			var spec: Dictionary = o.get("combat", {})
+			if Array(spec.get("enemies", [])).is_empty():
+				errors.append("%s: бой без противников" % ow)
+			for en: String in spec.get("enemies", []):
+				if not c.enemies.has(en):
+					errors.append("%s: нет противника %s" % [ow, en])
+			if spec.has("field") and not c.fields.has(str(spec["field"])):
+				errors.append("%s: нет поля боя %s" % [ow, spec["field"]])
 		if check in ["stat", "gate_stat"] and sum <= 0:
 			errors.append("%s: проверка без требований — нужен check: auto" % ow)
 		if check == "gate_stat" and Array(o.get("conditions", [])).is_empty():
@@ -110,7 +121,7 @@ static func _validate_event(c: Content, eid: String, errors: Array[String]) -> v
 				if c.card_kind(card) == "":
 					errors.append("%s: условие ссылается на несуществующую карту %s" % [ow, card])
 		for r: String in o.get("cost", {}):
-			if not ["coins", "mana"].has(r):
+			if not ["shards", "mana"].has(r):
 				errors.append("%s: неизвестный ресурс «%s»" % [ow, r])
 		_validate_effects(c, ow + " on_success", o.get("on_success", []), errors)
 		_validate_effects(c, ow + " on_failure", o.get("on_failure", []), errors)
@@ -163,3 +174,44 @@ static func _validate_effects(c: Content, where: String, effects: Array, errors:
 			var ch: Dictionary = c.characters.get(str(e.get("character", "")), {})
 			if not ch.get("stages", {}).has(str(e.get("stage", ""))):
 				errors.append("%s: нет стадии %s" % [where, e.get("stage", "")])
+
+
+## Боевые данные: все теги связей, полей, карт раунда и носителей существуют.
+static func _validate_combat(c: Content, errors: Array[String]) -> void:
+	var T := c.combat_tags
+	for sid: String in c.synergies:
+		for t: String in c.synergies[sid].get("tags", []):
+			if not T.has(t):
+				errors.append("Симбиоз %s: нет тега «%s»" % [sid, t])
+	for cid: String in c.conflicts:
+		for key: String in ["a", "b"]:
+			if not T.has(str(c.conflicts[cid].get(key, ""))):
+				errors.append("Конфликт %s: нет тега «%s»" % [cid, c.conflicts[cid].get(key, "")])
+	for fid: String in c.fields:
+		for t: String in c.fields[fid].get("tags", []):
+			if not T.has(t):
+				errors.append("Поле %s: нет тега «%s»" % [fid, t])
+	for rid: String in c.round_cards:
+		for t: String in c.round_cards[rid].get("tags", []):
+			if not T.has(t):
+				errors.append("Карта раунда %s: нет тега «%s»" % [rid, t])
+	for eid: String in c.enemies:
+		for t: String in c.enemies[eid].get("tags", []):
+			if not T.has(t):
+				errors.append("Противник %s: нет тега «%s»" % [eid, t])
+	for pid: String in c.characters:
+		var ch: Dictionary = c.characters[pid]
+		var all: Array = Array(ch.get("tags", [])) + Array(ch.get("support_tags", []))
+		for st: Dictionary in ch.get("stages", {}).values():
+			all += Array(st.get("tags", []))
+		for t: String in all:
+			if not T.has(t):
+				errors.append("Персонаж %s: нет тега «%s»" % [pid, t])
+	for uid: String in c.enhancements:
+		for t: String in c.enhancements[uid].get("tags", []):
+			if not T.has(t):
+				errors.append("Усиление %s: нет тега «%s»" % [uid, t])
+	for xid: String in c.tactics:
+		for t: String in Array(c.tactics[xid].get("add_tags", [])) + Array(c.tactics[xid].get("self_tags", [])):
+			if not T.has(t):
+				errors.append("Приём %s: нет тега «%s»" % [xid, t])

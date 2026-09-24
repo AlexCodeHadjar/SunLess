@@ -4,7 +4,7 @@ extends RefCounted
 ## Каждая команда возвращает записи для экрана результата: {"kind", "text", "card"?}.
 
 const STAT_NAMES := {"power": "Сила", "will": "Воля", "cunning": "Хитрость"}
-const RES_NAMES := {"coins": "⛁ монеты", "mana": "◈ мана"}
+const RES_NAMES := {"shards": "✧ осколки душ", "mana": "◈ мана"}
 
 
 static func apply_all(content: Content, state: RunState, effects: Array, executor: String,
@@ -113,6 +113,20 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 					gone.append(content.card_name(card2))
 			if not gone.is_empty():
 				return [{"kind": "lost", "text": "Уходят: %s" % ", ".join(gone)}]
+		"combat_mod":
+			var eid: String = e["event"]
+			var m: Dictionary = state.combat_mods.get(eid, {})
+			for key: String in ["hero_tags", "enemy_tags", "add_enemies", "allies"]:
+				if e.has(key):
+					var arr: Array = m.get(key, [])
+					for v: Variant in e[key]:
+						if not arr.has(v):
+							arr.append(v)
+					m[key] = arr
+			if e.has("field"):
+				m["field"] = str(e["field"])
+			state.combat_mods[eid] = m
+			return [{"kind": "flag", "text": str(e.get("text", "Будущий бой изменён"))}]
 		"end_demo":
 			state.demo_complete = true
 			return [{"kind": "story", "text": str(e.get("text", "Конец демоверсии"))}]

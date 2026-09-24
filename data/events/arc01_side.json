@@ -1,152 +1,686 @@
 [
-  {
-    "id": "SE01", "type": "side", "arc": "nightmare", "region": "mountain_pass", "source_kind": "initiator",
-    "title": "Передышка",
-    "text": "Короткий привал в тени скал. Можно перевязать раны или просто перевести дух.",
-    "tags": ["survival"], "map_pos": [0.30, 0.80],
-    "options": [
-      {"id": "SE01_1", "label": "Отдохнуть", "check": "auto",
-       "conditions": [{"type": "executor_has_trauma", "severity": ["light"], "text": "Нужна лёгкая травма"}],
-       "on_success": [{"cmd": "remove_trauma", "severities": ["light"]}],
-       "ok_text": "Сон без сновидений — редкая роскошь."},
-      {"id": "SE01_2", "label": "Собраться с силами", "req": {"will": 5}, "failure_traumas": 0,
-       "conditions": [{"type": "executor_has_trauma", "text": "Нет травм"}],
-       "on_success": [{"cmd": "remove_trauma"}],
-       "ok_text": "Боль отступает перед упрямством.", "fail_text": "Сил не хватает даже на это."},
-      {"id": "SE01_3", "label": "Медитация", "check": "auto", "cost": {"mana": 5},
-       "conditions": [{"type": "executor_has_trauma", "categories": ["mental"], "text": "Нет ментальной травмы"}],
-       "on_success": [{"cmd": "remove_trauma", "categories": ["mental"]}],
-       "ok_text": "Мысли снова становятся ясными."}
-    ]
-  },
-  {
-    "id": "SE02", "type": "side", "arc": "nightmare", "region": "mountain_pass", "source_kind": "initiator",
-    "title": "Разговор у костра",
-    "text": "Шолар греет руки у огня и, кажется, готов говорить.",
-    "tags": ["social", "knowledge"], "map_pos": [0.52, 0.78],
-    "options": [
-      {"id": "SE02_1", "label": "Расспросить о Горном Короле", "req": {"cunning": 5}, "failure_traumas": 0,
-       "on_success": [{"cmd": "reveal", "event": "E05", "text": "Раскрыты последствия «Горного Короля»"}],
-       "ok_text": "Шолар рассказывает о Тиранах то, что знает.", "fail_text": "Шолар отмалчивается."},
-      {"id": "SE02_2", "label": "Рассказать о себе", "req": {"will": 4}, "failure_traumas": 0,
-       "on_success": [{"cmd": "adjust_resource", "resource": "mana", "value": 2}],
-       "ok_text": "Говорить вслух оказалось легче, чем думать.", "fail_text": "Слова не идут."},
-      {"id": "SE02_3", "label": "Узнать о мире", "req": {"cunning": 6}, "failure_traumas": 0,
-       "on_success": [{"cmd": "add_temp", "stat": "cunning", "value": 2, "label": "Рассказы Шолара"}],
-       "ok_text": "Мир Кошмара становится чуть понятнее.", "fail_text": "Рассказ обрывается на полуслове."}
-    ]
-  },
-  {
-    "id": "RE_SEARCH", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Обыск повозки",
-    "text": "Брошенная повозка. Надсмотрщики далеко — пока.",
-    "tags": ["survival"], "trauma_pool": "physical", "map_pos": [0.22, 0.45],
-    "options": [
-      {"id": "RE_SEARCH_1", "label": "Обшарить тюки", "req": {"cunning": 5},
-       "on_success": [{"cmd": "adjust_resource", "resource": "coins", "value": 3}],
-       "ok_text": "Несколько монет в чужом кошеле.", "fail_text": "Кто-то заметил."},
-      {"id": "RE_SEARCH_2", "label": "Взломать сундук", "req": {"power": 5},
-       "on_success": [{"cmd": "adjust_resource", "resource": "coins", "value": 5}],
-       "ok_text": "Замок поддаётся.", "fail_text": "Крышка захлопывается на пальцах."},
-      {"id": "RE_SEARCH_3", "label": "Взять только нужное", "check": "auto",
-       "on_success": [{"cmd": "adjust_resource", "resource": "coins", "value": 1}],
-       "ok_text": "Немного, зато без риска."}
-    ]
-  },
-  {
-    "id": "RE_PRAYER", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Молитва у костра",
-    "text": "Рабы шепчут молитвы забытым богам. В этом шёпоте есть что-то большее, чем надежда.",
-    "tags": ["ritual"], "trauma_pool": "mental", "map_pos": [0.40, 0.72],
-    "options": [
-      {"id": "RE_PRAYER_1", "label": "Молиться вместе со всеми", "req": {"will": 5},
-       "on_success": [{"cmd": "adjust_resource", "resource": "mana", "value": 3}],
-       "ok_text": "Что-то отзывается в темноте.", "fail_text": "Пустота отвечает пустотой."},
-      {"id": "RE_PRAYER_2", "label": "Слушать чужие молитвы", "req": {"cunning": 5},
-       "on_success": [
-         {"cmd": "adjust_resource", "resource": "mana", "value": 2},
-         {"cmd": "add_temp", "stat": "cunning", "value": 1, "label": "Подслушанное"}],
-       "ok_text": "Люди выдают себя в молитвах.", "fail_text": "Его заметили и прогнали."},
-      {"id": "RE_PRAYER_3", "label": "Просто греться у огня", "check": "auto",
-       "on_success": [
-         {"cmd": "remove_trauma", "trauma": "T01"},
-         {"cmd": "adjust_resource", "resource": "mana", "value": 1}],
-       "ok_text": "Тепло возвращается в пальцы."}
-    ]
-  },
-  {
-    "id": "RE_HEALER", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Знахарь каравана",
-    "text": "Старый раб умеет вправлять кости и зашивать раны. Не бесплатно.",
-    "tags": ["social"], "map_pos": [0.60, 0.70],
-    "options": [
-      {"id": "RE_HEALER_1", "label": "Залечить лёгкую рану", "check": "auto", "cost": {"coins": 4},
-       "conditions": [{"type": "executor_has_trauma", "severity": ["light"], "categories": ["physical", "environment"], "text": "Нет лёгкой физической травмы или травмы среды"}],
-       "on_success": [{"cmd": "remove_trauma", "severities": ["light"], "categories": ["physical", "environment"]}],
-       "ok_text": "Перевязка держит крепко."},
-      {"id": "RE_HEALER_2", "label": "Залечить тяжёлую рану", "check": "auto", "cost": {"coins": 7},
-       "conditions": [{"type": "executor_has_trauma", "severity": ["heavy"], "categories": ["physical", "environment"], "text": "Нет тяжёлой физической травмы или травмы среды"}],
-       "on_success": [{"cmd": "remove_trauma", "severities": ["heavy"], "categories": ["physical", "environment"]}],
-       "ok_text": "Больно, но кость встала на место."},
-      {"id": "RE_HEALER_3", "label": "Спасти от критической раны", "check": "auto", "cost": {"coins": 10},
-       "conditions": [{"type": "executor_has_trauma", "severity": ["critical"], "text": "Нет критической травмы"}],
-       "on_success": [{"cmd": "remove_trauma", "severities": ["critical"]}],
-       "ok_text": "Знахарь качает головой: «Повезло»."}
-    ]
-  },
-  {
-    "id": "RE_TRADER", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Торговец каравана",
-    "text": "Торговец держит лавку прямо на повозке. У него есть всё — за правильную цену.",
-    "tags": ["social"], "trauma_pool": "physical", "map_pos": [0.72, 0.62],
-    "options": [
-      {"id": "RE_TRADER_1", "label": "Купить заточку", "check": "auto", "cost": {"coins": 6},
-       "conditions": [{"type": "not_owned", "card": "U01"}],
-       "on_success": [{"cmd": "add_card", "card": "U01"}],
-       "ok_text": "Грубая, но острая."},
-      {"id": "RE_TRADER_2", "label": "Выменять слухи", "check": "auto", "cost": {"coins": 3},
-       "on_success": [{"cmd": "add_temp", "stat": "cunning", "value": 1, "label": "Слухи торговца"}],
-       "ok_text": "Торговец знает больше, чем говорит."},
-      {"id": "RE_TRADER_3", "label": "Стащить с прилавка", "req": {"cunning": 7},
-       "conditions": [{"type": "not_owned", "card": "U01"}],
-       "on_success": [{"cmd": "add_card", "card": "U01"}],
-       "ok_text": "Никто не заметил.", "fail_text": "Торговец заметил — и ударил."}
-    ]
-  },
-  {
-    "id": "RE_QUARREL", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Ссора рабов",
-    "text": "Двое делят последнюю лепёшку. Скоро в ход пойдут кулаки.",
-    "tags": ["social"], "trauma_pool": "physical", "map_pos": [0.33, 0.35],
-    "options": [
-      {"id": "RE_QUARREL_1", "label": "Разнять", "req": {"will": 5},
-       "on_success": [{"cmd": "add_temp", "stat": "will", "value": 1, "label": "Уважение"}],
-       "ok_text": "Спорщики расходятся.", "fail_text": "Досталось и миротворцу."},
-      {"id": "RE_QUARREL_2", "label": "Использовать ссору", "req": {"cunning": 6},
-       "on_success": [{"cmd": "adjust_resource", "resource": "coins", "value": 3}],
-       "ok_text": "Пока они дерутся, кошель меняет хозяина.", "fail_text": "Оба оборачиваются к нему."},
-      {"id": "RE_QUARREL_3", "label": "Встать на сторону сильного", "req": {"power": 5},
-       "on_success": [{"cmd": "add_temp", "stat": "power", "value": 1, "label": "Злость"}],
-       "ok_text": "Спор решён быстро.", "fail_text": "Сильный оказался не тем."}
-    ]
-  },
-  {
-    "id": "RE_COLD", "type": "random", "arc": "nightmare", "region": "mountain_pass",
-    "title": "Ночной холод",
-    "text": "Ночь в горах убивает тише любого чудовища.",
-    "tags": ["weather", "survival"], "trauma_pool": "environment", "map_pos": [0.50, 0.22],
-    "options": [
-      {"id": "RE_COLD_1", "label": "Терпеть", "req": {"will": 5},
-       "on_success": [{"cmd": "adjust_resource", "resource": "mana", "value": 2}],
-       "ok_text": "Холод закаляет.", "fail_text": "Пальцы перестают слушаться."},
-      {"id": "RE_COLD_2", "label": "Найти укрытие", "req": {"cunning": 5},
-       "on_success": [
-         {"cmd": "remove_trauma", "trauma": "T01"},
-         {"cmd": "add_temp", "stat": "will", "value": 1, "label": "Выспался"}],
-       "ok_text": "Расщелина закрывает от ветра.", "fail_text": "Укрытие продувается насквозь."},
-      {"id": "RE_COLD_3", "label": "Двигаться, чтобы согреться", "req": {"power": 4},
-       "on_success": [{"cmd": "add_temp", "stat": "power", "value": 1, "label": "Разогрелся"}],
-       "ok_text": "Кровь снова бежит быстрее.", "fail_text": "Силы уходят быстрее тепла."}
-    ]
-  }
+ {
+  "id": "SE01",
+  "type": "side",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "source_kind": "initiator",
+  "title": "Передышка",
+  "text": "Короткий привал в тени скал. Можно перевязать раны или просто перевести дух.",
+  "tags": [
+   "survival"
+  ],
+  "map_pos": [
+   0.3,
+   0.8
+  ],
+  "options": [
+   {
+    "id": "SE01_1",
+    "label": "Отдохнуть",
+    "check": "auto",
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "severity": [
+       "light"
+      ],
+      "text": "Нужна лёгкая травма"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "severities": [
+       "light"
+      ]
+     }
+    ],
+    "ok_text": "Сон без сновидений — редкая роскошь."
+   },
+   {
+    "id": "SE01_2",
+    "label": "Собраться с силами",
+    "req": {
+     "will": 5
+    },
+    "failure_traumas": 0,
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "text": "Нет травм"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma"
+     }
+    ],
+    "ok_text": "Боль отступает перед упрямством.",
+    "fail_text": "Сил не хватает даже на это."
+   },
+   {
+    "id": "SE01_3",
+    "label": "Медитация",
+    "check": "auto",
+    "cost": {
+     "mana": 5
+    },
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "categories": [
+       "mental"
+      ],
+      "text": "Нет ментальной травмы"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "categories": [
+       "mental"
+      ]
+     }
+    ],
+    "ok_text": "Мысли снова становятся ясными."
+   }
+  ]
+ },
+ {
+  "id": "SE02",
+  "type": "side",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "source_kind": "initiator",
+  "title": "Разговор у костра",
+  "text": "Шолар греет руки у огня и, кажется, готов говорить.",
+  "tags": [
+   "social",
+   "knowledge"
+  ],
+  "map_pos": [
+   0.52,
+   0.78
+  ],
+  "options": [
+   {
+    "id": "SE02_1",
+    "label": "Расспросить о Горном Короле",
+    "req": {
+     "cunning": 5
+    },
+    "failure_traumas": 0,
+    "on_success": [
+     {
+      "cmd": "reveal",
+      "event": "E05",
+      "text": "Раскрыты последствия «Горного Короля»"
+     }
+    ],
+    "ok_text": "Шолар рассказывает о Тиранах то, что знает.",
+    "fail_text": "Шолар отмалчивается."
+   },
+   {
+    "id": "SE02_2",
+    "label": "Рассказать о себе",
+    "req": {
+     "will": 4
+    },
+    "failure_traumas": 0,
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "mana",
+      "value": 2
+     }
+    ],
+    "ok_text": "Говорить вслух оказалось легче, чем думать.",
+    "fail_text": "Слова не идут."
+   },
+   {
+    "id": "SE02_3",
+    "label": "Узнать о мире",
+    "req": {
+     "cunning": 6
+    },
+    "failure_traumas": 0,
+    "on_success": [
+     {
+      "cmd": "add_temp",
+      "stat": "cunning",
+      "value": 2,
+      "label": "Рассказы Шолара"
+     }
+    ],
+    "ok_text": "Мир Кошмара становится чуть понятнее.",
+    "fail_text": "Рассказ обрывается на полуслове."
+   }
+  ]
+ },
+ {
+  "id": "RE_SEARCH",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Обыск повозки",
+  "text": "Брошенная повозка. Надсмотрщики далеко — пока.",
+  "tags": [
+   "survival"
+  ],
+  "trauma_pool": "physical",
+  "map_pos": [
+   0.22,
+   0.45
+  ],
+  "options": [
+   {
+    "id": "RE_SEARCH_1",
+    "label": "Обшарить тюки",
+    "req": {
+     "cunning": 5
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ],
+    "ok_text": "Под тряпьём — пара тусклых осколков чьей-то души.",
+    "fail_text": "Кто-то заметил."
+   },
+   {
+    "id": "RE_SEARCH_2",
+    "label": "Взломать сундук",
+    "req": {
+     "power": 5
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ],
+    "ok_text": "Замок поддаётся.",
+    "fail_text": "Крышка захлопывается на пальцах."
+   },
+   {
+    "id": "RE_SEARCH_3",
+    "label": "Взять только нужное",
+    "check": "auto",
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ],
+    "ok_text": "Немного, зато без риска."
+   }
+  ]
+ },
+ {
+  "id": "RE_PRAYER",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Молитва у костра",
+  "text": "Рабы шепчут молитвы забытым богам. В этом шёпоте есть что-то большее, чем надежда.",
+  "tags": [
+   "ritual"
+  ],
+  "trauma_pool": "mental",
+  "map_pos": [
+   0.4,
+   0.72
+  ],
+  "options": [
+   {
+    "id": "RE_PRAYER_1",
+    "label": "Молиться вместе со всеми",
+    "req": {
+     "will": 5
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "mana",
+      "value": 3
+     }
+    ],
+    "ok_text": "Что-то отзывается в темноте.",
+    "fail_text": "Пустота отвечает пустотой."
+   },
+   {
+    "id": "RE_PRAYER_2",
+    "label": "Слушать чужие молитвы",
+    "req": {
+     "cunning": 5
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "mana",
+      "value": 2
+     },
+     {
+      "cmd": "add_temp",
+      "stat": "cunning",
+      "value": 1,
+      "label": "Подслушанное"
+     }
+    ],
+    "ok_text": "Люди выдают себя в молитвах.",
+    "fail_text": "Его заметили и прогнали."
+   },
+   {
+    "id": "RE_PRAYER_3",
+    "label": "Просто греться у огня",
+    "check": "auto",
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "trauma": "T01"
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "mana",
+      "value": 1
+     }
+    ],
+    "ok_text": "Тепло возвращается в пальцы."
+   }
+  ]
+ },
+ {
+  "id": "RE_HEALER",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Знахарь каравана",
+  "text": "Старый раб умеет вправлять кости и зашивать раны. Не бесплатно.",
+  "tags": [
+   "social"
+  ],
+  "map_pos": [
+   0.6,
+   0.7
+  ],
+  "options": [
+   {
+    "id": "RE_HEALER_1",
+    "label": "Залечить лёгкую рану",
+    "check": "auto",
+    "cost": {
+     "shards": 4
+    },
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "severity": [
+       "light"
+      ],
+      "categories": [
+       "physical",
+       "environment"
+      ],
+      "text": "Нет лёгкой физической травмы или травмы среды"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "severities": [
+       "light"
+      ],
+      "categories": [
+       "physical",
+       "environment"
+      ]
+     }
+    ],
+    "ok_text": "Перевязка держит крепко."
+   },
+   {
+    "id": "RE_HEALER_2",
+    "label": "Залечить тяжёлую рану",
+    "check": "auto",
+    "cost": {
+     "shards": 7
+    },
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "severity": [
+       "heavy"
+      ],
+      "categories": [
+       "physical",
+       "environment"
+      ],
+      "text": "Нет тяжёлой физической травмы или травмы среды"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "severities": [
+       "heavy"
+      ],
+      "categories": [
+       "physical",
+       "environment"
+      ]
+     }
+    ],
+    "ok_text": "Больно, но кость встала на место."
+   },
+   {
+    "id": "RE_HEALER_3",
+    "label": "Спасти от критической раны",
+    "check": "auto",
+    "cost": {
+     "shards": 10
+    },
+    "conditions": [
+     {
+      "type": "executor_has_trauma",
+      "severity": [
+       "critical"
+      ],
+      "text": "Нет критической травмы"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "severities": [
+       "critical"
+      ]
+     }
+    ],
+    "ok_text": "Знахарь качает головой: «Повезло»."
+   }
+  ]
+ },
+ {
+  "id": "RE_TRADER",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Торговец каравана",
+  "text": "Торговец держит лавку прямо на повозке. У него есть всё — за правильную цену.",
+  "tags": [
+   "social"
+  ],
+  "trauma_pool": "physical",
+  "map_pos": [
+   0.72,
+   0.62
+  ],
+  "options": [
+   {
+    "id": "RE_TRADER_1",
+    "label": "Купить заточку",
+    "check": "auto",
+    "cost": {
+     "shards": 6
+    },
+    "conditions": [
+     {
+      "type": "not_owned",
+      "card": "U01"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "add_card",
+      "card": "U01"
+     }
+    ],
+    "ok_text": "Грубая, но острая."
+   },
+   {
+    "id": "RE_TRADER_2",
+    "label": "Выменять слухи",
+    "check": "auto",
+    "cost": {
+     "shards": 3
+    },
+    "on_success": [
+     {
+      "cmd": "add_temp",
+      "stat": "cunning",
+      "value": 1,
+      "label": "Слухи торговца"
+     }
+    ],
+    "ok_text": "Торговец знает больше, чем говорит."
+   },
+   {
+    "id": "RE_TRADER_3",
+    "label": "Стащить с прилавка",
+    "req": {
+     "cunning": 7
+    },
+    "conditions": [
+     {
+      "type": "not_owned",
+      "card": "U01"
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "add_card",
+      "card": "U01"
+     }
+    ],
+    "ok_text": "Никто не заметил.",
+    "fail_text": "Торговец заметил — и ударил."
+   }
+  ]
+ },
+ {
+  "id": "RE_QUARREL",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Ссора рабов",
+  "text": "Двое делят последнюю лепёшку. Скоро в ход пойдут кулаки.",
+  "tags": [
+   "social"
+  ],
+  "trauma_pool": "physical",
+  "map_pos": [
+   0.33,
+   0.35
+  ],
+  "options": [
+   {
+    "id": "RE_QUARREL_1",
+    "label": "Разнять",
+    "req": {
+     "will": 5
+    },
+    "on_success": [
+     {
+      "cmd": "add_temp",
+      "stat": "will",
+      "value": 1,
+      "label": "Уважение"
+     }
+    ],
+    "ok_text": "Спорщики расходятся.",
+    "fail_text": "Досталось и миротворцу."
+   },
+   {
+    "id": "RE_QUARREL_2",
+    "label": "Использовать ссору",
+    "req": {
+     "cunning": 6
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ],
+    "ok_text": "Пока они дерутся, кошель меняет хозяина.",
+    "fail_text": "Оба оборачиваются к нему."
+   },
+   {
+    "id": "RE_QUARREL_3",
+    "label": "Встать на сторону сильного",
+    "req": {
+     "power": 5
+    },
+    "on_success": [
+     {
+      "cmd": "add_temp",
+      "stat": "power",
+      "value": 1,
+      "label": "Злость"
+     }
+    ],
+    "ok_text": "Спор решён быстро.",
+    "fail_text": "Сильный оказался не тем."
+   }
+  ]
+ },
+ {
+  "id": "RE_COLD",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Ночной холод",
+  "text": "Ночь в горах убивает тише любого чудовища.",
+  "tags": [
+   "weather",
+   "survival"
+  ],
+  "trauma_pool": "environment",
+  "map_pos": [
+   0.5,
+   0.22
+  ],
+  "options": [
+   {
+    "id": "RE_COLD_1",
+    "label": "Терпеть",
+    "req": {
+     "will": 5
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "mana",
+      "value": 2
+     }
+    ],
+    "ok_text": "Холод закаляет.",
+    "fail_text": "Пальцы перестают слушаться."
+   },
+   {
+    "id": "RE_COLD_2",
+    "label": "Найти укрытие",
+    "req": {
+     "cunning": 5
+    },
+    "on_success": [
+     {
+      "cmd": "remove_trauma",
+      "trauma": "T01"
+     },
+     {
+      "cmd": "add_temp",
+      "stat": "will",
+      "value": 1,
+      "label": "Выспался"
+     }
+    ],
+    "ok_text": "Расщелина закрывает от ветра.",
+    "fail_text": "Укрытие продувается насквозь."
+   },
+   {
+    "id": "RE_COLD_3",
+    "label": "Двигаться, чтобы согреться",
+    "req": {
+     "power": 4
+    },
+    "on_success": [
+     {
+      "cmd": "add_temp",
+      "stat": "power",
+      "value": 1,
+      "label": "Разогрелся"
+     }
+    ],
+    "ok_text": "Кровь снова бежит быстрее.",
+    "fail_text": "Силы уходят быстрее тепла."
+   }
+  ]
+ },
+ {
+  "id": "RE_HUNT",
+  "type": "random",
+  "arc": "nightmare",
+  "region": "mountain_pass",
+  "title": "Выводок в расщелине",
+  "text": "В расщелине копошатся личинки Горного Короля. Опасно — но из них сочится что-то похожее на осколки чужих душ.",
+  "tags": [
+   "combat",
+   "survival"
+  ],
+  "trauma_pool": "physical",
+  "map_pos": [
+   0.46,
+   0.62
+  ],
+  "options": [
+   {
+    "id": "RE_HUNT_1",
+    "label": "Спуститься и перебить выводок",
+    "check": "combat",
+    "combat": {
+     "enemies": [
+      "M01",
+      "M01",
+      "M01"
+     ],
+     "field": "F_01",
+     "kind": "normal"
+    },
+    "failure_traumas": 0,
+    "on_success": [],
+    "ok_text": "Расщелина затихла.",
+    "fail_text": "Их оказалось слишком много."
+   },
+   {
+    "id": "RE_HUNT_2",
+    "label": "Завалить расщелину камнями",
+    "req": {
+     "power": 6
+    },
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ],
+    "ok_text": "Под камнями стало тихо.",
+    "fail_text": "Камень сорвался на ногу."
+   },
+   {
+    "id": "RE_HUNT_3",
+    "label": "Обойти стороной",
+    "check": "auto",
+    "on_success": [],
+    "ok_text": "Не каждую битву нужно принимать."
+   }
+  ]
+ }
 ]

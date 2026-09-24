@@ -24,7 +24,7 @@ static func _one(c: Content, e: Dictionary, revealed: bool) -> String:
 				var k := c.card_kind(str(e["card"]))
 				return {"character": "спутник ?", "initiator": "инициатор ?"}.get(k, "карта ?")
 			"add_ability": return "способность ?"
-			"adjust_resource": return "◈" if e["resource"] == "mana" else "⛁"
+			"adjust_resource": return "◈" if e["resource"] == "mana" else "✧"
 			"add_temp", "add_perm": return "бонус ?"
 			"reveal": return "знание ?"
 			"remove_trauma", "clear_traumas": return "лечение"
@@ -33,7 +33,7 @@ static func _one(c: Content, e: Dictionary, revealed: bool) -> String:
 	match cmd:
 		"add_card": return "▣ " + c.card_name(str(e["card"]))
 		"add_ability": return "✦ " + c.card_name(str(e["ability"]))
-		"adjust_resource": return "%s %+d" % ["◈" if e["resource"] == "mana" else "⛁", int(e["value"])]
+		"adjust_resource": return "%s %+d" % ["◈" if e["resource"] == "mana" else "✧", int(e["value"])]
 		"add_temp":
 			var where := ""
 			if str(e.get("option_id", "")) != "":

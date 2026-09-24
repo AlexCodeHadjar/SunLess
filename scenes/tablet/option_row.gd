@@ -91,7 +91,7 @@ func _rebuild(prev_chance: int) -> void:
 		mid.add_child(UITheme.label("Без броска", "sans", 16, Palette.TEXT_DIM))
 	var cost: Dictionary = o.get("cost", {})
 	for r: String in cost:
-		mid.add_child(UITheme.label(("⛁ %d" if r == "coins" else "◈ %d") % int(cost[r]), "sans_bold", 16, Palette.COINS if r == "coins" else Palette.MANA))
+		mid.add_child(UITheme.label(("✧ %d" if r == "shards" else "◈ %d") % int(cost[r]), "sans_bold", 16, Palette.COINS if r == "shards" else Palette.MANA))
 	var spacer := Control.new()
 	spacer.custom_minimum_size.x = 8
 	mid.add_child(spacer)

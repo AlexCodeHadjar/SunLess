@@ -20,7 +20,11 @@ static func play(c: Content, seed_value: int, max_turns: int = 300) -> Dictionar
 		if move.is_empty():
 			stuck = true
 			break
-		var r := TurnResolver.resolve(c, s, move["event"], move["option"], move["draft"], move["extras"])
+		var r: Dictionary
+		if str(c.option(move["event"], move["option"]).get("check", "")) == "combat":
+			r = play_combat(c, s, move["event"], move["option"], move["draft"])
+		else:
+			r = TurnResolver.resolve(c, s, move["event"], move["option"], move["draft"], move["extras"])
 		if not r["ok"]:
 			stuck = true
 			break
@@ -28,7 +32,7 @@ static func play(c: Content, seed_value: int, max_turns: int = 300) -> Dictionar
 		turns += 1
 		max_traumas = maxi(max_traumas, Array(s.characters["P01"]["traumas"]).size())
 	return {"turns": turns, "weeks": s.week, "dead": s.game_over, "done": s.demo_complete,
-		"stuck": stuck, "max_traumas": max_traumas, "coins": s.resources["coins"], "mana": s.resources["mana"],
+		"stuck": stuck, "max_traumas": max_traumas, "shards": s.resources["shards"], "mana": s.resources["mana"],
 		"lost_items": _count_lost(s)}
 
 
@@ -89,3 +93,22 @@ static func _executors(c: Content, s: RunState) -> Array:
 		if c.card_kind(card) == "character" and s.is_alive(card):
 			out.append(card)
 	return out
+
+
+## Бой ботом: каждый раунд выбирает приём с лучшим шансом.
+static func play_combat(c: Content, s: RunState, eid: String, oid: String, draft: Dictionary) -> Dictionary:
+	var why := TurnResolver.can_resolve(c, s, eid, oid, draft)
+	if why != "":
+		return {"ok": false, "reason": why}
+	var cs := CombatSession.create(c, s, eid, oid, draft)
+	while not cs.finished:
+		cs.begin_round()
+		var best := ""
+		var best_ch := int(cs.ledger({})["chance"])
+		for t: String in cs.hand:
+			var ch := int(cs.ledger(c.tactics[t])["chance"])
+			if ch > best_ch:
+				best_ch = ch
+				best = t
+		cs.play_round(best)
+	return cs.finish()

@@ -11,6 +11,14 @@ var events: Dictionary = {}
 var regions: Dictionary = {}
 var tags: Dictionary = {}
 var thoughts: Dictionary = {}
+# бой
+var combat_tags: Dictionary = {}
+var synergies: Dictionary = {}
+var conflicts: Dictionary = {}
+var fields: Dictionary = {}
+var round_cards: Dictionary = {}
+var enemies: Dictionary = {}
+var tactics: Dictionary = {}
 var load_errors: Array[String] = []
 
 
@@ -24,6 +32,13 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.regions = c._load_map(dir + "/regions.json")
 	c.tags = c._load_map(dir + "/tags.json")
 	c.thoughts = c._load_map(dir + "/thoughts.json")
+	c.combat_tags = c._load_map(dir + "/combat/tags.json")
+	c.synergies = c._load_map(dir + "/combat/synergies.json")
+	c.conflicts = c._load_map(dir + "/combat/conflicts.json")
+	c.fields = c._load_map(dir + "/combat/fields.json")
+	c.round_cards = c._load_map(dir + "/combat/round_cards.json")
+	c.enemies = c._load_map(dir + "/combat/enemies.json")
+	c.tactics = c._load_map(dir + "/combat/tactics.json")
 	var ev_dir := DirAccess.open(dir + "/events")
 	if ev_dir == null:
 		c.load_errors.append("Нет папки %s/events" % dir)
@@ -79,11 +94,13 @@ func card_kind(card_id: String) -> String:
 		return "ability"
 	if traumas.has(card_id):
 		return "trauma"
+	if enemies.has(card_id):
+		return "enemy"
 	return ""
 
 
 func card_name(card_id: String) -> String:
-	for m: Dictionary in [characters, enhancements, initiators, abilities, traumas, events]:
+	for m: Dictionary in [characters, enhancements, initiators, abilities, traumas, events, enemies]:
 		if m.has(card_id):
 			return str(m[card_id].get("name", m[card_id].get("title", card_id)))
 	return card_id

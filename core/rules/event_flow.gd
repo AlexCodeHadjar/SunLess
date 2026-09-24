@@ -12,7 +12,7 @@ static func new_run(content: Content, seed_value: int) -> RunState:
 	var start: Dictionary = content.regions.get("mountain_pass", {})
 	s.arc = str(start.get("arc", "nightmare"))
 	s.region = "mountain_pass"
-	s.resources = {"coins": 10, "mana": 10}
+	s.resources = {"shards": 10, "mana": 10}
 	s.rng_seed = seed_value
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value

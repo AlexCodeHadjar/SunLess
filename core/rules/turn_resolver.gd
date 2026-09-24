@@ -30,6 +30,10 @@ static func preview(content: Content, state: RunState, event_id: String, draft: 
 			if check == "stat" or check == "gate_stat":
 				info["chance"] = ChanceCalculator.compute(r["totals"], req)
 				info["needs_roll"] = info["chance"] < 100
+			elif check == "combat":
+				info["chance"] = CombatSession.estimate(content, state, event_id, str(o["id"]), draft)
+				info["needs_roll"] = true
+				info["combat"] = true
 			else:
 				info["chance"] = 100
 		out.append(info)
@@ -77,6 +81,8 @@ static func resolve(content: Content, state_in: RunState, event_id: String, opti
 	var why := can_resolve(content, state_in, event_id, option_id, draft, extras)
 	if why != "":
 		return {"ok": false, "reason": why, "state": state_in}
+	if str(content.option(event_id, option_id).get("check", "")) == "combat":
+		return {"ok": false, "reason": "Этот вариант решается в бою", "state": state_in}
 	var state := state_in.copy()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = state.rng_seed
@@ -131,35 +137,49 @@ static func resolve(content: Content, state_in: RunState, event_id: String, opti
 
 	var story_scheduled := false
 	if success:
-		entries.append_array(EffectApplier.apply_all(content, state, ev.get("on_success_common", []), executor, rng))
-		entries.append_array(EffectApplier.apply_all(content, state, o.get("on_success", []), executor, rng))
-		# Добыча: 50% — мана или монеты поровну.
-		if rng.randi_range(1, 100) <= LOOT_CHANCE:
-			var res := "coins" if rng.randi_range(0, 1) == 0 else "mana"
-			var story_like: bool = ev.get("type", "") in ["story", "reward"]
-			var amount := rng.randi_range(2, 4) if story_like else rng.randi_range(1, 3)
-			entries.append_array(EffectApplier.apply(content, state, {"cmd": "adjust_resource", "resource": res, "value": amount}, executor, rng))
-			result["loot"] = {"resource": res, "value": amount}
-		var etype: String = ev.get("type", "story")
-		var progresses := etype == "reward" or (etype == "story" and bool(o.get("story", false)))
-		if etype in ["side", "random"] or progresses:
-			state.events[event_id]["status"] = "closed"
-		else:
-			state.events[event_id]["done_options"].append(option_id)
-		if progresses:
-			result["progressed"] = true
-			story_scheduled = true
-			var immediate := bool(ev.get("next_immediate", false))
-			entries.append_array(EventFlow.schedule_story(content, state, str(ev.get("next", "")), immediate, rng))
-			result["next_event"] = str(ev.get("next", ""))
+		story_scheduled = apply_success(content, state, event_id, option_id, executor, rng, entries, result, true)
 	else:
 		if o.has("on_failure"):
 			entries.append_array(EffectApplier.apply_all(content, state, o["on_failure"], executor, rng))
 		var count := int(o.get("failure_traumas", 2 if bool(o.get("danger", ev.get("danger", false))) else 1))
 		var pool: String = o.get("trauma_pool", ev.get("trauma_pool", "all"))
-		_give_traumas(content, state, executor, enh, count, pool, bool(extras.get("ward", false)), rng, result, entries)
+		give_traumas(content, state, executor, enh, count, pool, bool(extras.get("ward", false)), rng, result, entries)
 
-	# --- износ приложенных усилений ---
+	apply_wear(content, state, enh, rng, entries, result)
+	return finish_turn(content, state, event_id, option_id, executor, chance, roll, success, story_scheduled, rng, entries, result)
+
+
+## Успех варианта: эффекты, добыча, закрытие/продвижение события. Возвращает true, если назначен сюжет.
+## Общая часть для обычной проверки и для боя.
+static func apply_success(content: Content, state: RunState, event_id: String, option_id: String, executor: String,
+		rng: RandomNumberGenerator, entries: Array, result: Dictionary, generic_loot: bool) -> bool:
+	var ev: Dictionary = content.events[event_id]
+	var o := content.option(event_id, option_id)
+	entries.append_array(EffectApplier.apply_all(content, state, ev.get("on_success_common", []), executor, rng))
+	entries.append_array(EffectApplier.apply_all(content, state, o.get("on_success", []), executor, rng))
+	# Добыча: 50% — мана или осколки душ поровну.
+	if generic_loot and rng.randi_range(1, 100) <= LOOT_CHANCE:
+		var res := "shards" if rng.randi_range(0, 1) == 0 else "mana"
+		var story_like: bool = ev.get("type", "") in ["story", "reward"]
+		var amount := rng.randi_range(2, 4) if story_like else rng.randi_range(1, 3)
+		entries.append_array(EffectApplier.apply(content, state, {"cmd": "adjust_resource", "resource": res, "value": amount}, executor, rng))
+		result["loot"] = {"resource": res, "value": amount}
+	var etype: String = ev.get("type", "story")
+	var progresses := etype == "reward" or (etype == "story" and bool(o.get("story", false)))
+	if etype in ["side", "random"] or progresses:
+		state.events[event_id]["status"] = "closed"
+	else:
+		state.events[event_id]["done_options"].append(option_id)
+	if progresses:
+		result["progressed"] = true
+		var immediate := bool(ev.get("next_immediate", false))
+		entries.append_array(EventFlow.schedule_story(content, state, str(ev.get("next", "")), immediate, rng))
+		result["next_event"] = str(ev.get("next", ""))
+	return progresses
+
+
+## Износ приложенных усилений после события или боя.
+static func apply_wear(content: Content, state: RunState, enh: Array, rng: RandomNumberGenerator, entries: Array, result: Dictionary) -> void:
 	for card: String in enh:
 		if not WearRules.wears(content, state, card) or not state.owns(card):
 			continue
@@ -173,6 +193,11 @@ static func resolve(content: Content, state_in: RunState, event_id: String, opti
 		else:
 			state.wear[card] = w["after"]
 
+
+## Конец хода: журнал, неделя, сохранение RNG.
+static func finish_turn(content: Content, state: RunState, event_id: String, option_id: String, executor: String,
+		chance: int, roll: int, success: bool, story_scheduled: bool, rng: RandomNumberGenerator, entries: Array,
+		result: Dictionary) -> Dictionary:
 	state.drafts.erase(event_id)
 	state.log.append({
 		"week": state.week, "event": event_id, "option": option_id, "executor": executor,
@@ -186,7 +211,7 @@ static func resolve(content: Content, state_in: RunState, event_id: String, opti
 	return {"ok": true, "state": state, "result": result}
 
 
-static func _give_traumas(content: Content, state: RunState, executor: String, enh: Array, count: int,
+static func give_traumas(content: Content, state: RunState, executor: String, enh: Array, count: int,
 		pool: String, ward: bool, rng: RandomNumberGenerator, result: Dictionary, entries: Array) -> void:
 	var ch: Dictionary = state.character(executor)
 	var softened_once := false

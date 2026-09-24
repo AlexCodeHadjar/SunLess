@@ -6,12 +6,27 @@
     "rarity": "common",
     "wears": true,
     "bonuses": [
-      {"stat": "power", "value": 2, "tags": []},
-      {"stat": "cunning", "value": 1, "tags": ["survival"]}
+      {
+        "stat": "power",
+        "value": 2,
+        "tags": []
+      },
+      {
+        "stat": "cunning",
+        "value": 1,
+        "tags": [
+          "survival"
+        ]
+      }
     ],
     "text": "+2 Сила; в выживании ещё +1 Хитрость.",
     "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 5–7"
+    "source": "«Дитя Теней», гл. 5–7",
+    "tags": [
+      "Импровизация",
+      "Цепь",
+      "Тяжёлый удар"
+    ]
   },
   {
     "id": "U02",
@@ -19,15 +34,30 @@
     "origin": "memory",
     "rarity": "rare",
     "wears": true,
-    "wear_exempt_arcs": ["nightmare"],
+    "wear_exempt_arcs": [
+      "nightmare"
+    ],
     "art": "res://art/cards/U02.png",
     "art_has_frame": true,
     "bonuses": [
-      {"stat": "cunning", "value": 2, "tags": ["lure", "stealth"]}
+      {
+        "stat": "cunning",
+        "value": 2,
+        "tags": [
+          "lure",
+          "stealth"
+        ]
+      }
     ],
     "text": "+2 Хитрость в приманке и скрытности. Дальний звон слышен за километры. Не изнашивается до конца Первого Кошмара.",
     "canon": "канон",
-    "source": "«Дитя Теней», гл. 8, 13–14"
+    "source": "«Дитя Теней», гл. 8, 13–14",
+    "tags": [
+      "Звон",
+      "Приманка",
+      "Серебро",
+      "Воспоминание"
+    ]
   },
   {
     "id": "U06",
@@ -39,11 +69,21 @@
     "art_has_frame": true,
     "soften_first_physical": true,
     "bonuses": [
-      {"stat": "will", "value": 1, "tags": []}
+      {
+        "stat": "will",
+        "value": 1,
+        "tags": []
+      }
     ],
     "text": "+1 Воля; первая физическая травма события смягчается на ступень.",
     "canon": "канон",
-    "source": "«Дитя Теней», гл. 16, 83"
+    "source": "«Дитя Теней», гл. 16, 83",
+    "tags": [
+      "Ткань",
+      "Нить",
+      "Кукловод",
+      "Оборона"
+    ]
   },
   {
     "id": "K01",
@@ -52,11 +92,21 @@
     "rarity": "common",
     "wears": false,
     "bonuses": [
-      {"stat": "cunning", "value": 1, "tags": ["knowledge", "ritual"]}
+      {
+        "stat": "cunning",
+        "value": 1,
+        "tags": [
+          "knowledge",
+          "ritual"
+        ]
+      }
     ],
     "text": "Знание: +1 Хитрость в знаниях и ритуалах.",
     "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 1"
+    "source": "«Дитя Теней», гл. 1",
+    "tags": [
+      "Заклинание Кошмара"
+    ]
   },
   {
     "id": "K02",
@@ -65,11 +115,22 @@
     "rarity": "common",
     "wears": false,
     "bonuses": [
-      {"stat": "cunning", "value": 2, "tags": ["survival", "weather", "climb"]}
+      {
+        "stat": "cunning",
+        "value": 2,
+        "tags": [
+          "survival",
+          "weather",
+          "climb"
+        ]
+      }
     ],
     "text": "Знание: +2 Хитрость в пути, непогоде и подъёме.",
     "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 8–9"
+    "source": "«Дитя Теней», гл. 8–9",
+    "tags": [
+      "Выслеживание"
+    ]
   },
   {
     "id": "K03",
@@ -78,10 +139,17 @@
     "rarity": "rare",
     "wears": false,
     "bonuses": [
-      {"stat": "will", "value": 1, "tags": []}
+      {
+        "stat": "will",
+        "value": 1,
+        "tags": []
+      }
     ],
     "text": "Знание: +1 Воля.",
     "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 15–16"
+    "source": "«Дитя Теней», гл. 15–16",
+    "tags": [
+      "Воспоминание"
+    ]
   }
 ]

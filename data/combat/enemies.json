@@ -1,0 +1,587 @@
+[
+ {
+  "id": "M01",
+  "name": "Личинка Горного Короля",
+  "rank": 0,
+  "class": 1,
+  "tags": [
+   "Паразит",
+   "Шипы",
+   "Ярость",
+   "Приспешник",
+   "Мягкое тело",
+   "Хладнокровная тварь",
+   "Стая"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 1,
+  "art": "res://art/cards/M01.png"
+ },
+ {
+  "id": "M02",
+  "name": "Горный Король",
+  "rank": 1,
+  "class": 5,
+  "tags": [
+   "Гигант",
+   "Когти",
+   "Многоглазый",
+   "Предводитель",
+   "Мех",
+   "Древний",
+   "Регенерация"
+  ],
+  "kind": "boss",
+  "trauma_pool": "physical",
+  "shards": 10,
+  "art": "res://art/cards/M02.png"
+ },
+ {
+  "id": "M03",
+  "name": "Падальщик Карапакса",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Панцирь",
+   "Хитин",
+   "Сочленения",
+   "Скорость",
+   "Когти"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M03.png",
+  "echo": {
+   "card": "U12",
+   "chance": 0.25
+  }
+ },
+ {
+  "id": "M04",
+  "name": "Центурион Карапакса",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Панцирь",
+   "Дальний удар",
+   "Скорость",
+   "Элита"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M04.png"
+ },
+ {
+  "id": "M05",
+  "name": "Демон Карапакса",
+  "rank": 1,
+  "class": 3,
+  "tags": [
+   "Панцирь",
+   "Разумный",
+   "Командование",
+   "Регенерация"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 6,
+  "art": "res://art/cards/M05.png"
+ },
+ {
+  "id": "M06",
+  "name": "Красные многоножки",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Многоногость",
+   "Кислота",
+   "Засада",
+   "Стая"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M06.png"
+ },
+ {
+  "id": "M07",
+  "name": "Плотоядные черви",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Подземный",
+   "Рой",
+   "Засада"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M07.png"
+ },
+ {
+  "id": "M08",
+  "name": "Плотоядные цветы",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Растение",
+   "Захват",
+   "Удушение",
+   "Кровь"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M08.png"
+ },
+ {
+  "id": "M09",
+  "name": "Прозрачные щупальца",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Щупальца",
+   "Захват",
+   "Засада",
+   "Бесформенный"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M09.png"
+ },
+ {
+  "id": "M10",
+  "name": "Древо Души",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Очарование",
+   "Ментальное давление",
+   "Растение",
+   "Древний"
+  ],
+  "kind": "normal",
+  "trauma_pool": "mental",
+  "shards": 2,
+  "art": "res://art/cards/M10.png"
+ },
+ {
+  "id": "M11",
+  "name": "Отродье Мерзкой Птицы",
+  "rank": 4,
+  "class": 4,
+  "tags": [
+   "Древний",
+   "Пожирание душ",
+   "Яйцо"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 20,
+  "art": "res://art/cards/M11.png"
+ },
+ {
+  "id": "M12",
+  "name": "Щупальцевый обитатель",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Глубинный",
+   "Щупальца",
+   "Захват"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M12.png"
+ },
+ {
+  "id": "M15",
+  "name": "Кровавый Изверг",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Жажда крови",
+   "Ярость",
+   "Запах крови"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M15.png"
+ },
+ {
+  "id": "M16",
+  "name": "Живые статуи / Каменная Святая",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Конструкт",
+   "Камень",
+   "Оборона",
+   "Дуэль",
+   "Командование"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M16.png"
+ },
+ {
+  "id": "M17",
+  "name": "Живые статуи / Каменная Святая",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Конструкт",
+   "Камень",
+   "Оборона",
+   "Дуэль",
+   "Командование"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M17.png",
+  "echo": {
+   "card": "P27",
+   "chance": 0.05
+  }
+ },
+ {
+  "id": "M18",
+  "name": "Железные пауки выводка",
+  "rank": 2,
+  "class": 1,
+  "tags": [
+   "Железо",
+   "Сети",
+   "Скорость",
+   "Стая",
+   "Многоногость"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 3,
+  "art": "res://art/cards/M18.png"
+ },
+ {
+  "id": "M19",
+  "name": "Дикобразоподобный монстр",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Шипы",
+   "Метание",
+   "Кость",
+   "Броня"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M19.png"
+ },
+ {
+  "id": "M20",
+  "name": "Василиск",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Взгляд",
+   "Чешуя",
+   "Засада"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M20.png"
+ },
+ {
+  "id": "M21",
+  "name": "Колония термитов",
+  "rank": 1,
+  "class": 3,
+  "tags": [
+   "Рой",
+   "Разумный",
+   "Подземный"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 6,
+  "art": "res://art/cards/M21.png"
+ },
+ {
+  "id": "M23",
+  "name": "Катящийся Камень",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Камень",
+   "Натиск",
+   "Гигант"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M23.png"
+ },
+ {
+  "id": "M24",
+  "name": "Посланник Шпиля",
+  "rank": 2,
+  "class": 1,
+  "tags": [
+   "Летучий",
+   "Пикирование",
+   "Когти"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 3,
+  "art": "res://art/cards/M24.png"
+ },
+ {
+  "id": "M25",
+  "name": "Чёрный Рыцарь",
+  "rank": 2,
+  "class": 4,
+  "tags": [
+   "Дуэль",
+   "Тьма",
+   "Сталь",
+   "Уязвимость: меч"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 12,
+  "art": "res://art/cards/M25.png"
+ },
+ {
+  "id": "M26",
+  "name": "Повелитель Мёртвых",
+  "rank": 2,
+  "class": 5,
+  "tags": [
+   "Нежить",
+   "Призыв",
+   "Кость",
+   "Предводитель"
+  ],
+  "kind": "boss",
+  "trauma_pool": "physical",
+  "shards": 15,
+  "art": "res://art/cards/M26.png"
+ },
+ {
+  "id": "M27",
+  "name": "Скелеты",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Нежить",
+   "Кость",
+   "Стая",
+   "Приспешник"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M27.png"
+ },
+ {
+  "id": "M28",
+  "name": "Пожиратель Трупов",
+  "rank": 2,
+  "class": 1,
+  "tags": [
+   "Клыки",
+   "Кровь",
+   "Пробивание"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 3,
+  "art": "res://art/cards/M28.png"
+ },
+ {
+  "id": "M29",
+  "name": "Железные пауки / Матриарх",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Сети",
+   "Ловушка",
+   "Железо",
+   "Разумный"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M29.png"
+ },
+ {
+  "id": "M30",
+  "name": "Железные пауки / Матриарх",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Сети",
+   "Ловушка",
+   "Железо",
+   "Разумный"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M30.png"
+ },
+ {
+  "id": "M31",
+  "name": "Железные пауки / Матриарх",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Сети",
+   "Ловушка",
+   "Железо",
+   "Разумный"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M31.png"
+ },
+ {
+  "id": "M32",
+  "name": "Гигантская саранча",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Летучий",
+   "Пикирование",
+   "Рой"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M32.png"
+ },
+ {
+  "id": "M33",
+  "name": "Пожиратель Плоти",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Стая",
+   "Голод",
+   "Запах крови"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M33.png"
+ },
+ {
+  "id": "M34",
+  "name": "Кровавый Цветок",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Растение",
+   "Одержимость",
+   "Марионетка",
+   "Паразит"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M34.png"
+ },
+ {
+  "id": "M35",
+  "name": "Проклятый Посланник",
+  "rank": 2,
+  "class": 2,
+  "tags": [
+   "Летучий",
+   "Пикирование",
+   "Проклятие",
+   "Элита"
+  ],
+  "kind": "elite",
+  "trauma_pool": "physical",
+  "shards": 6,
+  "art": "res://art/cards/M35.png"
+ },
+ {
+  "id": "M36",
+  "name": "Коралловые големы Семерых",
+  "rank": 1,
+  "class": 2,
+  "tags": [
+   "Конструкт",
+   "Коралл",
+   "Семь",
+   "Командование"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 4,
+  "art": "res://art/cards/M36.png"
+ },
+ {
+  "id": "M37",
+  "name": "Багровый Ужас",
+  "rank": 2,
+  "class": 6,
+  "tags": [
+   "Коралл",
+   "Ментальное давление",
+   "Порча",
+   "Древний",
+   "Свет"
+  ],
+  "kind": "boss",
+  "trauma_pool": "mental",
+  "shards": 18,
+  "art": "res://art/cards/M37.png"
+ },
+ {
+  "id": "M38",
+  "name": "Осадная орда",
+  "rank": 1,
+  "class": 1,
+  "tags": [
+   "Стая",
+   "Рой",
+   "Летучий",
+   "Паразит"
+  ],
+  "kind": "normal",
+  "trauma_pool": "physical",
+  "shards": 2,
+  "art": "res://art/cards/M38.png"
+ },
+ {
+  "id": "H_AURO",
+  "name": "Ауро из Девяти",
+  "rank": 1,
+  "class": 1,
+  "human": true,
+  "kind": "elite",
+  "tags": [
+   "Дуэль",
+   "Сталь",
+   "Первый удар",
+   "Гордыня",
+   "Человек"
+  ],
+  "trauma_pool": "physical",
+  "shards": 3
+ }
+]

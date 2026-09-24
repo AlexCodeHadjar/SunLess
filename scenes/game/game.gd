@@ -200,7 +200,7 @@ func _build_top() -> void:
 	_top_labels["mana"].tooltip_text = "Мана: Прозрение 1, Концентрация 3, Оберег 4, Медитация 5"
 	_top_labels["mana"].mouse_filter = Control.MOUSE_FILTER_STOP
 	_top_labels["coins"].add_theme_color_override("font_color", Palette.COINS)
-	_top_labels["coins"].tooltip_text = "Монеты: лечение у знахаря, покупки, позже — ремонт у кузнеца"
+	_top_labels["coins"].tooltip_text = "Осколки душ: добыча с убитых тварей; лечение, покупки, ремонт у кузнеца"
 	_top_labels["coins"].mouse_filter = Control.MOUSE_FILTER_STOP
 	_pending_label = UITheme.label("", "serif_italic", 18, Palette.GOLD)
 	_pending_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -295,7 +295,7 @@ func _refresh() -> void:
 	_top_labels["region"].text = str(reg.get("name", s.region))
 	_top_labels["week"].text = "Неделя %d" % s.week
 	_top_labels["mana"].text = "◈ %d" % int(s.resources.get("mana", 0))
-	_top_labels["coins"].text = "⛁ %d" % int(s.resources.get("coins", 0))
+	_top_labels["coins"].text = "✧ %d" % int(s.resources.get("shards", 0))
 	_pending_label.text = "⋯ Надвигается следующая глава" if not s.pending_story.is_empty() else ""
 	_rebuild_markers()
 	_rebuild_cards()

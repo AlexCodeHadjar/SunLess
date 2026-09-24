@@ -10,14 +10,82 @@
     "start_stage": "slave",
     "start_abilities": [],
     "stages": {
-      "slave": {"name": "Раб", "stats": {"power": 3, "will": 5, "cunning": 6}},
-      "sleeper": {"name": "Спящий", "stats": {"power": 4, "will": 7, "cunning": 8}},
-      "sunless": {"name": "Санлес", "stats": {"power": 5, "will": 8, "cunning": 10}}
+      "slave": {
+        "name": "Раб",
+        "stats": {
+          "power": 3,
+          "will": 5,
+          "cunning": 6
+        },
+        "tags": [
+          "Раб",
+          "Хладнокровие",
+          "Импровизация",
+          "Скрытность",
+          "Чутьё",
+          "Человек"
+        ]
+      },
+      "sleeper": {
+        "name": "Спящий",
+        "stats": {
+          "power": 4,
+          "will": 7,
+          "cunning": 8
+        },
+        "tags": [
+          "Хладнокровие",
+          "Импровизация",
+          "Скрытность",
+          "Чутьё",
+          "Человек",
+          "Тень",
+          "Контроль теней",
+          "Благословение теней",
+          "Чистая совесть"
+        ]
+      },
+      "sunless": {
+        "name": "Санлес",
+        "stats": {
+          "power": 5,
+          "will": 8,
+          "cunning": 10
+        },
+        "tags": [
+          "Хладнокровие",
+          "Скрытность",
+          "Чутьё",
+          "Человек",
+          "Тень",
+          "Контроль теней",
+          "Благословение теней",
+          "Чистая совесть",
+          "Засада",
+          "Дуэль",
+          "Плетение крови"
+        ],
+        "rank": 1
+      }
     },
     "traits": [
-      {"name": "Дитя Теней", "text": "+1 Хитрость в скрытности и приманке", "bonuses": [{"stat": "cunning", "value": 1, "tags": ["stealth", "lure"]}]}
+      {
+        "name": "Дитя Теней",
+        "text": "+1 Хитрость в скрытности и приманке",
+        "bonuses": [
+          {
+            "stat": "cunning",
+            "value": 1,
+            "tags": [
+              "stealth",
+              "lure"
+            ]
+          }
+        ]
+      }
     ],
-    "source": "«Дитя Теней», гл. 1–16"
+    "source": "«Дитя Теней», гл. 1–16",
+    "rank": 0
   },
   {
     "id": "P08",
@@ -25,12 +93,40 @@
     "status": "temporary",
     "rarity": "epic",
     "role": "Пробуждённый мечник",
-    "stats": {"power": 9, "will": 8, "cunning": 7},
+    "stats": {
+      "power": 9,
+      "will": 8,
+      "cunning": 7
+    },
     "start_stage": "",
     "traits": [
-      {"name": "Опытный воин", "text": "+2 Сила в дуэлях", "bonuses": [{"stat": "power", "value": 2, "tags": ["duel"]}]}
+      {
+        "name": "Опытный воин",
+        "text": "+2 Сила в дуэлях",
+        "bonuses": [
+          {
+            "stat": "power",
+            "value": 2,
+            "tags": [
+              "duel"
+            ]
+          }
+        ]
+      }
     ],
-    "source": "«Дитя Теней», гл. 5–13"
+    "source": "«Дитя Теней», гл. 5–13",
+    "rank": 1,
+    "tags": [
+      "Дуэль",
+      "Сталь",
+      "Первый удар",
+      "Гордыня",
+      "Человек"
+    ],
+    "support_tags": [
+      "Дуэль",
+      "Первый удар"
+    ]
   },
   {
     "id": "P09",
@@ -38,12 +134,41 @@
     "status": "temporary",
     "rarity": "common",
     "role": "советник / проводник",
-    "stats": {"power": 3, "will": 7, "cunning": 8},
+    "stats": {
+      "power": 3,
+      "will": 7,
+      "cunning": 8
+    },
     "start_stage": "",
     "traits": [
-      {"name": "Старые знания", "text": "+2 Хитрость в пути и непогоде", "bonuses": [{"stat": "cunning", "value": 2, "tags": ["survival", "weather", "climb"]}]}
+      {
+        "name": "Старые знания",
+        "text": "+2 Хитрость в пути и непогоде",
+        "bonuses": [
+          {
+            "stat": "cunning",
+            "value": 2,
+            "tags": [
+              "survival",
+              "weather",
+              "climb"
+            ]
+          }
+        ]
+      }
     ],
-    "source": "«Дитя Теней», гл. 5–12"
+    "source": "«Дитя Теней», гл. 5–12",
+    "rank": 0,
+    "tags": [
+      "Разумный",
+      "Выслеживание",
+      "Слабое тело",
+      "Человек"
+    ],
+    "support_tags": [
+      "Выслеживание",
+      "Разумный"
+    ]
   },
   {
     "id": "P10",
@@ -51,11 +176,38 @@
     "status": "temporary",
     "rarity": "common",
     "role": "плут / оппортунист",
-    "stats": {"power": 4, "will": 4, "cunning": 8},
+    "stats": {
+      "power": 4,
+      "will": 4,
+      "cunning": 8
+    },
     "start_stage": "",
     "traits": [
-      {"name": "Оппортунист", "text": "+2 Хитрость в сделках и ссорах", "bonuses": [{"stat": "cunning", "value": 2, "tags": ["social"]}]}
+      {
+        "name": "Оппортунист",
+        "text": "+2 Хитрость в сделках и ссорах",
+        "bonuses": [
+          {
+            "stat": "cunning",
+            "value": 2,
+            "tags": [
+              "social"
+            ]
+          }
+        ]
+      }
     ],
-    "source": "«Дитя Теней», гл. 5–10"
+    "source": "«Дитя Теней», гл. 5–10",
+    "rank": 0,
+    "tags": [
+      "Ложь",
+      "Бегство",
+      "Трус",
+      "Человек"
+    ],
+    "support_tags": [
+      "Ложь",
+      "Бегство"
+    ]
   }
 ]

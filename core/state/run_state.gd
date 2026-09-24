@@ -8,7 +8,7 @@ const SAVE_VERSION := 1
 var week: int = 1
 var arc: String = ""
 var region: String = ""
-var resources: Dictionary = {"coins": 10, "mana": 10}
+var resources: Dictionary = {"shards": 10, "mana": 10}
 ## ID карт в нижней панели: персонажи, усиления, знания, инициаторы.
 var collection: Array = []
 ## character_id -> {stage, traumas:[], perm:{power,will,cunning}, abilities:[], alive}
@@ -29,6 +29,10 @@ var random_used: Dictionary = {}
 ## event_id -> {character: String, enhancements: []}
 var drafts: Dictionary = {}
 var codex: Array = []
+## Бой: раны врагов по событию, настороженность, изменения боя от других вариантов
+var enemy_wounds: Dictionary = {}
+var enemy_alert: Dictionary = {}
+var combat_mods: Dictionary = {}
 var log: Array = []
 var game_over: bool = false
 var demo_complete: bool = false
@@ -54,6 +58,9 @@ func to_dict() -> Dictionary:
 		"random_used": random_used.duplicate(true),
 		"drafts": drafts.duplicate(true),
 		"codex": codex.duplicate(true),
+		"enemy_wounds": enemy_wounds.duplicate(true),
+		"enemy_alert": enemy_alert.duplicate(true),
+		"combat_mods": combat_mods.duplicate(true),
 		"log": log.duplicate(true),
 		"game_over": game_over,
 		"demo_complete": demo_complete,
@@ -69,6 +76,9 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.arc = str(d.get("arc", ""))
 	s.region = str(d.get("region", ""))
 	s.resources = _ints(d.get("resources", {}))
+	if s.resources.has("coins") and not s.resources.has("shards"):  # старые сохранения
+		s.resources["shards"] = s.resources["coins"]
+	s.resources.erase("coins")
 	s.collection = Array(d.get("collection", [])).duplicate(true)
 	s.characters = Dictionary(d.get("characters", {})).duplicate(true)
 	for cid: String in s.characters:
@@ -90,6 +100,9 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.random_used = Dictionary(d.get("random_used", {})).duplicate(true)
 	s.drafts = Dictionary(d.get("drafts", {})).duplicate(true)
 	s.codex = Array(d.get("codex", [])).duplicate(true)
+	s.enemy_wounds = _ints(d.get("enemy_wounds", {}))
+	s.enemy_alert = Dictionary(d.get("enemy_alert", {})).duplicate(true)
+	s.combat_mods = Dictionary(d.get("combat_mods", {})).duplicate(true)
 	s.log = Array(d.get("log", [])).duplicate(true)
 	for entry: Dictionary in s.log:
 		for k: String in ["week", "chance", "roll"]:
