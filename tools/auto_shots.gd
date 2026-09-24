@@ -92,15 +92,16 @@ func _run() -> void:
 		if ch is CombatScreen:
 			cs_screen = ch
 	cs_screen.call("_on_action")
-	await _wait(1.0)
+	await _wait(2.2)
 	await _shot("10a_beams_in_flight")
-	await _wait(3.5)
+	await _wait(6.5)
 	await _shot("10_combat_round")
 	var hand: Array = GameState.combat.hand
 	if not hand.is_empty():
 		cs_screen.call("_pick_tactic", hand[0])
-	await _wait(0.5)
-	await _wait(2.5)
+	await _wait(0.6)
+	await _shot("10b_tactic_diff")
+	await _wait(1.5)
 	await _shot("10c_tactic_selected")
 	cs_screen.call("_on_action")
 	await _wait(1.3)

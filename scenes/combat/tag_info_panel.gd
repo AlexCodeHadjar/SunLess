@@ -17,9 +17,9 @@ func _ready() -> void:
 	_label.bbcode_enabled = true
 	_label.fit_content = true
 	_label.scroll_active = false
-	_label.custom_minimum_size = Vector2(380, 0)
+	_label.custom_minimum_size = Vector2(460, 0)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_label.add_theme_font_size_override("normal_font_size", 16)
+	_label.add_theme_font_size_override("normal_font_size", 19)
 	add_child(_label)
 	visible = false
 

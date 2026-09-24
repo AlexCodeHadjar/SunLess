@@ -124,11 +124,11 @@ func _draw() -> void:
 
 ## Всплывающее число над точкой попадания.
 static func popup(parent: Control, at: Vector2, text: String, col: Color) -> void:
-	var l := UITheme.label(text, "title_bold", 24, col)
-	var w := maxf(240.0, UITheme.font("title_bold").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x + 20.0)
+	var l := UITheme.label(text, "title_bold", 30, col)
+	var w := maxf(240.0, UITheme.font("title_bold").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x + 20.0)
 	l.custom_minimum_size.x = w
 	# не выходить за края экрана
-	l.position = Vector2(clampf(at.x - w / 2.0, 10.0, parent.size.x - w - 10.0), maxf(at.y - 20.0, 60.0))
+	l.position = Vector2(clampf(at.x - w / 2.0, 10.0, parent.size.x - w - 10.0), maxf(at.y - 20.0, 96.0))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.z_index = 40
 	l.add_theme_constant_override("outline_size", 6)

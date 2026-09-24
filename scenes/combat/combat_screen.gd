@@ -8,16 +8,22 @@ signal closed
 
 enum Phase { PREP, SELECT, RESULT, DONE }
 
-const BOARD := Rect2(150, 64, 1620, 736)
+const BOARD := Rect2(40, 60, 1840, 744)
 # вертикальная раскладка поля (координаты внутри BOARD)
-const MID_X := 810.0
-const ENEMY_Y := 18.0
-const FIELD_Y := 300.0
-const SCALE_Y := 330.0
-const HERO_Y := 428.0
-const SIDE_Y := 448.0
-const HERO_SIZE := Vector2(126, 216)
-const SIDE_SIZE := Vector2(104, 178)
+const MID_X := 920.0
+const ENEMY_Y := 16.0
+const FIELD_Y := 306.0
+const SCALE_Y := 338.0
+const HERO_Y := 442.0
+const SIDE_Y := 470.0
+const ENEMY_SIZE := Vector2(164, 282)
+const ENEMY_COMPACT := Vector2(120, 206)
+const HERO_SIZE := Vector2(170, 292)
+const SIDE_SIZE := Vector2(136, 234)
+const SIDE_COMPACT := Vector2(112, 192)
+const TAG_COL := 200.0      # ширина столбца тегов справа от карты героя/врага
+const SIDE_COL := 158.0     # то же для союзников и усилений
+const STAGES := ["base", "tags", "synergy", "conflict", "field", "round_no", "state", "tactic", "intent", "stat"]
 
 var event_id := ""
 var option_id := ""
@@ -56,61 +62,140 @@ var _last_led: Dictionary = {}
 
 class ScaleBar extends Control:
 	## Весы силы: числа сторон, полоса долей и шанс раунда; указатель броска.
+	## Во время набора силы числа досчитываются по шагам, у каждого числа — подпись шага.
 	var hero := 100.0
 	var enemy := 100.0
 	var chance := 50
 	var marker := -1.0
-	var _tw: Tween
+	var building := false
+	var _caps := {"hero": "", "enemy": ""}
+	var _cap_cols := {"hero": Color.WHITE, "enemy": Color.WHITE}
+	var _cap_a := {"hero": 0.0, "enemy": 0.0}
+	var _pulse := {"hero": 0.0, "enemy": 0.0}
+	var _tws := {}
+
+	func _kill(key: String) -> void:
+		var tw: Tween = _tws.get(key)
+		if tw and tw.is_valid():
+			tw.kill()
 
 	func set_values(h: float, e: float, c: int, dur: float = 0.35) -> void:
-		if _tw:
-			_tw.kill()
-		_tw = create_tween()
-		_tw.tween_method(_set_hero, hero, h, dur)
-		_tw.parallel().tween_method(_set_enemy, enemy, e, dur)
+		for k: String in ["hero", "enemy", "roll"]:
+			_kill(k)
+		var tw := create_tween()
+		tw.tween_method(_set_hero, hero, h, maxf(dur, 0.01))
+		tw.parallel().tween_method(_set_enemy, enemy, e, maxf(dur, 0.01))
+		_tws["hero"] = tw
 		if c > 0:
 			chance = c
 		marker = -1.0
 		queue_redraw()
 
-	func _set_hero(v: float) -> void:
-		hero = v
+	## Обе силы в ноль — начало набора.
+	func reset() -> void:
+		for k: String in ["hero", "enemy", "roll", "cap_hero", "cap_enemy"]:
+			_kill(k)
+		hero = 0.0
+		enemy = 0.0
+		marker = -1.0
+		_cap_a = {"hero": 0.0, "enemy": 0.0}
+		queue_redraw()
+
+	## Один шаг одной стороны: число плавно доезжает до value, рядом вспыхивает подпись.
+	func step(side: String, value: float, caption: String, col: Color, dur: float) -> void:
+		_kill(side)
+		var tw := create_tween()
+		tw.tween_method(_set_hero if side == "hero" else _set_enemy, hero if side == "hero" else enemy, value, dur).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		tw.parallel().tween_method(_set_pulse.bind(side), 1.0, 0.0, dur + 0.2)
+		_tws[side] = tw
+		if caption != "":
+			_caps[side] = caption
+			_cap_cols[side] = col
+			_kill("cap_" + side)
+			var ct := create_tween()
+			ct.tween_method(_set_cap.bind(side), 1.0, 1.0, 1.1)
+			ct.tween_method(_set_cap.bind(side), 1.0, 0.0, 0.5)
+			_tws["cap_" + side] = ct
+
+	func _set_cap(v: float, side: String) -> void:
+		_cap_a[side] = v
+		queue_redraw()
+
+	func _set_pulse(v: float, side: String) -> void:
+		_pulse[side] = v
+		queue_redraw()
+
+	func _recalc() -> void:
 		chance = clampi(int(round(100.0 * hero / maxf(1.0, hero + enemy))), 5, 95)
 		queue_redraw()
+
+	func _set_hero(v: float) -> void:
+		hero = v
+		_recalc()
 
 	func _set_enemy(v: float) -> void:
 		enemy = v
-		chance = clampi(int(round(100.0 * hero / maxf(1.0, hero + enemy))), 5, 95)
-		queue_redraw()
+		_recalc()
 
 	func play_roll(value: int, speed: float) -> void:
+		_kill("roll")
 		var tw := create_tween()
 		tw.tween_method(_set_marker, 0.0, 100.0, 0.35 * maxf(speed, 0.05))
 		tw.tween_method(_set_marker, 100.0, float(value), 0.55 * maxf(speed, 0.05)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_tws["roll"] = tw
+
+	## Размер шрифта подписи, чтобы она влезла в ширину (от 19 до 13).
+	func _fit(f: Font, text: String, width: float) -> int:
+		var fs := 19
+		while fs > 13 and f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+			fs -= 1
+		return fs
 
 	func _set_marker(v: float) -> void:
 		marker = v
 		queue_redraw()
 
-	## Сверху: сила героя — шанс — сила врага; ниже полоса долей; подпись под ней. Всё в 84 px высоты.
+	## Сверху: сила героя — шанс — сила врага; ниже полоса долей; подпись под ней. Всё в 96 px высоты.
 	func _draw() -> void:
 		var w := size.x
-		var y := 46.0
-		var h := 16.0
-		var share := hero / maxf(1.0, hero + enemy)
+		var y := 52.0
+		var h := 20.0
+		var both := hero >= 1.0 and enemy >= 1.0
+		var share := hero / (hero + enemy) if both else 0.5
 		draw_rect(Rect2(0, y, w, h), Color("#0B0C11"))
-		draw_rect(Rect2(0, y, w * share, h), Palette.SILVER.darkened(0.1))
-		draw_rect(Rect2(w * share, y, w * (1.0 - share), h), Palette.TRAUMA.lightened(0.2))
+		if hero >= 1.0 or enemy >= 1.0:
+			draw_rect(Rect2(0, y, w * share, h), Palette.SILVER.darkened(0.1))
+			draw_rect(Rect2(w * share, y, w * (1.0 - share), h), Palette.TRAUMA.lightened(0.2))
 		draw_rect(Rect2(0, y, w, h), Palette.LINE, false, 1.0)
-		var cz := w * chance / 100.0
-		draw_line(Vector2(cz, y - 6), Vector2(cz, y + h + 6), Palette.GOLD, 2.0)
 		var fb := UITheme.font("title_bold")
 		var f := UITheme.font("sans")
-		draw_string(fb, Vector2(0, 34), "%d" % int(round(hero)), HORIZONTAL_ALIGNMENT_LEFT, -1, 36, Palette.SILVER)
-		draw_string(fb, Vector2(0, 34), "%d" % int(round(enemy)), HORIZONTAL_ALIGNMENT_RIGHT, w, 36, Palette.STAT_DOWN)
-		draw_string(fb, Vector2(0, 36), "%d%%" % chance, HORIZONTAL_ALIGNMENT_CENTER, w, 40,
+		var fsb := UITheme.font("sans_bold")
+		if both:
+			var cz := w * chance / 100.0
+			draw_line(Vector2(cz, y - 6), Vector2(cz, y + h + 6), Palette.GOLD, 2.0)
+		# числа сторон с «пульсом» на каждом шаге
+		var hs := 46 + int(10 * _pulse["hero"])
+		var es := 46 + int(10 * _pulse["enemy"])
+		var htxt := "%d" % int(round(hero))
+		var etxt := "%d" % int(round(enemy))
+		draw_string(fb, Vector2(0, 40), htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, hs, Palette.SILVER.lightened(0.3 * _pulse["hero"]))
+		draw_string(fb, Vector2(0, 40), etxt, HORIZONTAL_ALIGNMENT_RIGHT, w, es, Palette.STAT_DOWN.lightened(0.3 * _pulse["enemy"]))
+		draw_string(fb, Vector2(0, 44), ("%d%%" % chance) if both else "…", HORIZONTAL_ALIGNMENT_CENTER, w, 54,
 			Palette.chance_color(chance, SettingsService.get_value("chance_monochrome")))
-		draw_string(f, Vector2(0, y + h + 18), "сила героя · шанс раунда · сила врага", HORIZONTAL_ALIGNMENT_CENTER, w, 13, Palette.TEXT_DIM)
+		# подписи шагов: у героя — справа от числа, у врага — слева
+		var cap_w := w / 2.0 - 110.0
+		if _cap_a["hero"] > 0.01:
+			var x0 := fb.get_string_size(htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 46).x + 16.0
+			var hf := _fit(fsb, _caps["hero"], cap_w - x0)
+			draw_string(fsb, Vector2(x0, 34), _caps["hero"], HORIZONTAL_ALIGNMENT_LEFT, cap_w - x0, hf, Color(_cap_cols["hero"], _cap_a["hero"]))
+		if _cap_a["enemy"] > 0.01:
+			var x1 := w - fb.get_string_size(etxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 46).x - 16.0
+			var avail := x1 - (w - cap_w)
+			var ef := _fit(fsb, _caps["enemy"], avail)
+			var cw := minf(fsb.get_string_size(_caps["enemy"], HORIZONTAL_ALIGNMENT_LEFT, -1, ef).x, avail)
+			draw_string(fsb, Vector2(x1 - cw, 34), _caps["enemy"], HORIZONTAL_ALIGNMENT_LEFT, cw, ef, Color(_cap_cols["enemy"], _cap_a["enemy"]))
+		var hint := "сила героя · шанс раунда · сила врага" + ("   ·   щелчок — сразу итог" if building else "")
+		draw_string(f, Vector2(0, y + h + 22), hint, HORIZONTAL_ALIGNMENT_CENTER, w, 16, Palette.TEXT_DIM)
 		if marker >= 0:
 			var mx := w * marker / 100.0
 			draw_line(Vector2(mx, y - 10), Vector2(mx, y + h + 10), Palette.TEXT, 3.0)
@@ -131,16 +216,16 @@ class IntentCard extends Control:
 		draw_rect(r, Palette.STAT_DOWN, false, 2.0)
 		draw_rect(inner, Palette.TRAUMA, false, 1.0)
 		var f := UITheme.font("sans")
-		draw_string(UITheme.font("caps"), inner.position + Vector2(0, 22), "НАМЕРЕНИЕ ВРАГА", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 13, Palette.STAT_DOWN)
+		draw_string(UITheme.font("caps"), inner.position + Vector2(0, 26), "НАМЕРЕНИЕ ВРАГА", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 16, Palette.STAT_DOWN)
 		if ability.is_empty():
-			draw_string(f, inner.position + Vector2(0, 110), "раскроется в раунде", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 15, Palette.TEXT_DIM)
+			draw_string(f, inner.position + Vector2(0, 140), "раскроется в раунде", HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 19, Palette.TEXT_DIM)
 			return
-		draw_multiline_string(UITheme.font("title"), inner.position + Vector2(6, 54), str(ability.get("name", "")), HORIZONTAL_ALIGNMENT_CENTER, inner.size.x - 12, 22, 2, Palette.TEXT)
-		draw_line(inner.position + Vector2(16, 88), inner.position + Vector2(inner.size.x - 16, 88), Palette.TRAUMA, 1.0)
-		draw_multiline_string(f, inner.position + Vector2(8, 108), str(ability.get("text", "")), HORIZONTAL_ALIGNMENT_LEFT, inner.size.x - 16, 13, 7, Palette.TEXT_DIM)
+		draw_multiline_string(UITheme.font("title"), inner.position + Vector2(6, 64), str(ability.get("name", "")), HORIZONTAL_ALIGNMENT_CENTER, inner.size.x - 12, 27, 2, Palette.TEXT)
+		draw_line(inner.position + Vector2(16, 108), inner.position + Vector2(inner.size.x - 16, 108), Palette.TRAUMA, 1.0)
+		draw_multiline_string(f, inner.position + Vector2(10, 134), str(ability.get("text", "")), HORIZONTAL_ALIGNMENT_LEFT, inner.size.x - 20, 17, 7, Palette.TEXT_DIM)
 		if negated_by != "":
 			draw_line(inner.position + Vector2(10, 40), inner.end - Vector2(10, 30), Color(Palette.SILVER, 0.7), 3.0)
-			draw_string(UITheme.font("sans_bold"), Vector2(inner.position.x, inner.end.y - 8), "ПОГАШЕНО: %s" % negated_by, HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 13, Palette.SILVER)
+			draw_string(UITheme.font("sans_bold"), Vector2(inner.position.x, inner.end.y - 10), "ПОГАШЕНО: %s" % negated_by, HORIZONTAL_ALIGNMENT_CENTER, inner.size.x, 16, Palette.SILVER)
 
 
 # --- построение ---------------------------------------------------------------------
@@ -163,63 +248,66 @@ func _ready() -> void:
 
 	_build_board()
 
-	var title := UITheme.label("СТОЛКНОВЕНИЕ", "caps", 30, Palette.SILVER)
-	title.position = Vector2(40, 16)
+	var title := UITheme.label("СТОЛКНОВЕНИЕ", "caps", 34, Palette.SILVER)
+	title.position = Vector2(40, 8)
 	add_child(title)
-	_pips = UITheme.label("", "title_bold", 24, Palette.TEXT)
-	_pips.position = Vector2(560, 20)
+	_pips = UITheme.label("", "title_bold", 29, Palette.TEXT)
+	_pips.position = Vector2(560, 10)
 	_pips.custom_minimum_size.x = 800
 	_pips.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_pips)
 	var retreat := Button.new()
 	retreat.text = "ОТСТУПИТЬ"
-	retreat.position = Vector2(1690, 14)
-	retreat.custom_minimum_size = Vector2(190, 44)
+	retreat.position = Vector2(1670, 8)
+	retreat.custom_minimum_size = Vector2(210, 46)
+	retreat.add_theme_font_size_override("font_size", 20)
 	retreat.tooltip_text = "Бой прекратится без новых травм. Событие останется, раны врага сохранятся, он станет настороженным."
 	retreat.pressed.connect(_on_retreat)
 	add_child(retreat)
 
 	_hand_box = HBoxContainer.new()
 	_hand_box.add_theme_constant_override("separation", 22)
-	_hand_box.position = Vector2(170, 812)
+	_hand_box.position = Vector2(40, 818)
 	add_child(_hand_box)
 	_ledger_btn = Button.new()
 	_ledger_btn.text = "ЛЕТОПИСЬ СИЛЫ"
-	_ledger_btn.position = Vector2(1180, 842)
-	_ledger_btn.custom_minimum_size = Vector2(230, 46)
+	_ledger_btn.position = Vector2(1060, 850)
+	_ledger_btn.custom_minimum_size = Vector2(270, 54)
+	_ledger_btn.add_theme_font_size_override("font_size", 21)
 	_ledger_btn.tooltip_text = "Пошаговый расчёт обеих сторон"
 	_ledger_btn.pressed.connect(_toggle_ledger)
 	add_child(_ledger_btn)
 	_no_tactic_btn = Button.new()
 	_no_tactic_btn.text = "Без приёма"
-	_no_tactic_btn.position = Vector2(1180, 902)
-	_no_tactic_btn.custom_minimum_size = Vector2(230, 46)
+	_no_tactic_btn.position = Vector2(1060, 918)
+	_no_tactic_btn.custom_minimum_size = Vector2(270, 54)
+	_no_tactic_btn.add_theme_font_size_override("font_size", 21)
 	_no_tactic_btn.pressed.connect(_pick_tactic.bind(""))
 	add_child(_no_tactic_btn)
 	_action_btn = Button.new()
-	_action_btn.position = Vector2(1430, 862)
-	_action_btn.custom_minimum_size = Vector2(340, 84)
+	_action_btn.position = Vector2(1400, 856)
+	_action_btn.custom_minimum_size = Vector2(440, 110)
 	_action_btn.add_theme_font_override("font", UITheme.font("caps"))
-	_action_btn.add_theme_font_size_override("font_size", 24)
+	_action_btn.add_theme_font_size_override("font_size", 30)
 	_action_btn.pressed.connect(_on_action)
 	add_child(_action_btn)
 
 	_ledger_panel = PanelContainer.new()
-	_ledger_panel.position = Vector2(1010, 380)
-	_ledger_panel.custom_minimum_size = Vector2(740, 400)
+	_ledger_panel.position = Vector2(960, 290)
+	_ledger_panel.custom_minimum_size = Vector2(900, 500)
 	_ledger_panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.05, 0.07, 0.97), Palette.LINE, 1, 4, 14))
 	_ledger_panel.z_index = 30
 	_ledger_panel.visible = false
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(710, 370)
+	sc.custom_minimum_size = Vector2(870, 470)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_ledger_panel.add_child(sc)
-	_ledger = _rich(690, 15)
+	_ledger = _rich(850, 18)
 	sc.add_child(_ledger)
 	add_child(_ledger_panel)
 
-	_banner = UITheme.label("", "title_bold", 50, Palette.TEXT)
-	_banner.position = Vector2(0, 250)
+	_banner = UITheme.label("", "title_bold", 58, Palette.TEXT)
+	_banner.position = Vector2(0, 270)
 	_banner.custom_minimum_size = Vector2(1920, 0)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 10)
@@ -244,6 +332,7 @@ func _build_board() -> void:
 	_board.position = BOARD.position
 	_board.size = BOARD.size
 	_board.clip_contents = true
+	_board.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_board)
 	var bd := MapBackdrop.new()
 	bd.snow = true
@@ -264,43 +353,46 @@ func _build_board() -> void:
 	_board_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_board_layer.mouse_filter = Control.MOUSE_FILTER_PASS
 	_board.add_child(_board_layer)
-	_field_row = _flow(760)
-	_field_row.position = Vector2(MID_X - 380, FIELD_Y)
+	_field_row = _flow(1100)
+	_field_row.position = Vector2(MID_X - 550, FIELD_Y)
 	_board.add_child(_field_row)
 	_round_box = PanelContainer.new()
-	_round_box.position = Vector2(26, 300)
-	_round_box.custom_minimum_size = Vector2(340, 150)
-	_round_box.pivot_offset = Vector2(170, 75)
+	_round_box.position = Vector2(22, 22)
+	_round_box.custom_minimum_size = Vector2(300, 272)
+	_round_box.pivot_offset = Vector2(150, 136)
 	_round_box.add_theme_stylebox_override("panel", UITheme.box(Color(0.1, 0.09, 0.07, 0.95), Palette.GOLD.darkened(0.2), 1, 4, 12))
 	_board.add_child(_round_box)
 	var rv := VBoxContainer.new()
 	rv.add_theme_constant_override("separation", 3)
 	_round_box.add_child(rv)
-	rv.add_child(UITheme.label("КАРТА РАУНДА", "caps", 13, Palette.GOLD))
-	_round_title = UITheme.label("", "sans_bold", 21, Palette.TEXT)
+	rv.add_theme_constant_override("separation", 6)
+	rv.add_child(UITheme.label("КАРТА РАУНДА", "caps", 16, Palette.GOLD))
+	_round_title = UITheme.label("", "sans_bold", 25, Palette.TEXT)
+	_round_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_round_title.custom_minimum_size.x = 272
 	rv.add_child(_round_title)
-	_round_tags = _flow(310)
+	_round_tags = _flow(272)
 	_round_tags.alignment = FlowContainer.ALIGNMENT_BEGIN
 	rv.add_child(_round_tags)
-	_round_label = _rich(310, 15)
+	_round_label = _rich(272, 18)
 	rv.add_child(_round_label)
 	_scale = ScaleBar.new()
-	_scale.position = Vector2(MID_X - 390, SCALE_Y)
-	_scale.size = Vector2(780, 84)
+	_scale.position = Vector2(MID_X - 520, SCALE_Y)
+	_scale.size = Vector2(1040, 96)
 	_board.add_child(_scale)
 	_intent_card = IntentCard.new()
-	_intent_card.position = Vector2(1380, 30)
-	_intent_card.size = Vector2(200, 250)
+	_intent_card.size = Vector2(270, 300)
+	_intent_card.position = Vector2(BOARD.size.x - 22 - 270, 18)
 	_board.add_child(_intent_card)
 	_beams = Beams.new()
 	add_child(_beams)
 	# невидимые «стёкла» — наклонные плоскости в средней полосе, от них отражаются лучи
 	var o := BOARD.position
 	_glass = [
-		[o + Vector2(260, 300), o + Vector2(620, 420)],
-		[o + Vector2(700, 280), o + Vector2(930, 460)],
-		[o + Vector2(1000, 440), o + Vector2(1340, 300)],
-		[o + Vector2(420, 470), o + Vector2(820, 360)],
+		[o + Vector2(MID_X - 640, 312), o + Vector2(MID_X - 250, 436)],
+		[o + Vector2(MID_X - 160, 300), o + Vector2(MID_X + 100, 440)],
+		[o + Vector2(MID_X + 180, 436), o + Vector2(MID_X + 600, 312)],
+		[o + Vector2(MID_X - 440, 440), o + Vector2(MID_X + 20, 330)],
 	]
 
 
@@ -329,26 +421,29 @@ func _rich(width: float, fs: int = 16) -> RichTextLabel:
 
 # --- карты на поле -----------------------------------------------------------------
 
-## Раскладывает карты сторон: враги сверху, мои снизу; под каждой — ряд её тегов-чипов.
+## Раскладывает карты сторон: враги сверху, мои снизу. Теги — столбцом справа от карты;
+## если карт на стороне много — карты компактнее, а теги рядом под ними.
 func _layout(cs: CombatSession) -> void:
 	for ch in _board_layer.get_children():
 		ch.queue_free()
 	_carriers.clear()
 	var n := cs.enemies.size()
-	var esz := Vector2(112, 192) if n <= 3 else Vector2(96, 165)
-	var gap := 100.0 if n <= 2 else (64.0 if n == 3 else 40.0)
-	var total_w := n * esz.x + (n - 1) * gap
-	var x := MID_X - total_w / 2.0
+	var beside := n <= 3
+	var esz := ENEMY_SIZE if beside else ENEMY_COMPACT
+	var block := esz.x + 10.0 + TAG_COL if beside else esz.x + 50.0
+	var gap := 40.0 if beside else 16.0
+	var x := MID_X - (n * block + (n - 1) * gap) / 2.0
 	for e: Dictionary in cs.enemies:
 		var cv := CardView.make(str(e["id"]), esz, false)
-		cv.position = Vector2(x, ENEMY_Y)
+		cv.position = Vector2(x + (0.0 if beside else 25.0), ENEMY_Y)
 		cv.sway = true
 		cv.set_process(true)
 		_board_layer.add_child(cv)
-		_add_tags_under(cv, e.get("tags", []), "enemy", esz.x + gap - 8, FIELD_Y - 6)
-		x += esz.x + gap
+		_place_tags(cv, e.get("tags", []), "enemy", beside, TAG_COL if beside else block - 6.0, 18 if beside else 15, FIELD_Y - 6.0)
+		x += block + gap
 	_carriers.append({"node": _intent_card, "side": "intent", "tags": [str(cs.intent.get("name", ""))], "chips": {}})
-	var hero_x := MID_X - HERO_SIZE.x / 2.0
+	# герой: карта и столбец тегов, блок по центру поля
+	var hero_x := MID_X - (HERO_SIZE.x + 10.0 + TAG_COL) / 2.0
 	_hero_card = CardView.make(cs.hero, HERO_SIZE, false)
 	_hero_card.position = Vector2(hero_x, HERO_Y)
 	_board_layer.add_child(_hero_card)
@@ -358,21 +453,18 @@ func _layout(cs: CombatSession) -> void:
 	for t: String in cs.hero_extra_tags + Array(cs.mods.get("hero_tags", [])):
 		if not htags.has(t):
 			htags.append(t)
-	_add_tags_under(_hero_card, htags, "hero", HERO_SIZE.x + 44, BOARD.size.y - 10)
-	var ex := hero_x + HERO_SIZE.x + 44
+	_place_tags(_hero_card, htags, "hero", true, TAG_COL, 19, BOARD.size.y - 10.0)
+	# усиления справа от героя, союзники слева; больше двух на стороне — компактно
+	var right := hero_x + HERO_SIZE.x + 10.0 + TAG_COL + 24.0
+	var enh_compact := cs.enh.size() > 2
 	for e: String in cs.enh:
-		var ec := CardView.make(e, SIDE_SIZE, false)
-		ec.position = Vector2(ex, SIDE_Y)
-		_board_layer.add_child(ec)
-		_add_tags_under(ec, ContentDB.data.enhancements.get(e, {}).get("tags", []), "hero", SIDE_SIZE.x + 34, BOARD.size.y - 10)
-		ex += SIDE_SIZE.x + 42
-	var ax := hero_x - 44 - SIDE_SIZE.x
+		right += _side_card(e, ContentDB.data.enhancements.get(e, {}).get("tags", []), right, enh_compact) + 20.0
+	var left := hero_x - 24.0
+	var ally_compact := cs.allies.size() > 2
 	for a: String in cs.allies:
-		var ac := CardView.make(a, SIDE_SIZE, false)
-		ac.position = Vector2(ax, SIDE_Y)
-		_board_layer.add_child(ac)
-		_add_tags_under(ac, ContentDB.data.characters.get(a, {}).get("support_tags", []), "hero", SIDE_SIZE.x + 34, BOARD.size.y - 10)
-		ax -= SIDE_SIZE.x + 42
+		left -= _side_block_width(ally_compact)
+		_side_card(a, ContentDB.data.characters.get(a, {}).get("support_tags", []), left, ally_compact)
+		left -= 20.0
 	_fill_field(cs.field)
 	_fill_round(cs.round_card)
 	_intent_card.ability = cs.intent
@@ -380,15 +472,58 @@ func _layout(cs: CombatSession) -> void:
 	_intent_card.queue_redraw()
 
 
+func _side_block_width(compact: bool) -> float:
+	return SIDE_COMPACT.x + 44.0 if compact else SIDE_SIZE.x + 8.0 + SIDE_COL
+
+
+## Карта союзника или усиления с тегами; x — левый край блока. Возвращает ширину блока.
+func _side_card(id: String, tags: Array, x: float, compact: bool) -> float:
+	var w := _side_block_width(compact)
+	var c := CardView.make(id, SIDE_COMPACT if compact else SIDE_SIZE, false)
+	c.position = Vector2(x + (22.0 if compact else 0.0), SIDE_Y + (12.0 if compact else 0.0))
+	_board_layer.add_child(c)
+	_place_tags(c, tags, "hero", not compact, w if compact else SIDE_COL, 15 if compact else 17, BOARD.size.y - 10.0)
+	return w
+
+
+## Теги карты: столбцом справа (beside) или рядом под ней, не ниже max_y.
+## Не влезают — шрифт мельче, в крайнем случае только иконки.
+func _place_tags(card: Control, tags: Array, side: String, beside: bool, width: float, fs0: int, max_y: float) -> void:
+	var pos: Vector2
+	var max_h: float
+	if beside:
+		pos = card.position + Vector2(card.size.x + 10.0, 2.0)
+		max_h = card.size.y - 2.0
+	else:
+		pos = Vector2(card.position.x + card.size.x / 2.0 - width / 2.0, card.position.y + card.size.y + 4.0)
+		max_h = max_y - pos.y
+	var fs := fs0
+	var icon_only := false
+	for opt: Array in [[fs0, false], [fs0 - 1, false], [fs0 - 2, false], [fs0 - 3, false], [18, true]]:
+		fs = opt[0]
+		icon_only = opt[1]
+		if _rows_needed(tags, width, fs, icon_only) * (fs + 9) <= max_h + 3:
+			break
+	var row := _flow(width)
+	if beside:
+		row.alignment = FlowContainer.ALIGNMENT_BEGIN
+	if icon_only:
+		row.add_theme_constant_override("h_separation", 5)
+	row.position = pos
+	_board_layer.add_child(row)
+	var chips := _add_chips(row, tags, fs, icon_only)
+	_carriers.append({"node": card, "side": side, "tags": tags, "chips": chips})
+
+
 ## Табличка поля боя: подпись, название (якорь лучей поля) и теги-чипы.
 func _fill_field(field: Dictionary) -> void:
 	for ch in _field_row.get_children():
 		ch.queue_free()
-	_field_row.add_child(UITheme.label("ПОЛЕ БОЯ", "caps", 14, Palette.GOLD))
-	var name_l := UITheme.label(str(field.get("name", "")), "sans_bold", 17, Palette.TEXT)
+	_field_row.add_child(UITheme.label("ПОЛЕ БОЯ", "caps", 17, Palette.GOLD))
+	var name_l := UITheme.label(str(field.get("name", "")), "sans_bold", 21, Palette.TEXT)
 	_field_row.add_child(name_l)
 	var tags: Array = field.get("tags", [])
-	var chips := _add_chips(_field_row, tags, 14, false)
+	var chips := _add_chips(_field_row, tags, 18, false)
 	_carriers.append({"node": name_l, "side": "env", "tags": tags, "chips": chips, "name": str(field.get("name", ""))})
 
 
@@ -406,7 +541,7 @@ func _fill_round(card: Dictionary) -> void:
 	_round_title.text = str(card.get("name", ""))
 	var tags: Array = card.get("tags", [])
 	_round_tags.visible = not tags.is_empty()
-	var chips := _add_chips(_round_tags, tags, 14, false)
+	var chips := _add_chips(_round_tags, tags, 18, false)
 	_round_label.text = "[color=#9A9CA6]%s[/color]\n[color=#C9CED6]Характеристика: %s[/color]" % [card.get("text", ""), stat_name]
 	_carriers.append({"node": _round_title, "side": "env", "tags": tags, "chips": chips, "name": str(card.get("name", ""))})
 
@@ -417,8 +552,8 @@ func _flow(width: float) -> HFlowContainer:
 	f.custom_minimum_size = Vector2(width, 0)
 	f.size = Vector2(width, 0)
 	f.mouse_filter = Control.MOUSE_FILTER_PASS
-	f.add_theme_constant_override("h_separation", 9)
-	f.add_theme_constant_override("v_separation", 1)
+	f.add_theme_constant_override("h_separation", 10)
+	f.add_theme_constant_override("v_separation", 3)
 	return f
 
 
@@ -432,27 +567,8 @@ func _add_chips(parent: Control, tags: Array, fs: int, icon_only: bool) -> Dicti
 	return chips
 
 
-## Ряд тегов под картой: переносится по ширине, не ниже max_y. Не влезает — мельче шрифт, затем только иконки.
-func _add_tags_under(card: Control, tags: Array, side: String, width: float, max_y: float) -> void:
-	var top := card.position.y + card.size.y + 4
-	var fs := 13
-	var icon_only := false
-	for opt: Array in [[13, false], [12, false], [11, false], [16, true]]:
-		fs = opt[0]
-		icon_only = opt[1]
-		if top + _rows_needed(tags, width, fs, icon_only) * (fs + 7) <= max_y:
-			break
-	var row := _flow(width)
-	if icon_only:
-		row.add_theme_constant_override("h_separation", 5)
-	row.position = Vector2(card.position.x + card.size.x / 2.0 - width / 2.0, top)
-	_board_layer.add_child(row)
-	var chips := _add_chips(row, tags, fs, icon_only)
-	_carriers.append({"node": card, "side": side, "tags": tags, "chips": chips})
-
-
 func _rows_needed(tags: Array, width: float, fs: int, icon_only: bool) -> int:
-	var sep := 5.0 if icon_only else 9.0
+	var sep := 5.0 if icon_only else 10.0
 	var rows := 1
 	var x := 0.0
 	for t: Variant in tags:
@@ -650,72 +766,215 @@ func _pick_tactic(id: String) -> void:
 	_play_links(cs, cs.ledger(ContentDB.data.tactics.get(_selected, {})), false)
 
 
-## Главный эффект: лучи связей по очереди, числа сил и шанс меняются с каждым попаданием.
+## Главный эффект — «набор силы»: числа обеих сторон растут с нуля шаг за шагом в порядке расчёта
+## (база → теги → симбиозы → конфликты → поле → раунд → состояния → приём → намерение → характеристика).
+## У каждого шага — подпись у числа; связи бьют лучами от тега к тегу в момент своего шага.
+## При смене приёма (from_base = false) досчитывается только разница. Щелчок по полю — сразу к итогу.
 func _play_links(cs: CombatSession, led: Dictionary, from_base: bool) -> void:
 	_anim_token += 1
 	var token := _anim_token
+	var prev := _last_led
 	_last_led = led
 	_show_ledger(cs, led, true)
-	var hsteps: Array = led["hero_steps"]
-	var esteps: Array = led["enemy_steps"]
-	var h0 := float(hsteps[0]["value"]) if from_base else _scale.hero
-	var e0 := float(esteps[0]["value"]) if from_base else _scale.enemy
-	var h1 := float(led["hero"])
-	var e1 := float(led["enemy"])
-	_scale.set_values(h0, e0, 0, 0.2)
-	var links: Array = led["links"]
-	var n := links.size()
-	if n == 0 or Vfx.reduced():
-		_scale.set_values(h1, e1, int(led["chance"]))
-		_mark_intent(led)
+	if Vfx.reduced():
+		_finish_anim(led)
 		return
-	await get_tree().create_timer(0.25).timeout
-	for i in n:
+	if not from_base and not prev.is_empty():
+		await _play_diff(led, prev, token)
+		return
+	_scale.reset()
+	_scale.building = true
+	await get_tree().create_timer(0.3).timeout
+	var timeline := _timeline(cs, led)
+	var step_time := clampf(4.5 / maxf(1.0, timeline.size()), 0.34, 0.55)
+	var li := 0
+	for entry: Dictionary in timeline:
 		if token != _anim_token or not is_inside_tree():
 			return
-		var l: Dictionary = links[i]
-		var kind := "synergy" if l["type"] == "synergy" else "conflict"
-		if str(l["id"]).begins_with("env:"):
-			kind = "env"
-		elif bool(l.get("intent", false)):
-			kind = "intent"
-		var col: Color = Beams.COLORS[kind]
+		# лучи связей этого шага — одновременно
+		var fired: Array = []
 		var dur := 0.0
-		var hit: Array = []
-		var land := Vector2()
-		for seg: Array in _link_segments(l, kind):
-			var na: Control = seg[0]
-			var nb: Control = seg[1]
-			if not is_instance_valid(na) or not is_instance_valid(nb):
-				continue
-			var a := _anchor_of(na)
-			var b := _anchor_of(nb)
-			if a.distance_to(b) < 30:
-				b = a + Vector2(0, -120)
-			dur = maxf(dur, _beams.fire(a, b, kind, i, _glass))
-			if na is TagChip:
-				(na as TagChip).flash(col)
-			hit.append(nb)
-			land = b
-		AudioManager.play("tick", -14.0, 1.2 + i * 0.05)
+		for l: Dictionary in entry["links"]:
+			var f := _fire_link(l, li)
+			li += 1
+			dur = maxf(dur, float(f["dur"]))
+			fired.append(f)
+		if dur > 0.0:
+			AudioManager.play("tick", -14.0, 1.2 + li * 0.04)
+			await get_tree().create_timer(dur).timeout
+			if token != _anim_token or not is_inside_tree():
+				return
+			for f: Dictionary in fired:
+				_land_link(f)
+		var st: Dictionary = entry["step"]
+		if st.is_empty():
+			continue
+		if st.get("kind", "") == "tags":
+			var col := Palette.SILVER if entry["side"] == "hero" else Palette.STAT_DOWN
+			for t: Variant in st.get("tags", []):
+				var chip := _tag_node(str(t), [entry["side"]])
+				if chip is TagChip:
+					(chip as TagChip).flash(col)
+		_scale.step(entry["side"], float(st["value"]), _step_caption(st), _step_color(st, entry["side"]), step_time * 0.85)
+		AudioManager.play("tick", -12.0, 0.8 if entry["side"] == "enemy" else 1.0)
+		await get_tree().create_timer(step_time).timeout
+	if token == _anim_token and is_inside_tree():
+		_finish_anim(led)
+
+
+## Итог без анимации: числа и шанс на месте, намерение отмечено.
+func _finish_anim(led: Dictionary) -> void:
+	_scale.building = false
+	_scale.set_values(float(led["hero"]), float(led["enemy"]), int(led["chance"]), 0.25)
+	_mark_intent(led)
+
+
+## Щелчок по полю во время набора силы — сразу к итогу.
+func _skip_anim() -> void:
+	if not _scale.building or _last_led.is_empty():
+		return
+	_anim_token += 1
+	_finish_anim(_last_led)
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_skip_anim()
+
+
+## Смена приёма: новые связи бьют лучами, числа доезжают до новых значений, у чисел — что изменилось.
+func _play_diff(led: Dictionary, prev: Dictionary, token: int) -> void:
+	_scale.building = true
+	var old_ids := _link_ids(prev)
+	var fired: Array = []
+	var dur := 0.0
+	var i := 0
+	for l: Dictionary in led["links"]:
+		if not old_ids.has(str(l["id"])):
+			var f := _fire_link(l, i)
+			i += 1
+			dur = maxf(dur, float(f["dur"]))
+			fired.append(f)
+	if dur > 0.0:
 		await get_tree().create_timer(dur).timeout
 		if token != _anim_token or not is_inside_tree():
 			return
-		for nb: Control in hit:
-			if nb is TagChip and is_instance_valid(nb):
-				(nb as TagChip).flash(col)
-		var known := ProfileService.is_known(str(l["id"])) or kind in ["env", "intent"]
-		var v := float(l["value"])
-		var txt := ("%+d%%" % int(round(v * 100))) if absf(v) > 0.001 else "✦"
-		var label_name: String = str(l["name"]) if known else "???"
-		if land != Vector2():
-			Beams.popup(self, land, "%s  %s" % [txt, label_name], col)
-		var k := float(i + 1) / n
-		_scale.set_values(lerpf(h0, h1, k), lerpf(e0, e1, k), 0, 0.22)
-		await get_tree().create_timer(0.12).timeout
+		for f: Dictionary in fired:
+			_land_link(f)
+	for side: String in ["hero", "enemy"]:
+		var key := side + "_steps"
+		var cap := _diff_caption(prev[key], led[key])
+		_scale.step(side, float(led[side]), cap, Palette.TEXT, 0.6)
+	await get_tree().create_timer(0.65).timeout
 	if token == _anim_token and is_inside_tree():
-		_scale.set_values(h1, e1, int(led["chance"]))
-		_mark_intent(led)
+		_finish_anim(led)
+
+
+## Очередь шагов обеих сторон со связями, привязанными к своему шагу.
+func _timeline(cs: CombatSession, led: Dictionary) -> Array:
+	var by_key := {}
+	for l: Dictionary in led["links"]:
+		var k := "%s:%s" % [l["side"], _link_stage(cs, l)]
+		if not by_key.has(k):
+			by_key[k] = []
+		by_key[k].append(l)
+	var out: Array = []
+	for stage: String in STAGES:
+		for side: String in ["hero", "enemy"]:
+			var k := "%s:%s" % [side, stage]
+			var steps: Array = led[side + "_steps"]
+			var had := false
+			for st: Dictionary in steps:
+				if st.get("kind", "") == stage:
+					out.append({"side": side, "step": st, "links": by_key.get(k, []) if not had else []})
+					had = true
+			if not had and by_key.has(k):
+				out.append({"side": side, "step": {}, "links": by_key[k]})
+	return out
+
+
+func _link_stage(cs: CombatSession, l: Dictionary) -> String:
+	var id := str(l["id"])
+	if id.begins_with("env:"):
+		return "field" if id.begins_with("env:%s>" % cs.field.get("id", "")) else "round_no"
+	if bool(l.get("intent", false)):
+		return "intent"
+	if id.begins_with("tac:"):
+		return "conflict"
+	return "synergy" if l["type"] == "synergy" else "conflict"
+
+
+func _step_caption(st: Dictionary) -> String:
+	if not st.has("pct"):
+		return "%s  %d" % [st["label"], int(round(float(st["value"])))]
+	var p := float(st["pct"])
+	if absf(p) < 0.001:
+		return str(st["label"])
+	return "%s  %+d%%" % [st["label"], int(round(p * 100))]
+
+
+## Цвет подписи с точки зрения героя: рост врага — красный, его ослабление — зелёный.
+func _step_color(st: Dictionary, side: String) -> Color:
+	if not st.has("pct"):
+		return Palette.TEXT
+	var p := float(st["pct"]) * (1.0 if side == "hero" else -1.0)
+	return Palette.STAT_UP if p > 0.0 else (Palette.STAT_DOWN if p < 0.0 else Palette.TEXT_DIM)
+
+
+## Подпись разницы: шаги, которых не было в прошлом расчёте (или с другим процентом).
+func _diff_caption(old_steps: Array, new_steps: Array) -> String:
+	var old_keys: Array = []
+	for st: Dictionary in old_steps:
+		old_keys.append("%s|%d" % [st["label"], int(round(float(st.get("pct", 0.0)) * 100))])
+	var parts: Array = []
+	for st: Dictionary in new_steps:
+		if st.get("kind", "") == "base":
+			continue
+		if not old_keys.has("%s|%d" % [st["label"], int(round(float(st.get("pct", 0.0)) * 100))]):
+			parts.append(_step_caption(st))
+	return "  ·  ".join(parts.slice(0, 2))
+
+
+## Запускает лучи одной связи; возвращает что нужно для попадания.
+func _fire_link(l: Dictionary, i: int) -> Dictionary:
+	var kind := "synergy" if l["type"] == "synergy" else "conflict"
+	if str(l["id"]).begins_with("env:"):
+		kind = "env"
+	elif bool(l.get("intent", false)):
+		kind = "intent"
+	var col: Color = Beams.COLORS[kind]
+	var dur := 0.0
+	var hit: Array = []
+	var land := Vector2()
+	for seg: Array in _link_segments(l, kind):
+		var na: Control = seg[0]
+		var nb: Control = seg[1]
+		if not is_instance_valid(na) or not is_instance_valid(nb):
+			continue
+		var a := _anchor_of(na)
+		var b := _anchor_of(nb)
+		if a.distance_to(b) < 30:
+			b = a + Vector2(0, -120)
+		dur = maxf(dur, _beams.fire(a, b, kind, i, _glass))
+		if na is TagChip:
+			(na as TagChip).flash(col)
+		hit.append(nb)
+		land = b
+	return {"link": l, "kind": kind, "col": col, "dur": dur, "hit": hit, "land": land}
+
+
+func _land_link(f: Dictionary) -> void:
+	var l: Dictionary = f["link"]
+	var col: Color = f["col"]
+	for nb: Variant in f["hit"]:
+		if is_instance_valid(nb) and nb is TagChip:
+			(nb as TagChip).flash(col)
+	var known: bool = ProfileService.is_known(str(l["id"])) or f["kind"] in ["env", "intent"]
+	var v := float(l["value"])
+	var txt := ("%+d%%" % int(round(v * 100))) if absf(v) > 0.001 else "✦"
+	var label_name: String = str(l["name"]) if known else "???"
+	if f["land"] != Vector2():
+		Beams.popup(self, f["land"], "%s  %s" % [txt, label_name], col)
 
 
 func _mark_intent(led: Dictionary) -> void:
@@ -736,6 +995,7 @@ func _play() -> void:
 	AudioManager.play("roll_shake", -4.0)
 	var rec := cs.play_round(_selected)
 	var led: Dictionary = rec["ledger"]
+	_scale.building = false
 	_scale.set_values(float(led["hero"]), float(led["enemy"]), int(led["chance"]), 0.2)
 	var speed: float = SettingsService.get_value("roll_speed")
 	_scale.play_roll(int(rec["roll"]), speed if speed > 0 else 0.05)
@@ -767,7 +1027,7 @@ func _play() -> void:
 
 
 func _clash(won: bool) -> void:
-	var center := BOARD.position + Vector2(810, 390)
+	var center := BOARD.position + Vector2(MID_X, SCALE_Y + 50)
 	var fx := Vfx.burst(center, won)
 	add_child(fx)
 	Vfx.autofree(fx)

@@ -2,7 +2,7 @@ class_name ThoughtBubble
 extends Control
 ## Облачко мыслей над картой героя: тёмный пергамент, курсив, печатная машинка, хвостик вниз.
 
-const MAX_W := 380.0
+const MAX_W := 420.0
 
 var _panel: PanelContainer
 var _label: RichTextLabel
@@ -30,7 +30,7 @@ func _ready() -> void:
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.custom_minimum_size = Vector2(MAX_W - 36, 0)
 	_label.add_theme_font_override("normal_font", UITheme.font("serif_italic"))
-	_label.add_theme_font_size_override("normal_font_size", 18)
+	_label.add_theme_font_size_override("normal_font_size", 21)
 	_label.add_theme_color_override("default_color", Palette.TEXT)
 	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_label)
