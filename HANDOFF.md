@@ -15,7 +15,7 @@
 ## Команды
 
 ```bash
-# тесты (42 шт. + симуляция 300 прохождений ботом)
+# тесты (40 шт. + симуляция 300 прохождений ботом)
 Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tests/run_tests.gd
 # импорт после добавления ассетов (иногда падает с segfault — просто повторить)
 Godot_v4.7.2-stable_win64_console.exe --headless --path . --import
