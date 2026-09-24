@@ -43,6 +43,7 @@ var _seed := 0
 var _t := 0.0
 var _static := false
 var _shapes := {}              # заранее посчитанные фигуры: трещины, вены, шипы, кристаллы
+var _back: Control             # слой за картой: ореол света, круг рун, жар огня
 
 
 ## Мотивы по тегам, травмам и числу ран; травмы и раны — первыми.
@@ -75,12 +76,34 @@ func _ready() -> void:
 	_build_shapes()
 	if not _static:
 		_add_particles()
+	if motifs.has("light") or motifs.has("mind") or motifs.has("fire"):
+		_back = Control.new()
+		_back.show_behind_parent = true
+		_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_back.size = size
+		var m := CanvasItemMaterial.new()
+		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_back.material = m
+		_back.draw.connect(_draw_back)
+		get_parent().add_child.call_deferred(_back)
+		tree_exiting.connect(_drop_back)
 	set_process(not _static)
+
+
+func _drop_back() -> void:
+	if is_instance_valid(_back):
+		_back.queue_free()
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	queue_redraw()
+	if _back:
+		_back.queue_redraw()
+
+
+static func _tx(name: String) -> Texture2D:
+	return Vfx.tex(name)
 
 
 func _k() -> float:
@@ -208,6 +231,8 @@ func _add_particles() -> void:
 		var p: CPUParticles2D = null
 		match m:
 			"fire":
+				add_child(_emitter("kenney/flame_05", 10, 0.9, Rect2(w * 0.1, h - 4, w * 0.8, 4), Vector2(0, -1), 10.0, Vector2(0, -30), 20, 45,
+					0.05 * k, 0.1 * k, [[0.0, Color(1, 0.55, 0.15, 0)], [0.2, Color(1, 0.5, 0.12, 0.8)], [1.0, Color(0.6, 0.1, 0.02, 0)]], true))
 				p = _emitter("spark", 16, 1.6, Rect2(0, h - 6, w, 6), Vector2(0, -1), 20.0, Vector2(0, -40), 20, 55,
 					0.02 * k, 0.05 * k, [[0.0, Color(1, 0.7, 0.3, 1)], [0.7, Color(1, 0.35, 0.1, 0.6)], [1.0, Color(0.5, 0.1, 0.05, 0)]], true)
 			"ice":
@@ -220,7 +245,7 @@ func _add_particles() -> void:
 				p = _emitter("spark_star", 10, 2.6, Rect2(0, h * 0.3, w, h * 0.7), Vector2(0, -1), 25.0, Vector2(0, -10), 8, 22,
 					0.02 * k, 0.045 * k, [[0.0, Color(1, 0.92, 0.6, 0)], [0.3, Color(1, 0.92, 0.6, 0.9)], [1.0, Color(1, 0.85, 0.5, 0)]], true)
 			"rot":
-				p = _emitter("smoke_b", 10, 4.0, Rect2(0, h * 0.6, w, h * 0.4), Vector2(1, -0.4), 40.0, Vector2(0, -6), 4, 12,
+				p = _emitter("kenney/smoke_07", 10, 4.0, Rect2(0, h * 0.6, w, h * 0.4), Vector2(1, -0.4), 40.0, Vector2(0, -6), 4, 12,
 					0.12 * k, 0.24 * k, [[0.0, Color(0.55, 0.7, 0.3, 0)], [0.4, Color(0.55, 0.7, 0.3, 0.45)], [1.0, Color(0.4, 0.55, 0.25, 0)]], false)
 				add_child(p)
 				p = _emitter("soft_dot", 8, 3.0, Rect2(0, h * 0.4, w, h * 0.6), Vector2(0, -1), 30.0, Vector2(0, -8), 4, 10,
@@ -234,8 +259,9 @@ func _add_particles() -> void:
 				p.scale_amount_min = 0.1 * k
 				p.scale_amount_max = 0.2 * k
 			"stone":
-				p = _emitter("soft_dot", 5, 2.5, Rect2(w * 0.2, h * 0.3, w * 0.6, h * 0.5), Vector2(0, 1), 10.0, Vector2(0, 30), 2, 8,
-					0.01 * k, 0.02 * k, [[0.0, Color(0.7, 0.68, 0.64, 0.8)], [1.0, Color(0.6, 0.58, 0.55, 0)]], false)
+				p = _emitter("kenney/dirt_01", 5, 2.2, Rect2(w * 0.1, h - 6, w * 0.8, 6), Vector2(0, 1), 20.0, Vector2(0, 60), 4, 14,
+					0.04 * k, 0.08 * k, [[0.0, Color(0.7, 0.66, 0.6, 0.9)], [1.0, Color(0.55, 0.52, 0.48, 0)]], false)
+				p.angle_max = 360.0
 		if p:
 			add_child(p)
 
@@ -284,7 +310,9 @@ func _draw() -> void:
 		match m:
 			"ice": _draw_ice(r, k)
 			"fire": _draw_glow(r, k, Color(1.0, 0.5, 0.15), 0.35 + 0.15 * sin(_t * 9.0) * sin(_t * 5.3))
-			"acid": _draw_drips(r, k, "acid", Color(0.55, 0.95, 0.25, 0.85))
+			"acid":
+				_draw_splats(r, "acid", Color(0.75, 1.0, 0.55, 0.7))
+				_draw_drips(r, k, "acid", Color(0.55, 0.95, 0.25, 0.85))
 			"water": _draw_drips(r, k, "water", Color(0.45, 0.7, 1.0, 0.6))
 			"blood": _draw_blood(r, k)
 			"rage": _draw_glow(r, k, Color(0.9, 0.1, 0.1), 0.3 + 0.25 * (0.5 + 0.5 * sin(_t * 4.0)))
@@ -307,6 +335,29 @@ func _draw() -> void:
 			"pain": _draw_vignette(r, k, Color(0.7, 0.05, 0.08), 0.18 + 0.2 * maxf(0.0, sin(_t * 3.2)))
 			"daze": _draw_daze(r, k)
 	draw_set_transform(Vector2.ZERO)
+
+
+## Слой за картой (аддитивный): ореол света, медленно вращающийся круг рун, жар огня.
+func _draw_back() -> void:
+	var lift := _lift()
+	var c := Vector2(size.x / 2, size.y / 2 - lift)
+	for m: String in motifs:
+		match m:
+			"light":
+				var s := size.x * 2.2
+				_back.draw_texture_rect(_tx("kenney/light_01"), Rect2(c - Vector2(s, s) / 2, Vector2(s, s)), false,
+					Color(1.0, 0.85, 0.5, 0.55 + 0.15 * sin(_t * 1.8)))
+			"mind":
+				var s2 := size.x * 1.7
+				_back.draw_set_transform(c, _t * 0.35)
+				_back.draw_texture_rect(_tx("kenney/magic_01"), Rect2(-s2 / 2, -s2 / 2, s2, s2), false, Color(0.75, 0.5, 1.0, 0.95))
+				_back.draw_set_transform(c, -_t * 0.22)
+				_back.draw_texture_rect(_tx("kenney/magic_02"), Rect2(-s2 * 0.4, -s2 * 0.4, s2 * 0.8, s2 * 0.8), false, Color(0.65, 0.45, 1.0, 0.7))
+				_back.draw_set_transform(Vector2.ZERO)
+			"fire":
+				var s3 := size.x * 1.8
+				_back.draw_texture_rect(_tx("kenney/light_02"), Rect2(Vector2(c.x - s3 / 2, size.y - lift - s3 * 0.6), Vector2(s3, s3)), false,
+					Color(1.0, 0.45, 0.1, 0.45 + 0.2 * sin(_t * 7.0) * sin(_t * 3.1)))
 
 
 ## Свечение за краем карты: несколько контуров с падающей прозрачностью.
@@ -334,12 +385,13 @@ func _draw_ice(r: Rect2, k: float) -> void:
 		draw_colored_polygon(PackedVector2Array([p - side, tip, p + side]), Color(0.86, 0.95, 1.0, 0.75))
 		draw_line(p, tip, Color(1, 1, 1, 0.9), 1.0)
 	if not _static:
+		var glint := _tx("kenney/star_07")
 		for i in 5:
 			var s2: Dictionary = _shapes["shards"][i * 4 % _shapes["shards"].size()]
 			var a := maxf(0.0, sin(_t * 2.2 + i * 1.7))
 			var c: Vector2 = s2["p"] + (s2["d"] as Vector2) * float(s2["len"])
-			draw_line(c - Vector2(5, 0) * k * a, c + Vector2(5, 0) * k * a, Color(1, 1, 1, a), 1.2)
-			draw_line(c - Vector2(0, 5) * k * a, c + Vector2(0, 5) * k * a, Color(1, 1, 1, a), 1.2)
+			var gs := 26.0 * k * a
+			draw_texture_rect(glint, Rect2(c - Vector2(gs, gs) / 2, Vector2(gs, gs)), false, Color(0.85, 0.95, 1.0, a))
 
 
 ## Потёки: растут вниз от края, на конце капля; по кругу.
@@ -365,7 +417,25 @@ func _draw_drips(r: Rect2, k: float, key: String, col: Color) -> void:
 				draw_circle(Vector2(x, r.size.y + fall * 30.0 * k), float(d["w"]), Color(col, col.a * (1.0 - fall)))
 
 
+## Брызги с листа Sinestesia (4×2 кадра по 256×512; нижний ряд — брызги) в заданном цвете.
+func _draw_splats(r: Rect2, key: String, col: Color) -> void:
+	var tex := _tx("blood/splatter_red" if key == "blood" else "blood/splatter_green")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _seed + key.length()
+	for i in 2:
+		var frame := rng.randi_range(4, 7)
+		var src := Rect2((frame % 4) * 256, 512 + 40, 256, 400)
+		var w := r.size.x * rng.randf_range(0.5, 0.75)
+		var dst := Rect2(Vector2(rng.randf_range(0.0, r.size.x - w), rng.randf_range(0.0, r.size.y * 0.55)), Vector2(w, w * 400.0 / 256.0))
+		draw_texture_rect_region(tex, dst, src, col)
+
+
 func _draw_blood(r: Rect2, k: float) -> void:
+	var grime := _tx("blood/blood_grime")
+	var gs := grime.get_size()
+	var gw := gs.x * 0.55
+	draw_texture_rect_region(grime, r, Rect2(Vector2(float(absi(_seed) % 200), float(absi(_seed) % 120)), Vector2(gw, gw * r.size.y / r.size.x)), Color(0.7, 0.12, 0.12, 0.35))
+	_draw_splats(r, "blood", Color(0.5, 0.06, 0.06, 0.85))
 	for s: Dictionary in _shapes.get("spots", []):
 		draw_circle(s["c"], float(s["r"]), Color(0.45, 0.02, 0.04, 0.8))
 	_draw_drips(r, k, "blood", Color(0.55, 0.02, 0.05, 0.9))
@@ -449,15 +519,15 @@ func _draw_storm(r: Rect2, k: float) -> void:
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _seed + slot
+	# молния-текстура Kenney от случайного края внутрь карты
 	var a := _edge_point(rng, r.size.x, r.size.y)
-	var b := a + (Vector2(r.size.x, r.size.y) / 2 - a).normalized().rotated(rng.randf_range(-1.2, 1.2)) * rng.randf_range(30, 70) * k
-	var pts := PackedVector2Array([a])
-	for i in range(1, 6):
-		pts.append(a.lerp(b, i / 6.0) + Vector2(rng.randf_range(-6, 6), rng.randf_range(-6, 6)) * k)
-	pts.append(b)
+	var inward := -_outward(a, r.size.x, r.size.y)
 	var alpha := 1.0 - local / 0.3
-	draw_polyline(pts, Color(0.6, 0.75, 1.0, 0.35 * alpha), 6.0 * k, true)
-	draw_polyline(pts, Color(0.95, 0.97, 1.0, alpha), 1.6 * k, true)
+	var bolt := _tx("kenney/spark_05" if rng.randf() < 0.5 else "kenney/spark_06")
+	var L := rng.randf_range(60, 110) * k
+	draw_set_transform(Vector2(a.x, a.y - _lift()), inward.angle() - PI / 2.0 + rng.randf_range(-0.5, 0.5))
+	draw_texture_rect(bolt, Rect2(-L * 0.25, 0, L * 0.5, L), false, Color(0.75, 0.85, 1.0, alpha))
+	draw_set_transform(Vector2(0, -_lift()))
 
 
 func _draw_wisps(r: Rect2, k: float, col: Color) -> void:

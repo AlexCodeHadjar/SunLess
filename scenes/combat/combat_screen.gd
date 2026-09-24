@@ -1047,6 +1047,7 @@ func _clash(won: bool) -> void:
 		for e: Control in enemies:
 			if e is CardView:
 				(e as CardView).shudder()
+				Vfx.blood_splash(self, e.get_global_rect().get_center(), e.size.x * 1.1)
 	else:
 		if not enemies.is_empty():
 			var target: Control = enemies[0]
@@ -1055,6 +1056,7 @@ func _clash(won: bool) -> void:
 			tw2.tween_property(target, "position", eb + Vector2(0, 90), 0.12).set_ease(Tween.EASE_OUT)
 			tw2.tween_property(target, "position", eb, 0.25)
 		_hero_card.shudder()
+		Vfx.blood_splash(self, _hero_card.get_global_rect().get_center(), _hero_card.size.x * 1.3)
 		AudioManager.play("trauma", -4.0)
 		var smoke := Vfx.burst(_hero_card.get_global_rect().get_center(), false)
 		add_child(smoke)

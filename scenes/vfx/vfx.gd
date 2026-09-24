@@ -9,8 +9,15 @@ static var _noise: NoiseTexture2D
 static var _dissolve: Shader
 
 
+static var _tex_cache := {}
+
+
+## Текстура VFX по имени (с подпапкой: "kenney/flame_05"). Держим ссылку в кэше: иначе текстура,
+## загруженная в _draw, освобождается сразу после кадра и рисуется белым прямоугольником.
 static func tex(name: String) -> Texture2D:
-	return load(TEX % name)
+	if not _tex_cache.has(name):
+		_tex_cache[name] = load(TEX % name)
+	return _tex_cache[name]
 
 
 static func _ramp(stops: Array) -> Gradient:
@@ -230,6 +237,26 @@ static func dissolve_material(card_size: Vector2) -> ShaderMaterial:
 	m.set_shader_parameter("card_size", card_size)
 	m.set_shader_parameter("progress", 0.0)
 	return m
+
+
+## Брызги крови (или кислоты) на удар: пятно разлетается и медленно гаснет. at — в координатах parent.
+static func blood_splash(parent: Node, at: Vector2, size_px: float, acid: bool = false) -> void:
+	if reduced():
+		return
+	var s := Sprite2D.new()
+	s.texture = tex("blood/blood_splat")
+	s.position = at
+	s.rotation = randf() * TAU
+	s.modulate = Color(0.45, 1.0, 0.35, 0.9) if acid else Color(0.6, 0.06, 0.08, 0.95)
+	s.z_index = 35
+	var k := size_px / 256.0
+	s.scale = Vector2.ONE * k * 0.25
+	parent.add_child(s)
+	var tw := s.create_tween()
+	tw.tween_property(s, "scale", Vector2.ONE * k, 0.18).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tw.tween_interval(0.5)
+	tw.tween_property(s, "modulate:a", 0.0, 0.9)
+	tw.tween_callback(s.queue_free)
 
 
 ## Удаляет разовый эмиттер после окончания.
