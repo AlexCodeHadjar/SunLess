@@ -7,6 +7,8 @@ const MAP_BOTTOM := 780.0
 const LEFT_W := 250.0
 
 var _backdrop: MapBackdrop
+var _life: MapLife
+var _shown_week := -1
 var _path: Control
 var _markers: Control
 var _map_drop: DropZone
@@ -64,6 +66,11 @@ func _build_map() -> void:
 	_backdrop.region = GameState.state.region
 	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_backdrop)
+	# облака, падающие звёзды, стаи, огни, светлячки
+	_life = MapLife.new()
+	_life.position = Vector2(0, 0)
+	_life.size = Vector2(1920, MAP_BOTTOM)
+	add_child(_life)
 	_map_drop = DropZone.new()
 	_map_drop.accepts = ["initiator"]
 	_map_drop.show_frame = false
@@ -293,7 +300,13 @@ func _refresh() -> void:
 	var c := ContentDB.data
 	var reg: Dictionary = c.regions.get(s.region, {})
 	_top_labels["region"].text = str(reg.get("name", s.region))
-	_top_labels["week"].text = "Неделя %d" % s.week
+	_top_labels["week"].text = "Неделя %d · %s" % [s.week, MapBackdrop.tod_name(s.week)]
+	if s.week != _shown_week:
+		# смена недели — небо плавно переходит к новому времени суток
+		var tod := MapBackdrop.tod_for_week(s.week)
+		_backdrop.set_tod(tod, _shown_week != -1)
+		_life.set_tod(tod, _shown_week != -1)
+		_shown_week = s.week
 	_top_labels["mana"].text = "◈ %d" % int(s.resources.get("mana", 0))
 	_top_labels["coins"].text = "✧ %d" % int(s.resources.get("shards", 0))
 	_pending_label.text = "⋯ Надвигается следующая глава" if not s.pending_story.is_empty() else ""

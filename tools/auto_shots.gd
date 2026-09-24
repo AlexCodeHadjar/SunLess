@@ -45,6 +45,18 @@ func _run() -> void:
 			m.call("_on_hover", true)
 	await _wait(1.0)
 	await _shot("03b_hover_smoke")
+	for m in game.get("_markers").get_children():
+		if m is CardView:
+			m.call("_on_hover", false)
+	# время суток по неделям: рассвет, день, сумерки, снова ночь
+	for wk: int in [2, 3, 4]:
+		GameState.state.week = wk
+		EventBus.state_changed.emit()
+		await _wait(3.6)
+		await _shot("03c_map_week%d_%s" % [wk, MapBackdrop.tod_name(wk)])
+	GameState.state.week = 1
+	EventBus.state_changed.emit()
+	await _wait(3.6)
 	game.call("_open_event", "E01")
 	await _wait(2.4)
 	await _shot("04_tablet_e01")

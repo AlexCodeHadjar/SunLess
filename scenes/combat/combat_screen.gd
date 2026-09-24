@@ -338,6 +338,8 @@ func _build_board() -> void:
 	bd.snow = true
 	bd.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bd.modulate = Color(0.55, 0.55, 0.62)
+	if GameState.state:
+		bd.tod = MapBackdrop.tod_for_week(GameState.state.week)
 	_board.add_child(bd)
 	var shade := ColorRect.new()
 	shade.color = Color(0.03, 0.03, 0.05, 0.55)

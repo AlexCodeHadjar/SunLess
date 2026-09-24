@@ -1,10 +1,20 @@
 class_name MapBackdrop
 extends Control
 ## Фон региона. Если есть art/regions/<регион>.png — показывает его;
-## иначе рисует гравюрный горный перевал (луна, хребты, туман, снег).
+## иначе рисует гравюрный горный перевал (небо, луна или солнце, звёзды, хребты, туман, снег).
+## Время суток tod: 0 ночь, 0.25 рассвет, 0.5 день, 0.75 сумерки — меняется по неделям.
+
+const TOD_NAMES := ["ночь", "рассвет", "день", "сумерки"]
+# ключевые цвета неба и оттенок гор для [ночь, рассвет, день, сумерки]
+const SKY_TOP := [Color("#07080C"), Color("#1C1B2E"), Color("#4E5A70"), Color("#150E1C")]
+const SKY_BOT := [Color("#4A5264"), Color("#B8826E"), Color("#AEB6C2"), Color("#9A5540")]
+const LAND_TINT := [Color(1, 1, 1), Color(1.22, 1.08, 1.08), Color(1.5, 1.5, 1.55), Color(1.18, 0.98, 0.95)]
 
 var region := "mountain_pass"
 var snow := true
+var tod := 0.0
+var _stars: Array = []      # [Vector3(x, y, фаза)]
+var _t := 0.0
 var _tex: Texture2D
 var _layers: Array = []     # [{poly: PackedVector2Array, color: Color}]
 var _flakes: Array = []     # [Vector3(x, y, speed)]
@@ -18,7 +28,49 @@ func _ready() -> void:
 		_tex = load(p)
 	resized.connect(_rebuild)
 	_rebuild()
-	set_process(snow and not SettingsService.get_value("reduce_motion"))
+	set_process(not SettingsService.get_value("reduce_motion"))
+
+
+## Время суток по номеру недели: 1 — ночь, 2 — рассвет, 3 — день, 4 — сумерки, 5 — снова ночь.
+static func tod_for_week(week: int) -> float:
+	return float((maxi(week, 1) - 1) % 4) * 0.25
+
+
+static func tod_name(week: int) -> String:
+	return TOD_NAMES[(maxi(week, 1) - 1) % 4]
+
+
+## Веса фаз [ночь, рассвет, день, сумерки]: соседние фазы плавно перетекают.
+static func phase_weights(t: float) -> Array:
+	var w := [0.0, 0.0, 0.0, 0.0]
+	var x := fposmod(t, 1.0) * 4.0
+	var i := int(floorf(x)) % 4
+	var f := x - floorf(x)
+	w[i] = 1.0 - f
+	w[(i + 1) % 4] += f
+	return w
+
+
+func set_tod(v: float, animate: bool) -> void:
+	if not animate or SettingsService.get_value("reduce_motion"):
+		tod = fposmod(v, 1.0)
+		queue_redraw()
+		return
+	var target := v if v >= tod else v + 1.0
+	var tw := create_tween()
+	tw.tween_method(_set_tod, tod, target, 3.0).set_trans(Tween.TRANS_SINE)
+
+
+func _set_tod(v: float) -> void:
+	tod = fposmod(v, 1.0)
+	queue_redraw()
+
+
+func _blend(keys: Array, w: Array) -> Color:
+	var c := Color(0, 0, 0, 0)
+	for i in 4:
+		c += (keys[i] as Color) * float(w[i])
+	return c
 
 
 func _rebuild() -> void:
@@ -60,10 +112,17 @@ func _rebuild() -> void:
 	rng.seed = 11
 	for i in 160:
 		_flakes.append(Vector3(rng.randf() * size.x, rng.randf() * size.y, rng.randf_range(12, 40)))
+	_stars.clear()
+	for i in 150:
+		_stars.append(Vector3(rng.randf() * size.x, rng.randf() * size.y * 0.42, rng.randf() * TAU))
 	queue_redraw()
 
 
 func _process(delta: float) -> void:
+	_t += delta
+	if not snow:
+		queue_redraw()
+		return
 	for i in _flakes.size():
 		var f: Vector3 = _flakes[i]
 		f.y += f.z * delta
@@ -79,8 +138,9 @@ func _draw() -> void:
 		_draw_cover()
 	else:
 		_draw_procedural()
-	for f: Vector3 in _flakes:
-		draw_circle(Vector2(f.x, f.y), 1.0 + f.z / 40.0, Color(0.85, 0.87, 0.92, 0.35))
+	if snow:
+		for f: Vector3 in _flakes:
+			draw_circle(Vector2(f.x, f.y), 1.0 + f.z / 40.0, Color(0.85, 0.87, 0.92, 0.35))
 	# виньетка
 	var v := 10
 	for i in v:
@@ -96,25 +156,48 @@ func _draw_cover() -> void:
 
 
 func _draw_procedural() -> void:
-	var sky_top := Color("#07080C")
-	var sky_bot := Color("#4A5264")
+	var w := phase_weights(tod)
+	var night: float = w[0]
+	var day: float = w[2]
+	var twilight: float = w[1] + w[3]
+	var sky_top := _blend(SKY_TOP, w)
+	var sky_bot := _blend(SKY_BOT, w)
+	var tint := _blend(LAND_TINT, w)
 	var bands := 48
 	for i in bands:
 		var t := float(i) / bands
 		draw_rect(Rect2(0, size.y * t * 0.75, size.x, size.y * 0.75 / bands + 1), sky_top.lerp(sky_bot, pow(t, 1.6)))
-	# луна с ореолом
-	var moon := Vector2(size.x * 0.70, size.y * 0.15)
-	for i in 14:
-		draw_circle(moon, 40.0 + i * 9, Color(0.78, 0.82, 0.9, 0.018))
-	draw_circle(moon, 36, Color("#DADDE3"))
-	draw_circle(moon + Vector2(-9, 6), 8, Color("#C3C6CD"))
-	draw_circle(moon + Vector2(11, -9), 5, Color("#C8CBD2"))
+	# звёзды: ночью ярко, в сумерках и на рассвете — слабее, мерцают
+	var star_a := night + 0.45 * twilight
+	if star_a > 0.02:
+		for st: Vector3 in _stars:
+			var tw := 0.55 + 0.45 * sin(_t * 1.8 + st.z * 3.0)
+			draw_circle(Vector2(st.x, st.y), 0.8 + fmod(st.z, 1.0), Color(0.88, 0.9, 1.0, 0.75 * star_a * tw))
+	# луна с ореолом — ночью и в сумерках
+	var moon_a := clampf(night + 0.6 * twilight, 0.0, 1.0)
+	if moon_a > 0.02:
+		var moon := Vector2(size.x * 0.70, size.y * 0.15)
+		for i in 14:
+			draw_circle(moon, 40.0 + i * 9, Color(0.78, 0.82, 0.9, 0.018 * moon_a))
+		draw_circle(moon, 36, Color(Color("#DADDE3"), moon_a))
+		draw_circle(moon + Vector2(-9, 6), 8, Color(Color("#C3C6CD"), moon_a))
+		draw_circle(moon + Vector2(11, -9), 5, Color(Color("#C8CBD2"), moon_a))
+	# солнце — днём высоко и бледное, на рассвете слева у гор, в сумерках справа; тёплое у горизонта
+	var sun_a := clampf(day + 0.8 * twilight, 0.0, 1.0)
+	if sun_a > 0.02:
+		var sun: Vector2 = Vector2(size.x * 0.30, size.y * 0.12) * day + Vector2(size.x * 0.16, size.y * 0.2) * w[1] \
+			+ Vector2(size.x * 0.84, size.y * 0.2) * w[3] + Vector2(size.x * 0.5, size.y * 0.5) * night
+		var warm := twilight / maxf(0.001, day + twilight)
+		var sc := Color(0.97, 0.95, 0.86).lerp(Color(1.0, 0.62, 0.36), warm)
+		for i in 18:
+			draw_circle(sun, 44.0 + i * 12, Color(sc, 0.022 * sun_a))
+		draw_circle(sun, 40, Color(sc, sun_a))
 	for L: Dictionary in _layers:
 		var poly: PackedVector2Array = L["poly"]
-		draw_colored_polygon(poly, L["color"])
+		draw_colored_polygon(poly, (L["color"] as Color) * tint)
 		if int(L["depth"]) < 4:
 			# псевдоградиент: сдвинутые вниз копии хребта темнеют к подножию
-			var base_c: Color = L["color"]
+			var base_c: Color = (L["color"] as Color) * tint
 			for k in range(1, 7):
 				var shifted := PackedVector2Array()
 				for q in poly:
