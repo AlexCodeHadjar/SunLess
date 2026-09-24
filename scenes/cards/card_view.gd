@@ -4,6 +4,7 @@ extends Control
 ## иначе рисует гравюрную рамку по спецификации (docs/11 §3).
 
 signal clicked(card_id: String)
+signal inspect_requested(card_id: String)
 signal burned
 
 const SIZE_PANEL := Vector2(140, 240)
@@ -203,6 +204,10 @@ func _animate_lift() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		inspect_requested.emit(card_id)
+		accept_event()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		if get_global_rect().has_point(get_global_mouse_position()):
 			clicked.emit(card_id)

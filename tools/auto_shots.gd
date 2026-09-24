@@ -85,6 +85,29 @@ func _run() -> void:
 	await _wait(0.5)
 	await _shot("07_cards")
 	game.call("_close_overlay")
+	# планшет карты: описание и сюжет
+	game.call("_inspect", "P01")
+	await _wait(0.5)
+	await _shot("07b_inspect_info")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_set_tab", "story")
+	await _wait(0.3)
+	await _shot("07c_inspect_story")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_close")
+	game.call("_inspect", "M01")
+	await _wait(0.5)
+	await _shot("07d_inspect_monster")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_set_tab", "story")
+	await _wait(0.3)
+	await _shot("07e_inspect_monster_story")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_close")
 	game.get("_result").call("_on_continue")
 	# --- бой ---
 	s = GameState.state

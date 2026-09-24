@@ -34,6 +34,7 @@ var enemy_wounds: Dictionary = {}
 var enemy_alert: Dictionary = {}
 var combat_mods: Dictionary = {}
 var log: Array = []
+var card_log: Array = []   # [{week, card, text}] — отметки карт для «В вашем прохождении»
 var game_over: bool = false
 var demo_complete: bool = false
 var rng_seed: int = 0
@@ -62,6 +63,7 @@ func to_dict() -> Dictionary:
 		"enemy_alert": enemy_alert.duplicate(true),
 		"combat_mods": combat_mods.duplicate(true),
 		"log": log.duplicate(true),
+		"card_log": card_log.duplicate(true),
 		"game_over": game_over,
 		"demo_complete": demo_complete,
 		# RNG хранится строкой: JSON теряет точность больших целых.
@@ -104,6 +106,10 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.enemy_alert = Dictionary(d.get("enemy_alert", {})).duplicate(true)
 	s.combat_mods = Dictionary(d.get("combat_mods", {})).duplicate(true)
 	s.log = Array(d.get("log", [])).duplicate(true)
+	s.card_log = Array(d.get("card_log", [])).duplicate(true)
+	for n: Dictionary in s.card_log:
+		n["week"] = int(n.get("week", 0))
+		n["seq"] = int(n.get("seq", 0))
 	for entry: Dictionary in s.log:
 		for k: String in ["week", "chance", "roll"]:
 			if entry.has(k):
@@ -128,6 +134,11 @@ static func _ints(src: Variant) -> Dictionary:
 
 
 # --- удобные запросы -------------------------------------------------------
+
+## Отметка в журнале карты (получение, травма, поломка, гибель).
+func note(card_id: String, text: String) -> void:
+	card_log.append({"week": week, "card": card_id, "text": text, "seq": log.size()})
+
 
 func owns(card_id: String) -> bool:
 	return collection.has(card_id)

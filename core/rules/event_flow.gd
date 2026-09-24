@@ -135,6 +135,7 @@ static func use_initiator(content: Content, state: RunState, card: String, rng: 
 	if state.is_event_active(eid):
 		return {"ok": false, "reason": "Это событие уже на карте"}
 	state.collection.erase(card)
+	state.note(card, "Применён: появилось событие «%s»" % content.events.get(eid, {}).get("title", eid))
 	var entries := spawn(content, state, eid, rng)
 	state.log.append({"week": state.week, "text": "Применён инициатор «%s»" % content.card_name(card)})
 	return {"ok": true, "event_id": eid, "entries": entries}

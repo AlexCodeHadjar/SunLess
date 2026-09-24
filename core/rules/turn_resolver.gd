@@ -189,6 +189,7 @@ static func apply_wear(content: Content, state: RunState, enh: Array, rng: Rando
 		if w["broken"]:
 			state.collection.erase(card)
 			state.wear.erase(card)
+			state.note(card, "Раскололась от износа")
 			entries.append({"kind": "broken", "text": "%s раскалывается и исчезает" % content.card_name(card), "card": card})
 		else:
 			state.wear[card] = w["after"]
@@ -198,10 +199,11 @@ static func apply_wear(content: Content, state: RunState, enh: Array, rng: Rando
 static func finish_turn(content: Content, state: RunState, event_id: String, option_id: String, executor: String,
 		chance: int, roll: int, success: bool, story_scheduled: bool, rng: RandomNumberGenerator, entries: Array,
 		result: Dictionary) -> Dictionary:
+	var enh_used: Array = Array(state.drafts.get(event_id, {}).get("enhancements", [])).duplicate()
 	state.drafts.erase(event_id)
 	state.log.append({
 		"week": state.week, "event": event_id, "option": option_id, "executor": executor,
-		"chance": chance, "roll": roll, "success": success,
+		"chance": chance, "roll": roll, "success": success, "enh": enh_used,
 	})
 	if not state.game_over:
 		entries.append_array(EventFlow.advance_week(content, state, rng, story_scheduled))
@@ -226,6 +228,7 @@ static func give_traumas(content: Content, state: RunState, executor: String, en
 		if tid != "":
 			traumas.append(tid)
 			result["traumas"].append(tid)
+			state.note(executor, "Травма: %s" % content.card_name(tid))
 			entries.append({"kind": "trauma", "text": "%s: %s" % [content.card_name(executor), content.card_name(tid)], "card": tid})
 		var n := TraumaRules.counted(traumas)
 		var dchance := TraumaRules.death_chance(n)
@@ -262,6 +265,7 @@ static func _softens(content: Content, state: RunState, executor: String, enh: A
 static func _kill(content: Content, state: RunState, cid: String, entries: Array) -> void:
 	state.characters[cid]["alive"] = false
 	state.collection.erase(cid)
+	state.note(cid, "Погиб")
 	if cid == DEATH_CHARACTER:
 		state.game_over = true
 		entries.append({"kind": "death", "text": "Тень угасла. %s погибает — прохождение окончено." % content.card_name(cid), "card": cid})

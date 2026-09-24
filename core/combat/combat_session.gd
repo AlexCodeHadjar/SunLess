@@ -691,6 +691,11 @@ func finish() -> Dictionary:
 		if outcome == "retreat":
 			state.enemy_alert[event_id] = true
 			entries.append({"kind": "info", "text": "Враг насторожен: при следующей встрече +10%"})
+	# журнал противника: встреча в бою
+	var verdict: String = {"win": "победа", "loss": "поражение", "death": "гибель героя", "retreat": "отступление"}.get(outcome, outcome)
+	var ev_title := str(content.events.get(event_id, {}).get("title", event_id))
+	for e: Dictionary in enemies:
+		state.note(str(e.get("id", "")), "Бой «%s» против %s · %s %d:%d" % [ev_title, content.card_name(hero), verdict, hero_wins, enemy_wins])
 	TurnResolver.apply_wear(content, state, enh, rng, entries, result)
 	return TurnResolver.finish_turn(content, state, event_id, option_id, hero, int(last["chance"]), int(last["roll"]),
 		success, story_scheduled, rng, entries, result)

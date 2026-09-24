@@ -385,6 +385,7 @@ func _rebuild_cards() -> void:
 			if _tablet.visible and de == _tablet.event_id:
 				cv.highlight = true
 			cv.clicked.connect(_on_card_clicked)
+			cv.inspect_requested.connect(_inspect)
 			_cards_row.add_child(cv)
 	if first:
 		_cards_row.add_child(UITheme.label("Здесь пока пусто.", "sans", 18, Palette.TEXT_DIM))
@@ -433,8 +434,16 @@ func _on_card_clicked(card: String) -> void:
 		elif k == "initiator":
 			_show_toast("Инициатор перетаскивают на карту мира")
 		_refresh()
-	elif k == "initiator":
-		_show_toast("Перетащите инициатор на карту мира")
+	else:
+		_inspect(card)
+
+
+## Планшет карты: крупный вид, описание и сюжет.
+func _inspect(card: String) -> void:
+	for ch in get_children():
+		if ch is CardInspector:
+			ch.queue_free()
+	CardInspector.open_for(self, card)
 
 
 func _on_tab(tab: String) -> void:
@@ -724,6 +733,8 @@ func _cards_overlay() -> Control:
 			cards.append(t)
 	for card: String in cards:
 		var cv := CardView.make(card, CardView.SIZE_ZOOM * 0.8, false)
+		cv.clicked.connect(_inspect)
+		cv.inspect_requested.connect(_inspect)
 		grid.add_child(cv)
 	if cards.is_empty():
 		grid.add_child(UITheme.label("Коллекция пуста.", "sans", 18, Palette.TEXT_DIM))

@@ -138,6 +138,7 @@ func _build_shapes() -> void:
 	if motifs.has("spikes"):
 		var spikes: Array = []
 		var count := 16
+		k = minf(k, 1.4)   # на крупных картах шипы не растут бесконечно
 		for i in count:
 			var p := _edge_point(rng, w, h)
 			var out := _outward(p, w, h).rotated(rng.randf_range(-0.35, 0.35))

@@ -42,6 +42,7 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			var ch2: Dictionary = state.character(target)
 			if not ch2.is_empty() and not Array(ch2["traumas"]).has(tid):
 				ch2["traumas"].append(tid)
+				state.note(target, "Травма: %s" % content.card_name(tid))
 				return [{"kind": "trauma", "text": "%s: %s" % [content.card_name(target), content.card_name(tid)], "card": tid}]
 		"remove_trauma":
 			return _remove_trauma(content, state, target, e)
@@ -156,11 +157,13 @@ static func add_card(content: Content, state: RunState, card: String) -> Array:
 			state.characters[card]["alive"] = true
 	elif kind == "enhancement" and bool(content.enhancements[card].get("wears", true)):
 		state.wear[card] = WearRules.START
+	state.note(card, "Карта получена")
 	return [{"kind": "card", "text": "Получено: %s" % content.card_name(card), "card": card}]
 
 
 static func _remove_card(state: RunState, card: String) -> void:
 	state.collection.erase(card)
+	state.note(card, "Покинула коллекцию")
 	for eid: String in state.drafts:
 		var d: Dictionary = state.drafts[eid]
 		if d.get("character", "") == card:
