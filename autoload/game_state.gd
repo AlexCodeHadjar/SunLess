@@ -136,10 +136,13 @@ func can_resolve(event_id: String, option_id: String) -> String:
 
 
 func resolve(event_id: String, option_id: String) -> Dictionary:
+	var before := state
 	var r := TurnResolver.resolve(content(), state, event_id, option_id, draft(event_id), _extras())
 	if not r["ok"]:
 		EventBus.toast.emit(r["reason"])
 		return r
+	# Состояние до броска — для «Вернуться к началу хода» после смерти Санни.
+	SaveService.save_state(before, "before_turn")
 	state = r["state"]
 	_reset_extras()
 	SaveService.save_state(state)

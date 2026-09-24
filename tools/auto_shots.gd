@@ -1,0 +1,67 @@
+extends Node
+## Автоснимки для проверки интерфейса без ручной игры.
+## Запуск: Godot --path . -- --shots=<папка>
+## Проходит сценарий: меню → карта → инициатор → планшет → результат, сохраняет PNG и выходит.
+
+var out_dir := ""
+
+
+func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--shots="):
+			out_dir = a.substr(8)
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	_run.call_deferred()
+
+
+func _shot(name: String) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	img.save_png("%s/%s.png" % [out_dir, name])
+	print("[shots] saved ", name)
+
+
+func _wait(sec: float) -> void:
+	await get_tree().create_timer(sec).timeout
+
+
+func _run() -> void:
+	SettingsService.values["tutorial"] = true
+	SettingsService.values["roll_speed"] = 0.0
+	await _wait(0.5)
+	await _shot("01_menu")
+	GameState.new_run(12345)
+	get_tree().change_scene_to_file("res://scenes/game/game.tscn")
+	await _wait(0.8)
+	await _shot("02_map_start")
+	GameState.use_initiator("I01")
+	await _wait(0.8)
+	await _shot("03_map_e01")
+	var game := get_tree().current_scene
+	game.call("_open_event", "E01")
+	await _wait(0.6)
+	await _shot("04_tablet_e01")
+	# Продвинемся к E05 со снаряжением, чтобы увидеть веер и арт события
+	var s: RunState = GameState.state
+	for card: String in ["U01", "U02", "P09", "P08", "K01"]:
+		EffectApplier.add_card(ContentDB.data, s, card)
+	s.characters["P01"]["traumas"] = ["T02", "T05"]
+	s.events["E01"]["status"] = "closed"
+	s.events["E05"] = {"status": "active", "done_options": [], "spawned_week": s.week}
+	s.wear["U01"] = 16
+	EventBus.state_changed.emit()
+	game.call("_open_event", "E05")
+	GameState.set_executor("E05", "P01")
+	GameState.attach("E05", "U01")
+	GameState.attach("E05", "U02")
+	await _wait(0.6)
+	await _shot("05_tablet_e05")
+	GameState.resolve("E05", "E05_1")
+	await _wait(0.8)
+	await _shot("06_result")
+	game.call("_on_nav", "cards")
+	await _wait(0.5)
+	await _shot("07_cards")
+	get_tree().quit()
