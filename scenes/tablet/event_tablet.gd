@@ -186,9 +186,15 @@ func open(eid: String) -> void:
 		if chars.size() == 1 and GameState.state.draft_event_of(chars[0]) == "":
 			GameState.set_executor(eid, chars[0])
 	refresh()
+	AudioManager.play("open", -4.0)
 	if not SettingsService.get_value("reduce_motion"):
 		_panel.modulate.a = 0.0
 		create_tween().tween_property(_panel, "modulate:a", 1.0, 0.22)
+
+
+## Глобальный прямоугольник карты героя в кармашке (для облачка мыслей).
+func pocket_rect() -> Rect2:
+	return _pocket.get_global_rect()
 
 
 func close_tablet() -> void:

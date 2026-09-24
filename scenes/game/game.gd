@@ -21,6 +21,11 @@ var _overlay_layer: Control
 var _toast: Label
 var _hint: Label
 var _end: Control
+var _fx_layer: Control
+var _bubble: ThoughtBubble
+var _last_lines := {}
+var _commented_event := ""
+var _pending_result: Dictionary = {}
 
 
 func _ready() -> void:
@@ -36,9 +41,20 @@ func _ready() -> void:
 	EventBus.state_changed.connect(_refresh)
 	EventBus.toast.connect(_show_toast)
 	EventBus.option_resolved.connect(_on_resolved)
-	EventBus.draft_changed.connect(func(_eid: String) -> void: _rebuild_cards())
-	EventBus.initiator_used.connect(func(eid: String) -> void: _show_toast("Новое событие: " + ContentDB.data.events[eid]["title"]))
+	EventBus.draft_changed.connect(_on_draft_changed)
+	AudioManager.play_music()
+	AudioManager.play_ambient()
+	_bubble = ThoughtBubble.new()
+	add_child(_bubble)
+	var idle := Timer.new()
+	idle.wait_time = 38.0
+	idle.autostart = true
+	idle.timeout.connect(_on_idle)
+	add_child(idle)
+	EventBus.initiator_used.connect(_on_initiator_used)
 	_refresh()
+	if GameState.state.week == 1 and GameState.state.active_event_ids().is_empty():
+		_think_later("new_run", "", 1.2)
 
 
 # --- построение ---------------------------------------------------------------
@@ -63,10 +79,18 @@ func _build_map() -> void:
 	_path.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_path.draw.connect(_draw_path)
 	add_child(_path)
+	# атмосфера: туман над долиной и искры от земли
+	var area := Rect2(Vector2(LEFT_W - 200, MAP_TOP + 120), Vector2(1920 - LEFT_W + 400, MAP_BOTTOM - MAP_TOP - 120))
+	add_child(Vfx.fog(area, 0.07))
+	add_child(Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP))))
 	_markers = Control.new()
 	_markers.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_markers.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_markers)
+	_fx_layer = Control.new()
+	_fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fx_layer)
 
 
 ## Точка «на земле» (узел пути); карта события стоит над ней.
@@ -242,7 +266,7 @@ func _build_overlays() -> void:
 	_tablet = EventTablet.new()
 	_tablet.visible = false
 	_tablet.resolve_requested.connect(_on_resolve_requested)
-	_tablet.closed.connect(_refresh)
+	_tablet.closed.connect(_on_tablet_closed)
 	add_child(_tablet)
 	# нижняя панель должна оставаться доступной для перетаскивания: поднимаем её над планшетом
 	_result = ResultScreen.new()
@@ -299,6 +323,8 @@ func _rebuild_markers() -> void:
 		var p := _map_point(ev.get("map_pos", [0.5, 0.5]))
 		card.position = p - Vector2(sz.x / 2, sz.y + 16)
 		card.highlight = story
+		card.sway = true
+		card.set_process(true)
 		card.tooltip_text = " "
 		card.clicked.connect(_open_event)
 		_markers.add_child(card)
@@ -362,7 +388,13 @@ func _update_hint() -> void:
 
 func _open_event(eid: String) -> void:
 	_tablet.open(eid)
+	_commented_event = ""
 	_refresh()
+	var ev: Dictionary = ContentDB.data.events.get(eid, {})
+	if _has_thought("event_open", eid):
+		_think_later("event_open", eid, 0.5)
+	elif ev.get("type", "") in ["random", "side"]:
+		_think_later("event_open_random", "", 0.5)
 
 
 func _on_card_clicked(card: String) -> void:
@@ -399,12 +431,153 @@ func _on_resolve_requested(eid: String, oid: String) -> void:
 
 func _on_resolved(result: Dictionary) -> void:
 	_tablet.visible = false
+	_bubble.hide()
+	_pending_result = result
+	var eid: String = result["event_id"]
+	var marker: CardView = null
+	for m in _markers.get_children():
+		if m is CardView and (m as CardView).card_id == eid and not m.is_queued_for_deletion():
+			marker = m
+	if marker:
+		# карту уносим из слоя маркеров, чтобы перестройка карты её не удалила
+		marker.reparent(_fx_layer)
+		move_child(_fx_layer, get_child_count() - 1)
+		if not GameState.state.is_event_active(eid):
+			marker.burn(1.3)
+			await get_tree().create_timer(1.35).timeout
+		else:
+			marker.shudder()
+			AudioManager.play("fail", -10.0, 0.8)
+			await get_tree().create_timer(0.45).timeout
+			marker.queue_free()
 	_result.show_result(result)
 	move_child(_result, get_child_count() - 1)
 
 
+func _on_tablet_closed() -> void:
+	_bubble.hide()
+	_refresh()
+
+
 func _on_result_continue() -> void:
 	_refresh()
+	var r := _pending_result
+	if r.is_empty() or GameState.state.game_over:
+		return
+	var trigger := ""
+	var broke := false
+	for w: Dictionary in r.get("wear", []):
+		if w["broken"]:
+			broke = true
+	var traumas: int = Array(GameState.state.character("P01").get("traumas", [])).size()
+	if traumas >= 2 and not Array(r.get("traumas", [])).is_empty():
+		trigger = "death_risk"
+	elif broke:
+		trigger = "item_broken"
+	elif not Array(r.get("traumas", [])).is_empty():
+		trigger = "trauma"
+	elif r["success"] and r.get("progressed", false):
+		trigger = "success_story"
+	elif r["success"]:
+		trigger = "success"
+	else:
+		trigger = "failure"
+	for e: Dictionary in r.get("entries", []):
+		if e.get("kind", "") == "card" and ContentDB.data.card_kind(str(e.get("card", ""))) == "character":
+			trigger = "companion_joined"
+	_think_later(trigger, "", 0.5)
+
+
+func _on_draft_changed(eid: String) -> void:
+	_rebuild_cards()
+	if not _tablet.visible or eid != _tablet.event_id or _commented_event == eid:
+		return
+	var executor: String = GameState.draft(eid).get("character", "")
+	if executor == "":
+		return
+	_commented_event = eid
+	if executor != "P01":
+		_think_later("executor_placed", "", 0.3, executor)
+		return
+	var best_story := -1
+	var all_high := true
+	for info: Dictionary in GameState.preview(eid):
+		if info["done"] or not Array(info["blockers"]).is_empty():
+			continue
+		if bool(info["option"].get("story", false)):
+			best_story = int(info["chance"])
+		if int(info["chance"]) < 90:
+			all_high = false
+	if best_story >= 0 and best_story < 45:
+		_think_later("chance_low", "", 2.5)
+	elif all_high:
+		_think_later("chance_high", "", 2.5)
+
+
+func _on_initiator_used(eid: String) -> void:
+	AudioManager.play("step")
+	AudioManager.play("new_event", -6.0)
+	_show_toast("Новое событие: " + ContentDB.data.events[eid]["title"])
+	_think_later("initiator_used", "", 0.8)
+
+
+func _on_idle() -> void:
+	if _tablet.visible or _result.visible or _overlay_layer.get_child_count() > 0 or randf() < 0.4:
+		return
+	think("idle")
+
+
+# --- мысли героя ------------------------------------------------------------------
+
+func _has_thought(trigger: String, event_id: String) -> bool:
+	for t: Dictionary in ContentDB.data.thoughts.values():
+		if t.get("trigger", "") == trigger and str(t.get("event", "")) == event_id:
+			return true
+	return false
+
+
+func _think_later(trigger: String, event_id: String, delay: float, who: String = "P01") -> void:
+	await get_tree().create_timer(delay).timeout
+	think(trigger, event_id, who)
+
+
+## Показывает мысль персонажа над его картой (кармашек планшета или нижняя панель).
+func think(trigger: String, event_id: String = "", who: String = "P01") -> void:
+	if not SettingsService.get_value("thoughts") or GameState.state == null:
+		return
+	var candidates: Array = []
+	for t: Dictionary in ContentDB.data.thoughts.values():
+		if t.get("trigger", "") != trigger or t.get("who", "P01") != who:
+			continue
+		if event_id != "" and str(t.get("event", "")) != event_id:
+			continue
+		candidates.append(t)
+	if candidates.is_empty():
+		return
+	var entry: Dictionary = candidates.pick_random()
+	var lines: Array = entry.get("lines", [])
+	if lines.is_empty():
+		return
+	var line: String = lines.pick_random()
+	if lines.size() > 1 and _last_lines.get(entry["id"], "") == line:
+		line = lines[(lines.find(line) + 1) % lines.size()]
+	_last_lines[entry["id"]] = line
+	var anchor := _hero_rect(who)
+	if anchor.size == Vector2.ZERO:
+		return
+	move_child(_bubble, get_child_count() - 1)
+	_bubble.say(line, anchor)
+
+
+func _hero_rect(who: String) -> Rect2:
+	if _tablet.visible:
+		return _tablet.pocket_rect()
+	if _result.visible:
+		return Rect2()
+	for c in _cards_row.get_children():
+		if c is CardView and (c as CardView).card_id == who:
+			return (c as CardView).get_global_rect()
+	return Rect2()
 
 
 func _show_toast(text: String) -> void:

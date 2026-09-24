@@ -10,6 +10,7 @@ var initiators: Dictionary = {}
 var events: Dictionary = {}
 var regions: Dictionary = {}
 var tags: Dictionary = {}
+var thoughts: Dictionary = {}
 var load_errors: Array[String] = []
 
 
@@ -22,6 +23,7 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.initiators = c._load_map(dir + "/initiators.json")
 	c.regions = c._load_map(dir + "/regions.json")
 	c.tags = c._load_map(dir + "/tags.json")
+	c.thoughts = c._load_map(dir + "/thoughts.json")
 	var ev_dir := DirAccess.open(dir + "/events")
 	if ev_dir == null:
 		c.load_errors.append("Нет папки %s/events" % dir)

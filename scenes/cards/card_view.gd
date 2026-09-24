@@ -4,6 +4,7 @@ extends Control
 ## иначе рисует гравюрную рамку по спецификации (docs/11 §3).
 
 signal clicked(card_id: String)
+signal burned
 
 const SIZE_PANEL := Vector2(140, 240)
 const SIZE_SIDE := Vector2(112, 192)
@@ -19,7 +20,12 @@ var hover_lift := true
 var dimmed := false
 var highlight := false
 var badge := ""          # короткая метка снизу: «Черновик: E03»
+var sway := false        # лёгкое покачивание (карты событий на карте мира)
+var smoke_on_hover := true
 var _hover := false
+var _smoke: CPUParticles2D
+var _phase := randf() * TAU
+var _burning := false
 var _lift := 0.0
 var _tex: Texture2D
 var _art_framed := false
@@ -63,8 +69,87 @@ func _def() -> Dictionary:
 
 
 func _on_hover(on: bool) -> void:
+	if _burning:
+		return
 	_hover = on
 	_animate_lift()
+	if on:
+		AudioManager.play("hover", -12.0)
+	if smoke_on_hover and not Vfx.reduced():
+		if _smoke == null and on:
+			_smoke = Vfx.card_smoke(size)
+			_smoke.show_behind_parent = true
+			add_child(_smoke)
+		if _smoke:
+			_smoke.emitting = on
+	set_process(sway or _hover)
+
+
+func _ready() -> void:
+	pivot_offset = size / 2
+	set_process(sway)
+
+
+func _process(_delta: float) -> void:
+	if _burning or Vfx.reduced():
+		rotation = 0.0
+		return
+	var target := 0.0
+	if _hover:
+		# наклон к курсору, не больше 6°
+		var dx := (get_local_mouse_position().x - size.x / 2) / size.x
+		target = deg_to_rad(clampf(dx * 10.0, -6.0, 6.0))
+	elif sway:
+		target = deg_to_rad(sin(Time.get_ticks_msec() / 1000.0 * 0.9 + _phase) * 1.4)
+	rotation = lerp_angle(rotation, target, 0.15)
+
+
+## Карта сгорает и осыпается пеплом; по окончании — сигнал burned и удаление.
+func burn(duration: float = 1.3) -> void:
+	_burning = true
+	_hover = false
+	_lift = 0.0
+	if _smoke:
+		_smoke.emitting = false
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	AudioManager.play("ash", -4.0, 0.6)
+	if Vfx.reduced():
+		var tw0 := create_tween()
+		tw0.tween_property(self, "modulate:a", 0.0, 0.3)
+		tw0.finished.connect(_on_burned)
+		return
+	material = Vfx.dissolve_material(size)
+	var parent := get_parent()
+	var rect := Rect2(position, size)
+	var ash := Vfx.ash_burst(rect)
+	var embers := Vfx.embers_burst(rect)
+	parent.add_child(ash)
+	parent.add_child(embers)
+	Vfx.autofree(ash)
+	Vfx.autofree(embers)
+	var tw := create_tween()
+	tw.tween_method(_set_burn, 0.0, 1.0, duration).set_ease(Tween.EASE_IN)
+	tw.finished.connect(_on_burned)
+
+
+func _set_burn(v: float) -> void:
+	(material as ShaderMaterial).set_shader_parameter("progress", v)
+
+
+func _on_burned() -> void:
+	burned.emit()
+	queue_free()
+
+
+## Короткая дрожь (событие устояло после провала).
+func shudder() -> void:
+	if Vfx.reduced():
+		return
+	var base := position
+	var tw := create_tween()
+	for i in 6:
+		tw.tween_property(self, "position", base + Vector2(randf_range(-4, 4), randf_range(-2, 2)), 0.04)
+	tw.tween_property(self, "position", base, 0.05)
 
 
 func _set_lift(v: float) -> void:

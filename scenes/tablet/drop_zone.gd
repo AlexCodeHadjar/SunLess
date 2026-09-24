@@ -25,6 +25,7 @@ func _can_drop_data(_at: Vector2, data: Variant) -> bool:
 func _drop_data(_at: Vector2, data: Variant) -> void:
 	_hot = false
 	queue_redraw()
+	AudioManager.play("place")
 	dropped.emit(str(data["card"]))
 
 

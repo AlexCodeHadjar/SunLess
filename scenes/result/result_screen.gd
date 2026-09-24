@@ -30,7 +30,11 @@ func _ready() -> void:
 
 
 func _process(_d: float) -> void:
-	_panel.position = ((get_viewport_rect().size - _panel.size) / 2).round()
+	if not visible:
+		return
+	var want := ((get_viewport_rect().size - _panel.size) / 2).round()
+	if _panel.position.distance_to(want) > 12:
+		_panel.position = want
 
 
 func show_result(result: Dictionary) -> void:
@@ -72,9 +76,12 @@ func show_result(result: Dictionary) -> void:
 		bar.set_chance(int(result["chance"]), false)
 		roll_row.add_child(UITheme.label("%d%%" % int(result["chance"]), "title_bold", 30, Palette.TEXT))
 		roll_label.text = "Шанс %d%% · Выпало %d · %s" % [int(result["chance"]), int(result["roll"]), "Успех" if success else "Провал"]
+		AudioManager.play("roll_shake", -4.0)
+		bar.roll_finished.connect(_on_roll_finished.bind(bar))
 		bar.play_roll.call_deferred(int(result["roll"]))
 	else:
 		roll_label.text = "Без броска — условия выполнены"
+		_on_roll_finished.call_deferred(null)
 	roll_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	roll_label.add_theme_color_override("font_color", Palette.STAT_UP if success else Palette.STAT_DOWN)
 	_content.add_child(roll_label)
@@ -157,6 +164,39 @@ func show_result(result: Dictionary) -> void:
 	_content.add_child(footer)
 	btn.grab_focus.call_deferred()
 	_flash(success)
+
+
+## Итог после остановки указателя: звук исхода, частицы, затем травмы / поломки / смерть.
+func _on_roll_finished(bar: ChanceBar) -> void:
+	var success: bool = _result["success"]
+	if bar:
+		AudioManager.play("roll", -6.0)
+	AudioManager.play("success" if success else "fail", -2.0, 1.0 if success else 0.8)
+	var center := _panel.position + Vector2(_panel.size.x / 2, 150)
+	var fx := Vfx.burst(center, success)
+	add_child(fx)
+	Vfx.autofree(fx)
+	if not success:
+		_shake()
+	await get_tree().create_timer(0.45).timeout
+	if not Array(_result.get("traumas", [])).is_empty():
+		AudioManager.play("trauma", -3.0)
+		await get_tree().create_timer(0.3).timeout
+	for w: Dictionary in _result.get("wear", []):
+		if w["broken"]:
+			AudioManager.play("break", -2.0)
+	if bool(_result.get("death", {}).get("died", false)):
+		AudioManager.play("death", 0.0, 0.7)
+
+
+func _shake() -> void:
+	if SettingsService.get_value("reduce_motion"):
+		return
+	var base := _panel.position
+	var tw := create_tween()
+	for i in 7:
+		tw.tween_property(_panel, "position", base + Vector2(randf_range(-3, 3), randf_range(-3, 3)), 0.035)
+	tw.tween_property(_panel, "position", base, 0.05)
 
 
 func _entry_color(kind: String) -> Color:

@@ -10,6 +10,12 @@ var values := {
 	"chance_monochrome": false,
 	"tutorial": true,
 	"canon_notes": true,
+	"thoughts": true,
+	"vol_master": 0.9,
+	"vol_music": 0.55,
+	"vol_ambient": 0.7,
+	"vol_sfx": 0.85,
+	"vol_ui": 0.6,
 }
 
 
@@ -29,6 +35,9 @@ func set_value(key: String, value: Variant) -> void:
 
 
 func apply() -> void:
+	var am := get_node_or_null("/root/AudioManager")
+	if am:
+		am.call("apply_volumes")
 	if DisplayServer.get_name() == "headless":
 		return
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if values["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED

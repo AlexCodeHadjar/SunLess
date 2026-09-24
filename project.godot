@@ -25,6 +25,7 @@ ContentDB="*res://autoload/content_db.gd"
 SettingsService="*res://autoload/settings_service.gd"
 SaveService="*res://autoload/save_service.gd"
 GameState="*res://autoload/game_state.gd"
+AudioManager="*res://autoload/audio_manager.gd"
 
 [debug]
 

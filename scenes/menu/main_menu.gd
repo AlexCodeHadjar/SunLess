@@ -10,6 +10,11 @@ func _ready() -> void:
 	var bd := MapBackdrop.new()
 	bd.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bd)
+	var vp := Vector2(1920, 1080)
+	add_child(Vfx.fog(Rect2(Vector2(-200, 300), Vector2(vp.x + 400, 600)), 0.06))
+	add_child(Vfx.ambient_embers(Rect2(Vector2(0, 0), vp)))
+	AudioManager.play_music()
+	AudioManager.play_ambient()
 	var shade := ColorRect.new()
 	shade.color = Color(0, 0, 0, 0.35)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -64,5 +69,6 @@ func _on_continue() -> void:
 
 
 func _on_new() -> void:
+	AudioManager.play("shuffle")
 	GameState.new_run()
 	get_tree().change_scene_to_file(GAME)

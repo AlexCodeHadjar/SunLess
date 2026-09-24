@@ -40,8 +40,13 @@ func _run() -> void:
 	await _wait(0.8)
 	await _shot("03_map_e01")
 	var game := get_tree().current_scene
+	for m in game.get("_markers").get_children():
+		if m is CardView:
+			m.call("_on_hover", true)
+	await _wait(1.0)
+	await _shot("03b_hover_smoke")
 	game.call("_open_event", "E01")
-	await _wait(0.6)
+	await _wait(2.4)
 	await _shot("04_tablet_e01")
 	# Продвинемся к E05 со снаряжением, чтобы увидеть веер и арт события
 	var s: RunState = GameState.state
@@ -58,8 +63,11 @@ func _run() -> void:
 	GameState.attach("E05", "U02")
 	await _wait(0.6)
 	await _shot("05_tablet_e05")
+	s.characters["P01"]["perm"]["cunning"] = 5
 	GameState.resolve("E05", "E05_1")
-	await _wait(0.8)
+	await _wait(0.65)
+	await _shot("06a_burn")
+	await _wait(1.6)
 	await _shot("06_result")
 	game.call("_on_nav", "cards")
 	await _wait(0.5)
