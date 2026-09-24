@@ -12,6 +12,8 @@ const SIZE_POCKET := Vector2(210, 360)
 const SIZE_FAN := Vector2(126, 216)
 const SIZE_ZOOM := Vector2(280, 480)
 const SIZE_TRAUMA := Vector2(84, 144)
+const RANKS := ["Спящий", "Пробуждённый", "Падший", "Порченый", "Великий", "Проклятый", "Нечестивый"]
+const CLASSES := ["", "Зверь", "Монстр", "Демон", "Дьявол", "Тиран", "Ужас", "Титан"]
 
 var card_id := ""
 var kind := ""          # character | enhancement | initiator | trauma | event
@@ -51,7 +53,7 @@ func _init_card() -> void:
 	var art: String = def.get("art", "")
 	if art != "" and ResourceLoader.exists(art):
 		_tex = load(art)
-		_art_framed = bool(def.get("art_has_frame", false))
+		_art_framed = bool(def.get("art_has_frame", kind == "enemy"))
 	tooltip_text = " "  # включает кастомную подсказку-увеличение
 	mouse_entered.connect(_on_hover.bind(true))
 	mouse_exited.connect(_on_hover.bind(false))
@@ -65,6 +67,7 @@ func _def() -> Dictionary:
 		"initiator": return c.initiators.get(card_id, {})
 		"trauma": return c.traumas.get(card_id, {})
 		"event": return c.events.get(card_id, {})
+		"enemy": return c.enemies.get(card_id, {})
 	return {}
 
 
@@ -254,7 +257,27 @@ func describe() -> String:
 			lines.append(", ".join(mods))
 		"event":
 			lines.append(str(d.get("text", "")))
+		"enemy":
+			lines.append("%s · %s · %s" % [RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CLASSES[clampi(int(d.get("class", 1)), 1, 7)],
+				{"normal": "обычный", "elite": "элита", "boss": "босс"}.get(d.get("kind", "normal"), "")])
+			lines.append("Добыча: ✧ %d осколков душ" % int(d.get("shards", 0)))
+	var ctags := _combat_tags()
+	if not ctags.is_empty():
+		lines.append("")
+		lines.append("[color=#9A9CA6]Теги:[/color] " + TagText.links(ctags, "  ", 16))
 	return "\n".join(lines)
+
+
+## Боевые теги карты (видны только в увеличенном просмотре и в бою).
+func _combat_tags() -> Array:
+	var d := _def()
+	if kind == "character":
+		var s := GameState.state
+		var stage: String = s.character(card_id).get("stage", "") if s else ""
+		return d.get("stages", {}).get(stage, {}).get("tags", d.get("tags", []))
+	if kind in ["enhancement", "enemy"]:
+		return d.get("tags", [])
+	return []
 
 
 # --- отрисовка ---------------------------------------------------------------
@@ -283,6 +306,7 @@ func _border_color(d: Dictionary) -> Color:
 		"enhancement": return Color("#8C6B45") if d.get("origin", "") != "knowledge" else Palette.REQ_MET.darkened(0.2)
 		"initiator": return Palette.INITIATOR.lightened(0.2)
 		"trauma": return Palette.TRAUMA_BRIGHT
+		"enemy": return Palette.STAT_DOWN
 		"event":
 			return Palette.GOLD if d.get("type", "") in ["story", "reward"] else (Palette.INITIATOR.lightened(0.2) if d.get("source_kind", "") == "initiator" else Palette.SILVER.darkened(0.2))
 	return Palette.LINE
@@ -335,6 +359,8 @@ func _subtitle(d: Dictionary) -> String:
 			var s := GameState.state
 			var st2 := ContentDB.data.stage_name(card_id, str(s.character(card_id).get("stage", ""))) if s else ""
 			return st2 if st2 != "" else str(d.get("role", "")).split(" /")[0]
+		"enemy":
+			return "%s · %s" % [RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CLASSES[clampi(int(d.get("class", 1)), 1, 7)]]
 		"event":
 			var tags: Array = []
 			for t: String in Array(d.get("tags", [])).slice(0, 2):

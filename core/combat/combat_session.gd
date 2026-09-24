@@ -40,6 +40,11 @@ var hero_wins := 0
 var enemy_wins := 0
 var momentum := ""                # "hero" | "enemy" | ""
 var round_card: Dictionary = {}
+## Намерение врага на этот раунд (видно игроку до выбора приёма)
+var intent: Dictionary = {}
+var intent_notes: Array = []
+var pending_enemy_bonus := 0.0
+var carry_enemy_bonus := 0.0
 var next_round_card: Dictionary = {}
 var used_round_cards: Array = []
 var hand: Array = []              # id приёмов
@@ -107,7 +112,69 @@ func begin_round() -> void:
 				weakest = e.duplicate(true)
 		weakest["name"] = str(weakest["name"]) + " (подкрепление)"
 		enemies.append(weakest)
+	carry_enemy_bonus = pending_enemy_bonus
+	pending_enemy_bonus = 0.0
+	_choose_intent()
 	hand = _draw_hand()
+
+
+## Враг выбирает способность по своим тегам (взвешенно). Эффекты начала раунда применяются сразу.
+func _choose_intent() -> void:
+	intent_notes.clear()
+	var et := _enemy_tags({})
+	var pool: Array = []
+	var total := 0
+	var ids: Array = content.enemy_abilities.keys()
+	ids.sort()
+	for id: String in ids:
+		var a: Dictionary = content.enemy_abilities[id]
+		var need: Array = a.get("when_tags", [])
+		var ok := need.is_empty()
+		for t: String in need:
+			if et.has(t):
+				ok = true
+		if ok:
+			pool.append(a)
+			total += int(a.get("weight", 1))
+	intent = {}
+	if pool.is_empty():
+		return
+	var r := rng.randi_range(1, total)
+	for a: Dictionary in pool:
+		r -= int(a.get("weight", 1))
+		if r <= 0:
+			intent = a.duplicate(true)
+			break
+	var neg := _intent_negator(_hero_tags({}), _env_tags(), {})
+	if neg != "":
+		return
+	if bool(intent.get("summon", false)) and not enemies.is_empty():
+		var weakest: Dictionary = enemies[0].duplicate(true)
+		for e: Dictionary in enemies:
+			if _enemy_base(e) < _enemy_base(weakest):
+				weakest = e.duplicate(true)
+		weakest["name"] = str(weakest["name"]).trim_suffix(" (подкрепление)") + " (поднят)"
+		enemies.append(weakest)
+		intent_notes.append("К бою присоединяется %s" % weakest["name"])
+	if int(intent.get("heal_wound", 0)) > 0:
+		if session_wounds > 0:
+			session_wounds -= 1
+			intent_notes.append("Рана врага затянулась")
+		elif int(state.enemy_wounds.get(event_id, 0)) > 0:
+			state.enemy_wounds[event_id] = int(state.enemy_wounds[event_id]) - 1
+			intent_notes.append("Старая рана врага затянулась")
+
+
+## Тег героя/поля, гасящий намерение (или "", если намерение действует).
+func _intent_negator(ht: Array, env: Array, tactic: Dictionary) -> String:
+	if intent.is_empty():
+		return ""
+	if bool(tactic.get("cancel_intent", false)):
+		return "Финт"
+	for t: String in intent.get("negated_by", []):
+		if ht.has(t) or env.has(t):
+			return t
+	return ""
 
 
 func _draw_round_card() -> Dictionary:
@@ -174,13 +241,21 @@ func play_round(tactic_id: String = "") -> Dictionary:
 			state.resources["mana"] = int(state.resources["mana"]) - cost
 			entries.append({"kind": "resource", "text": "◈ мана −%d («%s»)" % [cost, tactic["name"]]})
 	var led := ledger(tactic)
+	var intent_active := _intent_negator(led["hero_tags"], led["env_tags"], tactic) == ""
+	if intent_active and float(intent.get("next_bonus", 0.0)) > 0.0:
+		pending_enemy_bonus = float(intent["next_bonus"])
+	if intent_active and int(intent.get("wear", 0)) > 0:
+		for card: String in enh:
+			if WearRules.wears(content, state, card):
+				state.wear[card] = mini(100, WearRules.current(state, card) + int(intent["wear"]))
+		entries.append({"kind": "info", "text": "«%s»: усиления изнашиваются сильнее" % intent.get("name", "")})
 	var roll := rng.randi_range(1, 100)
 	var won: bool = roll <= int(led["chance"])
 	for l: Dictionary in led["links"]:
 		if not discovered.has(l["id"]):
 			discovered.append(l["id"])
 	var rec := {"round": round_no, "card": round_card, "tactic": tactic_id, "chance": led["chance"], "roll": roll,
-		"hero_won": won, "ledger": led, "traumas": []}
+		"hero_won": won, "ledger": led, "traumas": [], "intent": intent, "intent_active": intent_active}
 	if won:
 		hero_wins += 1
 		session_wounds += 1
@@ -188,7 +263,8 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	else:
 		enemy_wins += 1
 		momentum = "enemy"
-		_lose_round(tactic, rec)
+		var extra := int(intent.get("extra_trauma_on_win", 0)) if intent_active else 0
+		_lose_round(tactic, rec, extra)
 	for t: String in tactic.get("self_tags", []):
 		if not hero_extra_tags.has(t):
 			hero_extra_tags.append(t)
@@ -205,8 +281,8 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	return rec
 
 
-func _lose_round(tactic: Dictionary, rec: Dictionary) -> void:
-	var count := 2 if bool(tactic.get("all_in", false)) else 1
+func _lose_round(tactic: Dictionary, rec: Dictionary, extra: int = 0) -> void:
+	var count := (2 if bool(tactic.get("all_in", false)) else 1) + extra
 	if bool(tactic.get("guard", false)) and rng.randi_range(1, 100) <= 50:
 		entries.append({"kind": "info", "text": "Удар принят в защите — травмы нет"})
 		return
@@ -314,6 +390,10 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 	var ht := _hero_tags(tactic)
 	var et := _enemy_tags(tactic)
 	var env := _env_tags()
+	var intent_neg := _intent_negator(ht, env, tactic)
+	if intent_neg == "":
+		for t: String in intent.get("cancel_hero_tags", []):
+			ht.erase(t)
 	var hs: Array = []
 	var es: Array = []
 	var links: Array = []
@@ -473,6 +553,45 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 		var tb := float(tactic["bonus"])
 		H *= 1.0 + tb
 		hs.append({"label": "Приём: %s" % tactic.get("name", ""), "kind": "tactic", "pct": tb, "value": H})
+
+	# 8б. Намерение врага
+	if not intent.is_empty():
+		var iname := "Намерение: %s" % intent.get("name", "")
+		if intent_neg != "":
+			links.append({"id": "int:%s>%s" % [intent.get("id", ""), intent_neg], "type": "conflict", "name": "%s гасит «%s»" % [intent_neg, intent.get("name", "")],
+				"tags": [intent_neg, str(intent.get("name", ""))], "side": "enemy", "value": 0.0, "intent": true})
+			es.append({"label": iname + " — погашено (%s)" % intent_neg, "kind": "intent", "pct": 0.0, "value": E})
+		else:
+			var eb2 := float(intent.get("bonus", 0.0))
+			if TraumaRules.counted(state.character(hero).get("traumas", [])) > 0:
+				eb2 += float(intent.get("bonus_if_hero_wounded", 0.0))
+			if intent.has("per_enemy"):
+				eb2 += minf(float(intent["per_enemy"]) * maxf(0, enemies.size() - 1), float(intent.get("per_enemy_cap", 0.3)))
+			var red: Dictionary = intent.get("reduced_by", {})
+			for t: String in red.get("tags", []):
+				if ht.has(t):
+					eb2 *= float(red.get("factor", 0.5))
+					links.append({"id": "int:%s>%s" % [intent.get("id", ""), t], "type": "conflict", "name": "%s ослабляет «%s»" % [t, intent.get("name", "")],
+						"tags": [t, str(intent.get("name", ""))], "side": "enemy", "value": 0.0, "intent": true})
+					break
+			for t: String in intent.get("backfire_tags", []):
+				if ht.has(t):
+					eb2 = -0.20
+					links.append({"id": "int:%s>%s" % [intent.get("id", ""), t], "type": "conflict", "name": "%s: гордыня против врага" % t,
+						"tags": [t, str(intent.get("name", ""))], "side": "enemy", "value": -0.20, "intent": true})
+					break
+			if absf(eb2) > 0.0001:
+				E *= 1.0 + eb2
+				es.append({"label": iname, "kind": "intent", "pct": eb2, "value": E})
+			var hp := float(intent.get("hero_penalty", 0.0))
+			if hp > 0.0:
+				H *= 1.0 - hp
+				hs.append({"label": iname, "kind": "intent", "pct": -hp, "value": H})
+				links.append({"id": "int:%s" % intent.get("id", ""), "type": "conflict", "name": str(intent.get("name", "")),
+					"tags": [str(intent.get("name", "")), "герой"], "side": "hero", "value": -hp, "intent": true})
+	if carry_enemy_bonus > 0.0:
+		E *= 1.0 + carry_enemy_bonus
+		es.append({"label": "Выжидание окупилось", "kind": "intent", "pct": carry_enemy_bonus, "value": E})
 
 	# 9. Характеристика раунда
 	var stat: String = round_card.get("stat", "")

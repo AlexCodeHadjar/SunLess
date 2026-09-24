@@ -211,6 +211,12 @@ static func _validate_combat(c: Content, errors: Array[String]) -> void:
 		for t: String in c.enhancements[uid].get("tags", []):
 			if not T.has(t):
 				errors.append("Усиление %s: нет тега «%s»" % [uid, t])
+	for aid: String in c.enemy_abilities:
+		var a: Dictionary = c.enemy_abilities[aid]
+		for t: String in Array(a.get("when_tags", [])) + Array(a.get("negated_by", [])) + Array(a.get("cancel_hero_tags", [])) \
+				+ Array(a.get("backfire_tags", [])) + Array(a.get("reduced_by", {}).get("tags", [])):
+			if not T.has(t):
+				errors.append("Способность врага %s: нет тега «%s»" % [aid, t])
 	for xid: String in c.tactics:
 		for t: String in Array(c.tactics[xid].get("add_tags", [])) + Array(c.tactics[xid].get("self_tags", [])):
 			if not T.has(t):

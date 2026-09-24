@@ -424,6 +424,19 @@ func _on_tab(tab: String) -> void:
 
 
 func _on_resolve_requested(eid: String, oid: String) -> void:
+	if str(ContentDB.data.option(eid, oid).get("check", "")) == "combat":
+		var why := GameState.can_resolve(eid, oid)
+		if why != "":
+			_show_toast(why)
+			return
+		_tablet.visible = false
+		_bubble.hide()
+		var cs := CombatScreen.new()
+		add_child(cs)
+		cs.open(eid, oid)
+		cs.closed.connect(_on_combat_closed.bind(eid))
+		_think_later("combat_start", "", 1.0)
+		return
 	var r := GameState.resolve(eid, oid)
 	if not r["ok"]:
 		_show_toast(r["reason"])
@@ -452,6 +465,12 @@ func _on_resolved(result: Dictionary) -> void:
 			marker.queue_free()
 	_result.show_result(result)
 	move_child(_result, get_child_count() - 1)
+
+
+func _on_combat_closed(eid: String) -> void:
+	# если бой отменён на подготовке — вернуть планшет
+	if GameState.state.is_event_active(eid) and not _result.visible and _pending_result.get("event_id", "") != eid:
+		_tablet.open(eid)
 
 
 func _on_tablet_closed() -> void:
@@ -570,6 +589,9 @@ func think(trigger: String, event_id: String = "", who: String = "P01") -> void:
 
 
 func _hero_rect(who: String) -> Rect2:
+	for ch in get_children():
+		if ch is CombatScreen and is_instance_valid(ch.get("_hero_card")):
+			return (ch.get("_hero_card") as Control).get_global_rect()
 	if _tablet.visible:
 		return _tablet.pocket_rect()
 	if _result.visible:

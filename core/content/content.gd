@@ -19,6 +19,7 @@ var fields: Dictionary = {}
 var round_cards: Dictionary = {}
 var enemies: Dictionary = {}
 var tactics: Dictionary = {}
+var enemy_abilities: Dictionary = {}
 var load_errors: Array[String] = []
 
 
@@ -39,6 +40,7 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.round_cards = c._load_map(dir + "/combat/round_cards.json")
 	c.enemies = c._load_map(dir + "/combat/enemies.json")
 	c.tactics = c._load_map(dir + "/combat/tactics.json")
+	c.enemy_abilities = c._load_map(dir + "/combat/enemy_abilities.json")
 	var ev_dir := DirAccess.open(dir + "/events")
 	if ev_dir == null:
 		c.load_errors.append("Нет папки %s/events" % dir)

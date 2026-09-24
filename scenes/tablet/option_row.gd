@@ -87,6 +87,18 @@ func _rebuild(prev_chance: int) -> void:
 				col_req = Palette.TEXT_DIM
 				mark = ""
 			mid.add_child(UITheme.label("%d %s" % [need, mark], "title_bold", 22, col_req))
+	elif check == "combat":
+		var spec: Dictionary = o.get("combat", {})
+		var names: Array = []
+		for en: String in spec.get("enemies", []):
+			names.append(ContentDB.data.card_name(en))
+		var counts := {}
+		for nme: String in names:
+			counts[nme] = int(counts.get(nme, 0)) + 1
+		var parts: Array = []
+		for nme: String in counts:
+			parts.append(nme + (" ×%d" % counts[nme] if int(counts[nme]) > 1 else ""))
+		mid.add_child(UITheme.label("⚔ Бой: " + ", ".join(parts), "sans_bold", 16, Palette.STAT_DOWN))
 	else:
 		mid.add_child(UITheme.label("Без броска", "sans", 16, Palette.TEXT_DIM))
 	var cost: Dictionary = o.get("cost", {})
@@ -105,7 +117,7 @@ func _rebuild(prev_chance: int) -> void:
 		if prev_chance < 0:
 			_bar.set_chance(chance, false)
 		mid.add_child(UITheme.label("%d%%" % chance, "title_bold", 26, Palette.TEXT))
-		mid.add_child(UITheme.label(ChanceCalculator.label(chance), "sans", 14, Palette.TEXT_DIM))
+		mid.add_child(UITheme.label("1-й раунд" if check == "combat" else ChanceCalculator.label(chance), "sans", 14, Palette.TEXT_DIM))
 	else:
 		_bar.set_chance(0, false)
 		mid.add_child(UITheme.label("—", "title_bold", 26, Palette.TEXT_DIM))

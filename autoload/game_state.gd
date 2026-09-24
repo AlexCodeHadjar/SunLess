@@ -168,3 +168,34 @@ func use_initiator(card: String) -> Dictionary:
 
 func _extras() -> Dictionary:
 	return {"concentration": concentration.duplicate(), "ward": ward}
+
+
+# --- бой ----------------------------------------------------------------------
+
+var combat: CombatSession
+
+
+func start_combat(event_id: String, option_id: String, support: Array = []) -> String:
+	var why := can_resolve(event_id, option_id)
+	if why != "":
+		return why
+	combat = CombatSession.create(content(), state, event_id, option_id, draft(event_id), support, ward)
+	return ""
+
+
+## Завершает бой: применяет итог, сохраняет, открывает связи, показывает результат.
+func finish_combat() -> Dictionary:
+	if combat == null:
+		return {}
+	var before := state
+	var r := combat.finish()
+	SaveService.save_state(before, "before_turn")
+	state = r["state"]
+	var fresh := ProfileService.discover(combat.discovered)
+	r["result"]["discovered"] = fresh
+	combat = null
+	_reset_extras()
+	SaveService.save_state(state)
+	EventBus.option_resolved.emit(r["result"])
+	EventBus.state_changed.emit()
+	return r

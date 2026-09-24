@@ -153,6 +153,33 @@ func test_option_adds_ally_to_combat() -> void:
 	check(cs.available_tactics().has("X_ALLY"), "с союзником доступен приём «Плечом к плечу»")
 
 
+func test_enemy_intent_chosen_and_negated() -> void:
+	var c := content()
+	var s := _state(c)
+	_open(s, "E03")
+	var cs := CombatSession.create(c, s, "E03", "E03_1", {"character": "P01", "enhancements": []})
+	cs.begin_round()
+	check(not cs.intent.is_empty(), "враг выбрал намерение")
+	# Смертельный взгляд гасится Слепотой
+	cs.intent = c.enemy_abilities["EA_GAZE"].duplicate(true)
+	var with_gaze := float(cs.ledger({})["hero"])
+	cs.mods = {"hero_tags": ["Слепота"]}
+	var blind := float(cs.ledger({})["hero"])
+	check(blind > with_gaze, "Слепота гасит взгляд: %.0f → %.0f" % [with_gaze, blind])
+
+
+func test_feint_cancels_intent() -> void:
+	var c := content()
+	var s := _state(c)
+	_open(s, "E05")
+	var cs := CombatSession.create(c, s, "E05", "E05_2", {"character": "P01", "enhancements": []})
+	cs.round_no = 1
+	cs.intent = c.enemy_abilities["EA_CHARGE"].duplicate(true)
+	var plain := float(cs.ledger({})["enemy"])
+	var feint := float(cs.ledger(c.tactics["X_FEINT"])["enemy"])
+	check(feint < plain, "Финт сбивает натиск: %.0f → %.0f" % [plain, feint])
+
+
 func test_combat_option_blocked_in_turn_resolver() -> void:
 	var c := content()
 	var s := _state(c)

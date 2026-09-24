@@ -72,4 +72,45 @@ func _run() -> void:
 	game.call("_on_nav", "cards")
 	await _wait(0.5)
 	await _shot("07_cards")
+	game.call("_close_overlay")
+	game.get("_result").call("_on_continue")
+	# --- бой ---
+	s = GameState.state
+	s.characters["P01"]["traumas"] = []
+	s.events["E03"] = {"status": "active", "done_options": [], "spawned_week": s.week}
+	EventBus.state_changed.emit()
+	game.call("_open_event", "E03")
+	GameState.set_executor("E03", "P01")
+	GameState.attach("E03", "U01")
+	await _wait(0.5)
+	await _shot("08_tablet_combat_option")
+	game.call("_on_resolve_requested", "E03", "E03_1")
+	await _wait(1.2)
+	await _shot("09_combat_prep")
+	var cs_screen: Node = null
+	for ch in game.get_children():
+		if ch is CombatScreen:
+			cs_screen = ch
+	cs_screen.call("_on_action")
+	await _wait(1.0)
+	await _shot("10a_beams_in_flight")
+	await _wait(3.5)
+	await _shot("10_combat_round")
+	var hand: Array = GameState.combat.hand
+	if not hand.is_empty():
+		cs_screen.call("_pick_tactic", hand[0])
+	await _wait(0.5)
+	await _wait(2.5)
+	await _shot("10c_tactic_selected")
+	cs_screen.call("_on_action")
+	await _wait(1.3)
+	await _shot("11_combat_round_result")
+	cs_screen.get("_info").call("show_tag", "Мягкое тело", Vector2(900, 420), "В этом бою: есть у врага")
+	await _wait(0.3)
+	await _shot("12_tag_info")
+	cs_screen.get("_info").visible = false
+	cs_screen.set("_graph_forced", true)
+	cs_screen.get("_graph").call("show_for", "Тень")
+	await _wait(0.4)
+	await _shot("13_link_graph")
 	get_tree().quit()

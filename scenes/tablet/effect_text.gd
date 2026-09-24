@@ -29,6 +29,7 @@ static func _one(c: Content, e: Dictionary, revealed: bool) -> String:
 			"reveal": return "знание ?"
 			"remove_trauma", "clear_traumas": return "лечение"
 			"set_flag": return "последствие ?"
+			"combat_mod": return "влияет на бой ?"
 			_: return ""
 	match cmd:
 		"add_card": return "▣ " + c.card_name(str(e["card"]))
@@ -52,10 +53,13 @@ static func _one(c: Content, e: Dictionary, revealed: bool) -> String:
 		"set_flag": return str(e.get("text", "")) if e.has("text") else ""
 		"remove_card": return ""
 		"text": return str(e["text"])
+		"combat_mod": return "меняет бой"
 	return ""
 
 
 static func failure(c: Content, ev: Dictionary, o: Dictionary) -> String:
+	if str(o.get("check", "")) == "combat":
+		return "травма за каждый проигранный раунд"
 	var count := int(o.get("failure_traumas", 2 if bool(o.get("danger", ev.get("danger", false))) else 1))
 	if count <= 0:
 		return "без травмы"
