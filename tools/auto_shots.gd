@@ -151,6 +151,37 @@ func _run() -> void:
 	await _shot("13_link_graph")
 	cs_screen.set("_graph_forced", false)
 	cs_screen.get("_graph").visible = false
+	# --- свободный режим: Академия ---
+	cs_screen.queue_free()
+	GameState.combat = null
+	s = GameState.state
+	s.characters["P01"]["stage"] = "sleeper"
+	s.characters["P01"]["traumas"] = ["T02"]
+	var crng := RandomNumberGenerator.new()
+	crng.seed = 3
+	Chronicle.start_chapter(ContentDB.data, s, "academy", crng)
+	s.week += 1
+	EventBus.state_changed.emit()
+	await _wait(1.2)
+	await _shot("15_academy_intro")
+	s.flags["intro_academy"] = true
+	var intro: Node = game.get("_intro")
+	if intro:
+		intro.queue_free()
+		game.set("_intro", null)
+	s.events["E12"]["status"] = "closed"
+	Chronicle.unlock(ContentDB.data, s, crng)
+	s.events["E13"]["status"] = "closed"
+	Chronicle.unlock(ContentDB.data, s, crng)
+	EventBus.state_changed.emit()
+	await _wait(1.0)
+	await _shot("16_academy_map")
+	game.call("_ask_travel", "library")
+	await _wait(0.4)
+	await _shot("17_academy_travel")
+	game.call("_do_travel", "dorm")
+	await _wait(1.0)
+	await _shot("18_academy_camp")
 	# витрина живого облика карт: враги по тегам, герой с травмами
 	var shelf := Control.new()
 	shelf.top_level = true

@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "add_trauma", "remove_trauma", "clear_traumas",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "reveal", "add_codex",
-	"set_region", "remove_temporaries", "end_demo", "text", "combat_mod"]
+	"set_region", "remove_temporaries", "end_demo", "text", "combat_mod", "spawn_event", "start_chapter", "reset_wear"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_has_trauma"]
 const CHECKS := ["stat", "gate_stat", "auto", "combat"]
@@ -36,6 +36,7 @@ static func validate(c: Content) -> Array[String]:
 		_validate_event(c, eid, errors)
 
 	_validate_combat(c, errors)
+	_validate_chapters(c, errors)
 
 	# Сюжетная цепочка от E01 должна дойти до конца без обрывов и циклов.
 	var seen := {}
@@ -174,6 +175,34 @@ static func _validate_effects(c: Content, where: String, effects: Array, errors:
 			var ch: Dictionary = c.characters.get(str(e.get("character", "")), {})
 			if not ch.get("stages", {}).has(str(e.get("stage", ""))):
 				errors.append("%s: нет стадии %s" % [where, e.get("stage", "")])
+
+
+## Главы свободного режима: места связаны, якоря и события ссылаются на существующее.
+static func _validate_chapters(c: Content, errors: Array[String]) -> void:
+	for cid: String in c.chapters:
+		var ch: Dictionary = c.chapters[cid]
+		var nodes := {}
+		for n: Dictionary in ch.get("nodes", []):
+			nodes[str(n["id"])] = true
+		if not nodes.has(str(ch.get("start_node", ""))):
+			errors.append("Глава %s: нет стартового места" % cid)
+		for l: Array in ch.get("links", []):
+			for nid: Variant in l:
+				if not nodes.has(str(nid)):
+					errors.append("Глава %s: связь с несуществующим местом %s" % [cid, nid])
+		var ids: Array = [str(ch.get("final", ""))]
+		for a: Dictionary in Array(ch.get("anchors", [])) + Array(ch.get("threads", [])):
+			ids.append(str(a["event"]))
+			for dep: String in a.get("after", []):
+				if not c.events.has(dep):
+					errors.append("Глава %s: условие ссылается на несуществующее %s" % [cid, dep])
+		for eid: String in ids:
+			if not c.events.has(eid):
+				errors.append("Глава %s: нет события %s" % [cid, eid])
+		for eid: String in c.events:
+			var ev: Dictionary = c.events[eid]
+			if str(ev.get("chapter", "")) == cid and ev.has("node") and not nodes.has(str(ev["node"])):
+				errors.append("%s: место %s не найдено в главе %s" % [eid, ev["node"], cid])
 
 
 ## Боевые данные: все теги связей, полей, карт раунда и носителей существуют.

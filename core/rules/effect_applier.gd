@@ -128,6 +128,23 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 				m["field"] = str(e["field"])
 			state.combat_mods[eid] = m
 			return [{"kind": "flag", "text": str(e.get("text", "Будущий бой изменён"))}]
+		"spawn_event":
+			var sid: String = e["event"]
+			if not state.events.has(sid):
+				return EventFlow.spawn(content, state, sid, rng)
+		"start_chapter":
+			return Chronicle.start_chapter(content, state, str(e["chapter"]), rng)
+		"reset_wear":
+			# кузнец: самое изношенное усиление — снова как новое
+			var worst := ""
+			for c3: String in state.wear:
+				if state.owns(c3) and (worst == "" or int(state.wear[c3]) > int(state.wear[worst])):
+					worst = c3
+			if worst == "" or int(state.wear[worst]) <= WearRules.START:
+				return [{"kind": "info", "text": "Чинить нечего"}]
+			state.wear[worst] = WearRules.START
+			state.note(worst, "Кузнец снял износ")
+			return [{"kind": "info", "text": "%s: износ сброшен до %d%%" % [content.card_name(worst), WearRules.START]}]
 		"end_demo":
 			state.demo_complete = true
 			return [{"kind": "story", "text": str(e.get("text", "Конец демоверсии"))}]

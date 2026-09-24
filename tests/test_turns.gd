@@ -155,7 +155,10 @@ func test_e11_finishes_slice() -> void:
 	s.events["E11"] = {"status": "active", "done_options": [], "spawned_week": 1}
 	var r := TurnResolver.resolve(c, s, "E11", "E11_1", _draft())
 	var ns: RunState = r["state"]
-	check(ns.demo_complete, "демоверсия пройдена")
+	check(not ns.demo_complete, "после Кошмара игра продолжается")
+	eq(ns.chapter, "academy", "свободный режим — Академия:")
+	eq(ns.node, "medbay", "Санни просыпается в медкрыле:")
+	check(ns.is_event_active("E12"), "первый якорь главы появился")
 	eq(ns.characters["P01"]["stage"], "sleeper", "стадия:")
 	eq(Array(ns.characters["P01"]["traumas"]).size(), 0, "травмы сняты:")
 	check(Array(ns.characters["P01"]["abilities"]).has("A01"), "Контроль Теней получен")

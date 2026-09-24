@@ -343,6 +343,8 @@ func _build_board() -> void:
 	bd.modulate = Color(0.55, 0.55, 0.62)
 	if GameState.state:
 		bd.tod = MapBackdrop.tod_for_week(GameState.state.week)
+		bd.region = GameState.state.region
+		bd.snow = GameState.state.region == "mountain_pass"
 	_board.add_child(bd)
 	var shade := ColorRect.new()
 	shade.color = Color(0.03, 0.03, 0.05, 0.55)

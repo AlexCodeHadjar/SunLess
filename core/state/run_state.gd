@@ -34,6 +34,9 @@ var enemy_wounds: Dictionary = {}
 var enemy_alert: Dictionary = {}
 var combat_mods: Dictionary = {}
 var log: Array = []
+var chapter: String = ""      # глава свободного режима ("" — линейная часть)
+var node: String = ""         # место героя на карте главы
+var chapter_start: int = 0    # первая неделя главы (для отсчёта)
 var card_log: Array = []   # [{week, card, text}] — отметки карт для «В вашем прохождении»
 var game_over: bool = false
 var demo_complete: bool = false
@@ -64,6 +67,9 @@ func to_dict() -> Dictionary:
 		"combat_mods": combat_mods.duplicate(true),
 		"log": log.duplicate(true),
 		"card_log": card_log.duplicate(true),
+		"chapter": chapter,
+		"node": node,
+		"chapter_start": chapter_start,
 		"game_over": game_over,
 		"demo_complete": demo_complete,
 		# RNG хранится строкой: JSON теряет точность больших целых.
@@ -107,6 +113,9 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.combat_mods = Dictionary(d.get("combat_mods", {})).duplicate(true)
 	s.log = Array(d.get("log", [])).duplicate(true)
 	s.card_log = Array(d.get("card_log", [])).duplicate(true)
+	s.chapter = str(d.get("chapter", ""))
+	s.node = str(d.get("node", ""))
+	s.chapter_start = int(d.get("chapter_start", 0))
 	for n: Dictionary in s.card_log:
 		n["week"] = int(n.get("week", 0))
 		n["seq"] = int(n.get("seq", 0))

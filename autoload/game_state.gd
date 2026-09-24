@@ -166,6 +166,33 @@ func use_initiator(card: String) -> Dictionary:
 	return r
 
 
+## Свободный режим: переход в место (неделя за шаг) или отдых в лагере.
+func move_to(node_id: String) -> Dictionary:
+	return _chronicle_turn(func(s: RunState, rng: RandomNumberGenerator) -> Dictionary: return Chronicle.move(content(), s, node_id, rng))
+
+
+func rest() -> Dictionary:
+	return _chronicle_turn(func(s: RunState, rng: RandomNumberGenerator) -> Dictionary: return Chronicle.rest(content(), s, rng))
+
+
+func _chronicle_turn(action: Callable) -> Dictionary:
+	var s := state.copy()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = s.rng_seed
+	rng.state = s.rng_state
+	var r: Dictionary = action.call(s, rng)
+	if not r["ok"]:
+		EventBus.toast.emit(r["reason"])
+		return r
+	state = s
+	SaveService.save_state(state)
+	for e: Dictionary in r["entries"]:
+		if e.get("kind", "") in ["event", "story", "lost"]:
+			EventBus.toast.emit(str(e["text"]))
+	EventBus.state_changed.emit()
+	return r
+
+
 func _extras() -> Dictionary:
 	return {"concentration": concentration.duplicate(), "ward": ward}
 

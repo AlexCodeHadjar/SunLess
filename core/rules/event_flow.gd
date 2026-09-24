@@ -30,6 +30,9 @@ static func spawn(content: Content, state: RunState, event_id: String, rng: Rand
 		push_error("Событие %s не найдено" % event_id)
 		return []
 	state.events[event_id] = {"status": "active", "done_options": [], "spawned_week": state.week}
+	# в свободном режиме событие без своего места появляется там, где стоит герой
+	if Chronicle.active(state) and str(ev.get("node", "")) == "":
+		state.events[event_id]["node"] = state.node
 	var out: Array = [{"kind": "event", "text": "Новое событие: %s" % str(ev.get("title", event_id)), "card": event_id}]
 	out.append_array(EffectApplier.apply_all(content, state, ev.get("on_appear", []), "P01", rng))
 	return out
@@ -61,6 +64,8 @@ static func advance_week(content: Content, state: RunState, rng: RandomNumberGen
 			out.append_array(spawn(content, state, eid, rng))
 	if rng.randi_range(1, 100) <= RANDOM_EVENT_CHANCE:
 		out.append_array(spawn_random(content, state, rng))
+	if Chronicle.active(state):
+		out.append_array(Chronicle.unlock(content, state, rng))
 	out.append_array(ensure_not_stuck(content, state, rng))
 	return out
 

@@ -14,6 +14,7 @@ var region := "mountain_pass"
 var snow := true
 var tod := 0.0
 var _stars: Array = []      # [Vector3(x, y, фаза)]
+var _windows: Array = []    # (устар.) окна теперь хранятся в слоях: L["windows"]
 var _t := 0.0
 var _tex: Texture2D
 var _layers: Array = []     # [{poly: PackedVector2Array, color: Color}]
@@ -32,6 +33,44 @@ func _ready() -> void:
 
 
 ## Время суток по номеру недели: 1 — ночь, 2 — рассвет, 3 — день, 4 — сумерки, 5 — снова ночь.
+## Академия: силуэт стерильного города — ярусы корпусов, мачты прожекторов, башня в центре.
+func _build_city() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	var colors: Array[Color] = [Color("#3A4352"), Color("#2A313D"), Color("#1C212A"), Color("#12151C")]
+	var bases: Array[float] = [0.50, 0.62, 0.76, 0.90]
+	var tall: Array[float] = [0.20, 0.16, 0.12, 0.08]
+	for li in 4:
+		var poly := PackedVector2Array([Vector2(0, size.y)])
+		var wins: Array = []
+		var x := 0.0
+		while x < size.x:
+			var w := rng.randf_range(50, 160) * (1.0 - li * 0.12)
+			var h := size.y * (bases[li] - rng.randf_range(0.02, tall[li]))
+			if li == 1 and absf(x - size.x * 0.55) < 90:
+				h = size.y * 0.18   # центральная башня Академии
+			poly.append(Vector2(x, h))
+			poly.append(Vector2(x + w, h))
+			if li < 3:
+				for wy in range(int(h) + 14, int(size.y * bases[li]), 22):
+					for wx in range(int(x) + 10, int(x + w) - 10, 26):
+						if rng.randf() < 0.28:
+							wins.append(Vector3(wx, wy, rng.randf() * TAU))
+			x += w
+		poly.append(Vector2(size.x, size.y))
+		_layers.append({"poly": poly, "color": colors[li], "snow": false, "depth": li, "windows": wins})
+	# мачты прожекторов
+	for i in 6:
+		var mx := size.x * (0.1 + i * 0.16)
+		_layers.append({"poly": PackedVector2Array([Vector2(mx - 3, size.y * 0.66), Vector2(mx - 1, size.y * 0.30), Vector2(mx + 1, size.y * 0.30), Vector2(mx + 3, size.y * 0.66)]),
+			"color": Color("#232A34"), "snow": false, "depth": 4})
+	_flakes.clear()
+	_stars.clear()
+	for i in 150:
+		_stars.append(Vector3(rng.randf() * size.x, rng.randf() * size.y * 0.4, rng.randf() * TAU))
+	queue_redraw()
+
+
 static func tod_for_week(week: int) -> float:
 	return float((maxi(week, 1) - 1) % 4) * 0.25
 
@@ -73,11 +112,27 @@ func _blend(keys: Array, w: Array) -> Color:
 	return c
 
 
+## Смена региона (новая глава): другой силуэт, без снега вне гор.
+func set_region(r: String) -> void:
+	region = r
+	snow = r == "mountain_pass"
+	_tex = null
+	var p := "res://art/regions/%s.png" % region
+	if ResourceLoader.exists(p):
+		_tex = load(p)
+	_built_for = Vector2.ZERO
+	_rebuild()
+
+
 func _rebuild() -> void:
 	if size == _built_for or size.x < 2:
 		return
 	_built_for = size
 	_layers.clear()
+	_windows.clear()
+	if region == "academy":
+		_build_city()
+		return
 	var noise := FastNoiseLite.new()
 	noise.seed = 7
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
@@ -192,9 +247,15 @@ func _draw_procedural() -> void:
 		for i in 18:
 			draw_circle(sun, 44.0 + i * 12, Color(sc, 0.022 * sun_a))
 		draw_circle(sun, 40, Color(sc, sun_a))
+	var win_a := night + 0.6 * twilight
 	for L: Dictionary in _layers:
 		var poly: PackedVector2Array = L["poly"]
 		draw_colored_polygon(poly, (L["color"] as Color) * tint)
+		if win_a > 0.02:
+			for wv: Vector3 in L.get("windows", []):
+				var flick := 0.75 + 0.25 * sin(_t * 0.7 + wv.z)
+				var wc := Color(0.55, 0.85, 0.85) if fmod(wv.z, 1.0) < 0.3 else Color(0.95, 0.8, 0.55)
+				draw_rect(Rect2(wv.x, wv.y, 6, 9), Color(wc, 0.55 * win_a * flick))
 		if int(L["depth"]) < 4:
 			# псевдоградиент: сдвинутые вниз копии хребта темнеют к подножию
 			var base_c: Color = (L["color"] as Color) * tint

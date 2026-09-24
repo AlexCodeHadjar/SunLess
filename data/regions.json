@@ -15,5 +15,6 @@
    "RE_HUNT"
   ],
   "combat_field": "F_04"
- }
+ },
+  {"id": "academy", "name": "Академия Пробуждённых", "arc": "academy", "arc_name": "Академия", "random_pool": ["RA_TRAINING", "RA_LIBRARY", "RA_JOB", "RA_MEDBAY", "RA_RUMORS"], "combat_field": "F_02"}
 ]

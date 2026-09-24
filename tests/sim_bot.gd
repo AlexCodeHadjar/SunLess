@@ -16,7 +16,18 @@ static func play(c: Content, seed_value: int, max_turns: int = 300) -> Dictionar
 	var max_traumas := 0
 	while turns < max_turns and not s.game_over and not s.demo_complete:
 		_use_initiators(c, s)
-		var move := _choose(c, s)
+		if Chronicle.active(s):
+			# свободный режим: действовать здесь или идти туда, где есть событие
+			var here := _choose(c, s, true)
+			if here.is_empty() or (float(here["score"]) < 50.0 and _events_elsewhere(c, s)):
+				var r2 := _travel(c, s)
+				if not r2["ok"]:
+					stuck = true
+					break
+				s = r2["state"]
+				turns += 1
+				continue
+		var move := _choose(c, s, Chronicle.active(s))
 		if move.is_empty():
 			stuck = true
 			break
@@ -56,8 +67,45 @@ static func _use_initiators(c: Content, s: RunState) -> void:
 	s.rng_state = rng.state
 
 
+## Есть ли события в других местах главы.
+static func _events_elsewhere(c: Content, s: RunState) -> bool:
+	for eid: String in s.active_event_ids():
+		if Chronicle.event_node(c, s, eid) != s.node:
+			return true
+	return false
+
+
+## Ход в свободном режиме: к ближайшему сюжетному событию, иначе к любому; если событий нет — отдых в лагере.
+static func _travel(c: Content, s: RunState) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = s.rng_seed
+	rng.state = s.rng_state
+	var best := ""
+	var best_len := 999
+	for pass_i in 2:
+		for eid: String in s.active_event_ids():
+			var story: bool = c.events[eid].get("type", "") in ["story", "reward"]
+			if pass_i == 0 and not story:
+				continue
+			var nid := Chronicle.event_node(c, s, eid)
+			if nid == s.node:
+				continue
+			var steps := Chronicle.path(c, s, nid).size()
+			if steps > 0 and steps < best_len:
+				best_len = steps
+				best = nid
+		if best != "":
+			break
+	if best == "":
+		if Chronicle.is_camp(c, s):
+			return Chronicle.rest(c, s, rng)
+		best = str(Chronicle.chapter(c, s).get("camp", ""))
+	return Chronicle.move(c, s, best, rng)
+
+
 ## Выбирает ход: сюжет, если шанс приличный; иначе подготовка или лечение.
-static func _choose(c: Content, s: RunState) -> Dictionary:
+## here_only — только события в месте героя (свободный режим).
+static func _choose(c: Content, s: RunState, here_only: bool = false) -> Dictionary:
 	var enh: Array = []
 	for card: String in s.collection:
 		if c.card_kind(card) == "enhancement" and enh.size() < 3:
@@ -67,6 +115,8 @@ static func _choose(c: Content, s: RunState) -> Dictionary:
 	var traumas: int = Array(s.characters["P01"]["traumas"]).size()
 	for eid: String in s.active_event_ids():
 		var ev: Dictionary = c.events[eid]
+		if here_only and not Chronicle.can_open(c, s, eid):
+			continue
 		for executor: String in _executors(c, s):
 			var d := {"character": executor, "enhancements": enh}
 			for info: Dictionary in TurnResolver.preview(c, s, eid, d):
@@ -83,7 +133,7 @@ static func _choose(c: Content, s: RunState) -> Dictionary:
 					score += 25.0 if traumas >= 2 and eid == "SE01" else 0.0
 				if score > best_score:
 					best_score = score
-					best = {"event": eid, "option": o["id"], "draft": d, "extras": {"ward": traumas >= 2}}
+					best = {"event": eid, "option": o["id"], "draft": d, "extras": {"ward": traumas >= 2}, "score": score}
 	return best
 
 

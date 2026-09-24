@@ -8,6 +8,9 @@ const LEFT_W := 250.0
 
 var _backdrop: MapBackdrop
 var _life: MapLife
+var _nodes_layer: Control      # кнопки мест свободного режима
+var _travel: Control           # всплывающее «Идти?»
+var _intro: Control            # вступление главы
 var _shown_week := -1
 var _path: Control
 var _markers: Control
@@ -90,6 +93,10 @@ func _build_map() -> void:
 	var area := Rect2(Vector2(LEFT_W - 200, MAP_TOP + 120), Vector2(1920 - LEFT_W + 400, MAP_BOTTOM - MAP_TOP - 120))
 	add_child(Vfx.fog(area, 0.07))
 	add_child(Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP))))
+	_nodes_layer = Control.new()
+	_nodes_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_nodes_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_nodes_layer)
 	_markers = Control.new()
 	_markers.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_markers.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -112,6 +119,9 @@ func _map_point(p: Array) -> Vector2:
 func _draw_path() -> void:
 	var c := ContentDB.data
 	var s := GameState.state
+	if Chronicle.active(s):
+		_draw_chapter_map()
+		return
 	var pts: Array[Vector2] = []
 	var ids: Array = []
 	var cur := "E01"
@@ -307,6 +317,8 @@ func _refresh() -> void:
 	var reg: Dictionary = c.regions.get(s.region, {})
 	_top_labels["region"].text = str(reg.get("name", s.region))
 	_top_labels["week"].text = "Неделя %d · %s" % [s.week, MapBackdrop.tod_name(s.week)]
+	if _backdrop.region != s.region:
+		_backdrop.set_region(s.region)
 	if s.week != _shown_week:
 		# смена недели — небо плавно переходит к новому времени суток
 		var tod := MapBackdrop.tod_for_week(s.week)
@@ -316,6 +328,12 @@ func _refresh() -> void:
 	_top_labels["mana"].text = "◈ %d" % int(s.resources.get("mana", 0))
 	_top_labels["coins"].text = "✧ %d" % int(s.resources.get("shards", 0))
 	_pending_label.text = "⋯ Надвигается следующая глава" if not s.pending_story.is_empty() else ""
+	if Chronicle.active(s):
+		var left := Chronicle.weeks_left(c, s)
+		var here := Chronicle.node_def(c, s, s.node)
+		_pending_label.text = ("Вы здесь: %s   ·   " % here.get("name", "")) + (("До солнцестояния: %d нед." % left) if left > 0 else "Солнцестояние наступило")
+	_rebuild_nodes()
+	_maybe_intro()
 	_rebuild_markers()
 	_rebuild_cards()
 	_path.queue_redraw()
@@ -340,6 +358,17 @@ func _rebuild_markers() -> void:
 		var sz := CardView.SIZE_PANEL if story else CardView.SIZE_SIDE
 		var card := CardView.make(eid, sz, false)
 		var p := _map_point(ev.get("map_pos", [0.5, 0.5]))
+		if Chronicle.active(GameState.state):
+			# события стоят у своего места; в одном месте — веером
+			var nid := Chronicle.event_node(c, GameState.state, eid)
+			var here: Array = []
+			for other: String in GameState.state.active_event_ids():
+				if Chronicle.event_node(c, GameState.state, other) == nid:
+					here.append(other)
+			var idx := here.find(eid)
+			p = _node_point(Chronicle.node_def(c, GameState.state, nid).get("pos", [0.5, 0.5])) + Vector2((idx - (here.size() - 1) / 2.0) * (sz.x + 10.0), -8.0)
+			if nid != GameState.state.node:
+				card.modulate = Color(0.62, 0.62, 0.68)
 		card.position = p - Vector2(sz.x / 2, sz.y + 16)
 		card.highlight = story
 		card.sway = true
@@ -407,6 +436,10 @@ func _update_hint() -> void:
 # --- действия ----------------------------------------------------------------
 
 func _open_event(eid: String) -> void:
+	var s := GameState.state
+	if not Chronicle.can_open(ContentDB.data, s, eid):
+		_ask_travel(Chronicle.event_node(ContentDB.data, s, eid))
+		return
 	_tablet.open(eid)
 	_commented_event = ""
 	_refresh()
@@ -781,10 +814,11 @@ func _show_end() -> void:
 	v.custom_minimum_size = Vector2(800, 0)
 	_end.add_child(v)
 	var dead := s.game_over
-	var t := UITheme.label("ТЕНЬ УГАСЛА" if dead else "ПЕРВЫЙ КОШМАР ПРОЙДЕН", "title_bold", 60, Palette.STAT_DOWN if dead else Palette.GOLD)
+	var done_title := "АКАДЕМИЯ ПОЗАДИ" if s.chapter == "academy" else "ПЕРВЫЙ КОШМАР ПРОЙДЕН"
+	var t := UITheme.label("ТЕНЬ УГАСЛА" if dead else done_title, "title_bold", 60, Palette.STAT_DOWN if dead else Palette.GOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
-	var info := "Санни погиб. Прохождение окончено." if dead else "[Заклинание Кошмара]: Ты прошёл испытание. Конец демоверсии."
+	var info := "Санни погиб. Прохождение окончено." if dead else ("Спящие уснули. Впереди — Забытый Берег. Конец демоверсии." if s.chapter == "academy" else "[Заклинание Кошмара]: Ты прошёл испытание. Конец демоверсии.")
 	var il := UITheme.label(info, "serif_italic", 22, Palette.TEXT)
 	il.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(il)
@@ -829,3 +863,193 @@ func _load_before_turn() -> void:
 		GameState.state = r["state"]
 		SaveService.save_state(GameState.state)
 		get_tree().reload_current_scene()
+
+
+# --- свободный режим: карта мест ---------------------------------------------------
+
+## Точка места на карте главы (координаты мест — доли области карты).
+func _node_point(p: Array) -> Vector2:
+	var w := get_viewport_rect().size.x
+	var x := LEFT_W + 80 + (w - LEFT_W - 240) * float(p[0])
+	var top := MAP_TOP + 260.0
+	return Vector2(x, top + (MAP_BOTTOM - 40.0 - top) * float(p[1]))
+
+
+func _draw_chapter_map() -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	var ch := Chronicle.chapter(c, s)
+	var pts := {}
+	for n: Dictionary in ch.get("nodes", []):
+		pts[n["id"]] = _node_point(n.get("pos", [0.5, 0.5]))
+	var near := Chronicle.neighbors(ch, s.node)
+	for l: Array in ch.get("links", []):
+		var a: Vector2 = pts[l[0]]
+		var b: Vector2 = pts[l[1]]
+		var hot: bool = (l[0] == s.node and near.has(l[1])) or (l[1] == s.node and near.has(l[0]))
+		var n := int(a.distance_to(b) / 12)
+		for k in n:
+			if k % 2 == 0:
+				_path.draw_circle(a.lerp(b, float(k) / n), 2.0 if hot else 1.5, Color(0.9, 0.82, 0.62, 0.7) if hot else Color(0.85, 0.82, 0.72, 0.3))
+	var f := UITheme.font("caps")
+	for n: Dictionary in ch.get("nodes", []):
+		var p: Vector2 = pts[n["id"]]
+		var here: bool = n["id"] == s.node
+		var kind := str(n.get("kind", ""))
+		var locked := kind == "final" and not s.events.has(str(ch.get("final", "")))
+		var ring := Palette.GOLD if here else (Palette.SILVER.darkened(0.5) if locked else Palette.SILVER.darkened(0.1))
+		_path.draw_circle(p, 15, Color(0.05, 0.05, 0.07, 0.92))
+		_path.draw_arc(p, 15, 0, TAU, 32, ring, 3.0 if here else 1.6)
+		if kind == "camp":
+			_path.draw_colored_polygon(PackedVector2Array([p + Vector2(-7, 5), p + Vector2(0, -7), p + Vector2(7, 5)]), Palette.GOLD.darkened(0.2))
+		elif locked:
+			_path.draw_rect(Rect2(p - Vector2(5, 3), Vector2(10, 8)), Palette.SILVER.darkened(0.4))
+		if here:
+			var em := UITheme.emblem("character")
+			if em:
+				_path.draw_texture_rect(em, Rect2(p - Vector2(13, 13), Vector2(26, 26)), false)
+			_path.draw_arc(p, 20 + 2.0 * sin(Time.get_ticks_msec() / 400.0), 0, TAU, 40, Color(Palette.GOLD, 0.5), 1.5)
+		var label := str(n.get("name", ""))
+		var tw := f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		_path.draw_rect(Rect2(p + Vector2(-tw / 2 - 6, 20), Vector2(tw + 12, 22)), Color(0.04, 0.04, 0.06, 0.78))
+		_path.draw_string(f, p + Vector2(-tw / 2, 36), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Palette.GOLD if here else Palette.TEXT)
+
+
+## Кнопки мест: щелчок — предложение пойти; в лагере — «Отдохнуть неделю».
+func _rebuild_nodes() -> void:
+	for ch in _nodes_layer.get_children():
+		ch.queue_free()
+	var s := GameState.state
+	if not Chronicle.active(s):
+		return
+	var c := ContentDB.data
+	for n: Dictionary in Chronicle.chapter(c, s).get("nodes", []):
+		var b := Button.new()
+		b.flat = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		b.custom_minimum_size = Vector2(44, 44)
+		b.size = Vector2(44, 44)
+		b.position = _node_point(n.get("pos", [0.5, 0.5])) - Vector2(22, 22)
+		b.tooltip_text = "%s\n%s" % [n.get("name", ""), n.get("text", "")]
+		b.pressed.connect(_ask_travel.bind(str(n["id"])))
+		_nodes_layer.add_child(b)
+	if Chronicle.is_camp(c, s) and not s.game_over and not s.demo_complete:
+		var rest := Button.new()
+		rest.text = "Отдохнуть неделю"
+		rest.tooltip_text = "Неделя проходит; у персонажей снимается по одной лёгкой травме"
+		rest.custom_minimum_size = Vector2(210, 40)
+		rest.add_theme_font_size_override("font_size", 17)
+		rest.position = _node_point(Chronicle.node_def(c, s, s.node).get("pos", [0.5, 0.5])) + Vector2(-105, 48)
+		rest.pressed.connect(func() -> void: GameState.rest())
+		_nodes_layer.add_child(rest)
+	_path.queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	if GameState.state and Chronicle.active(GameState.state):
+		_path.queue_redraw()   # мерцание кольца героя
+
+
+func _ask_travel(nid: String) -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	if nid == s.node or s.game_over or s.demo_complete:
+		return
+	if _travel:
+		_travel.queue_free()
+	var n := Chronicle.node_def(c, s, nid)
+	var steps := Chronicle.path(c, s, nid)
+	var locked := str(n.get("kind", "")) == "final" and not s.events.has(str(Chronicle.chapter(c, s).get("final", "")))
+	_travel = PanelContainer.new()
+	_travel.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.055, 0.075, 0.97), Palette.GOLD.darkened(0.3), 1, 6, 16))
+	_travel.z_index = 40
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	_travel.add_child(v)
+	v.add_child(UITheme.label(str(n.get("name", nid)), "title_bold", 26, Palette.TEXT))
+	var info := UITheme.label(str(n.get("text", "")), "sans", 17, Palette.TEXT_DIM)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.custom_minimum_size.x = 380
+	v.add_child(info)
+	var events_here: Array = []
+	for eid: String in s.active_event_ids():
+		if Chronicle.event_node(c, s, eid) == nid:
+			events_here.append("«%s»" % c.events[eid].get("title", eid))
+	if not events_here.is_empty():
+		var el := UITheme.label("Здесь: " + ", ".join(events_here), "sans", 17, Palette.GOLD)
+		el.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		el.custom_minimum_size.x = 380
+		v.add_child(el)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	if locked:
+		v.add_child(UITheme.label("Закрыт до солнцестояния.", "sans", 17, Palette.STAT_DOWN))
+	elif steps.is_empty():
+		v.add_child(UITheme.label("Туда не пройти.", "sans", 17, Palette.STAT_DOWN))
+	else:
+		var left := Chronicle.weeks_left(c, s)
+		var go := Button.new()
+		go.text = "Идти · %d нед." % steps.size()
+		go.tooltip_text = "Каждый переход — неделя. До солнцестояния: %d нед." % left
+		go.custom_minimum_size = Vector2(190, 44)
+		go.pressed.connect(_do_travel.bind(nid))
+		row.add_child(go)
+	var cancel := Button.new()
+	cancel.text = "Отмена"
+	cancel.custom_minimum_size = Vector2(130, 44)
+	cancel.pressed.connect(func() -> void: _travel.queue_free())
+	row.add_child(cancel)
+	add_child(_travel)
+	var p := _node_point(n.get("pos", [0.5, 0.5]))
+	_travel.position = Vector2(clampf(p.x - 210, LEFT_W, 1920 - 450), clampf(p.y - 250, MAP_TOP + 10, MAP_BOTTOM - 260))
+
+
+func _do_travel(nid: String) -> void:
+	if _travel:
+		_travel.queue_free()
+	var r := GameState.move_to(nid)
+	if r.get("ok", false):
+		AudioManager.play("place", -4.0, 0.9)
+
+
+## Вступление главы — один раз при входе.
+func _maybe_intro() -> void:
+	var s := GameState.state
+	if not Chronicle.active(s) or _intro or _result.visible or s.flags.has("intro_" + s.chapter):
+		return
+	var ch := Chronicle.chapter(ContentDB.data, s)
+	_intro = Control.new()
+	_intro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_intro.z_index = 60
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.82)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_intro.add_child(dim)
+	var v := VBoxContainer.new()
+	v.position = Vector2(460, 260)
+	v.custom_minimum_size = Vector2(1000, 0)
+	v.add_theme_constant_override("separation", 22)
+	_intro.add_child(v)
+	var pre := UITheme.label("ПЕРВЫЙ КОШМАР ПРОЙДЕН", "caps", 22, Palette.SILVER.darkened(0.2))
+	pre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(pre)
+	var t := UITheme.label(str(ch.get("title", "")).to_upper(), "title_bold", 58, Palette.GOLD)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var body := UITheme.label(str(ch.get("intro", "")) % int(ch.get("weeks", 0)), "serif_italic", 24, Palette.TEXT)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(body)
+	var go := Button.new()
+	go.text = "Начать главу"
+	go.custom_minimum_size = Vector2(0, 58)
+	go.add_theme_font_size_override("font_size", 22)
+	go.pressed.connect(func() -> void:
+		s.flags["intro_" + s.chapter] = true
+		SaveService.save_state(s)
+		_intro.queue_free()
+		_intro = null)
+	v.add_child(go)
+	add_child(_intro)

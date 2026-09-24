@@ -583,5 +583,7 @@
   ],
   "trauma_pool": "physical",
   "shards": 3
- }
+ },
+  {"id": "H_CASTER", "name": "Кастер", "rank": 0, "class": 2, "human": true, "kind": "elite", "tags": ["Дуэль", "Скорость", "Первый удар", "Наследник", "Человек"], "trauma_pool": "physical", "shards": 2, "art": "res://art/cards/P04.webp"},
+  {"id": "H_GOLEM", "name": "Учебный голем", "rank": 0, "class": 1, "human": false, "kind": "normal", "tags": ["Конструкт", "Камень", "Оборона"], "trauma_pool": "physical", "shards": 1}
 ]

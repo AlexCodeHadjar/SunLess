@@ -151,5 +151,10 @@
     "tags": [
       "Воспоминание"
     ]
-  }
+  },
+  {"id": "K04", "name": "Мир Пробуждённых", "origin": "knowledge", "rarity": "common", "wears": false, "bonuses": [{"stat": "cunning", "value": 1, "tags": ["social", "knowledge"]}], "text": "Знание: +1 Хитрость в общении и знаниях.", "canon": "адаптация", "source": "«Дитя Теней», гл. 17–18", "tags": ["Разумный"]},
+  {"id": "K05", "name": "Знание Царства Снов", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "cunning", "value": 2, "tags": ["survival"]}], "text": "Знание: +2 Хитрость в выживании в Царстве Снов.", "canon": "адаптация", "source": "«Дитя Теней», гл. 22–24", "tags": ["Чутьё"]},
+  {"id": "K06", "name": "Предчувствие Берега", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "will", "value": 1, "tags": ["weather"]}], "text": "Знание: +1 Воля в непогоду; раскроет первые события Берега.", "canon": "адаптация", "source": "«Дитя Теней», гл. 29", "tags": ["Пророчество"]},
+  {"id": "U14", "name": "Уроки меча Нефис", "origin": "knowledge", "rarity": "epic", "wears": false, "bonuses": [{"stat": "power", "value": 2, "tags": []}, {"stat": "cunning", "value": 1, "tags": ["combat", "duel"]}], "text": "Навык: +2 Сила; в бою и дуэли ещё +1 Хитрость.", "canon": "адаптация", "source": "«Дитя Теней», гл. 26–27", "tags": ["Дуэль"]},
+  {"id": "U15", "name": "Выживание в Дикой Природе", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "cunning", "value": 2, "tags": ["survival", "weather", "climb"]}, {"stat": "will", "value": 1, "tags": ["survival", "weather", "climb"]}], "text": "Навык: в выживании, непогоде и подъёмах +2 Хитрость и +1 Воля.", "canon": "адаптация", "source": "«Дитя Теней», гл. 25", "tags": ["Выслеживание"]}
 ]

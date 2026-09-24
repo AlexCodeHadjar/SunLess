@@ -948,8 +948,8 @@
     "text": "Аспект и Недостаток"
    },
    {
-    "cmd": "end_demo",
-    "text": "Первый Кошмар пройден. Конец демоверсии."
+    "cmd": "start_chapter",
+    "chapter": "academy"
    }
   ],
   "options": [
