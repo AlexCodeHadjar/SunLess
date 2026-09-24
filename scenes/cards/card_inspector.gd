@@ -1,18 +1,38 @@
 class_name CardInspector
 extends Control
-## Планшет карты: крупная карта слева, справа — две вкладки.
-## «Описание» — что это и как работает (характеристики, черты, способности, износ, теги, как использовать).
-## «Сюжет» — «По книге» (data/lore.json из проектных документов) и «В вашем прохождении» (журнал карты).
+## Планшет карты: крупная карта слева, справа — вкладки «Описание» и «Сюжет».
+## Слева вверху — эмблема типа карты (наведение — что это за тип).
+## У персонажа: характеристики иконками (наведение — что это и из чего складывается),
+## теги (наведение — что дают), кармашек усилений (прикладываются к событию сами).
+## «Сюжет» — «По книге» (data/lore.json) и «В вашем прохождении» (журнал карты).
 ## Закрывается по ✕, Esc или щелчку по затемнению.
 
 signal closed
 
+const TYPE_TEXT := {
+	"character": "[b]Персонаж[/b]\nИсполнитель событий. Его Сила, Воля и Хитрость решают проверки, травмы ложатся на него, в бою он — герой или союзник в поддержке. Смерть Санни — конец прохождения.",
+	"enhancement": "[b]Усиление[/b]\nПредмет, Воспоминание или знание. Прикладывается к персонажу в событии (до трёх) и добавляет характеристики и теги. Предметы изнашиваются и могут сломаться.",
+	"initiator": "[b]Инициатор[/b]\nОдноразовая карта: перетащите на карту мира — появится конкретное событие, а карта исчезнет.",
+	"trauma": "[b]Травма[/b]\nПоследствие провала. Снижает характеристики персонажа, пока её не вылечат. С третьей травмы каждая новая может убить.",
+	"enemy": "[b]Противник[/b]\nКошмарное существо или враг. Сила в бою зависит от ранга, класса и тегов; раны сохраняются между встречами.",
+	"event": "[b]Событие[/b]\nСитуация на карте мира: три варианта, у каждого свои требования и последствия.",
+}
+const STAT_TEXT := {
+	"power": "[b]Сила[/b] — физическая мощь, скорость, бой, грубое действие.",
+	"will": "[b]Воля[/b] — стойкость, решимость, сопротивление боли, страху и ментальному воздействию.",
+	"cunning": "[b]Хитрость[/b] — наблюдательность, разведка, обман, анализ, скрытность, импровизация.",
+}
+const POCKET_MAX := 3
+
 var card_id := ""
 var _tab := "info"
-var _body: RichTextLabel
-var _tags_row: HFlowContainer
+var _frame: Control
+var _content: Control
 var _tabs: Array = []
 var _info: TagInfoPanel
+var _hint: PanelContainer
+var _hint_label: RichTextLabel
+var _card: CardView
 
 
 static func open_for(parent: Node, id: String) -> CardInspector:
@@ -36,40 +56,57 @@ func _ready() -> void:
 	dim.gui_input.connect(_on_dim_input)
 	add_child(dim)
 	var panel := PanelContainer.new()
-	panel.position = Vector2(120, 60)
-	panel.size = Vector2(1680, 960)
+	panel.position = Vector2(120, 50)
+	panel.size = Vector2(1680, 980)
 	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.055, 0.058, 0.075, 0.98), Palette.SILVER.darkened(0.35), 1, 6, 0))
 	add_child(panel)
-	var frame := Control.new()
-	frame.custom_minimum_size = panel.size
-	panel.add_child(frame)
-	# крупная карта
-	var cv := CardView.make(card_id, Vector2(450, 772), false)
-	cv.hover_lift = false
-	cv.smoke_on_hover = false
-	cv.position = Vector2(40, 94)
-	frame.add_child(cv)
+	_frame = Control.new()
+	_frame.custom_minimum_size = panel.size
+	panel.add_child(_frame)
 	var c := ContentDB.data
 	var kind := c.card_kind(card_id)
+	if kind == "" and c.events.has(card_id):
+		kind = "event"
+	# эмблема типа карты
+	var type_icon := TextureRect.new()
+	type_icon.texture = UITheme.emblem(_emblem_for(kind))
+	type_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	type_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	type_icon.position = Vector2(34, 18)
+	type_icon.size = Vector2(62, 62)
+	type_icon.mouse_filter = Control.MOUSE_FILTER_STOP
+	type_icon.mouse_default_cursor_shape = Control.CURSOR_HELP
+	type_icon.mouse_entered.connect(_show_hint.bind(TYPE_TEXT.get(kind, "")))
+	type_icon.mouse_exited.connect(_hide_hint)
+	_frame.add_child(type_icon)
+	var type_name := UITheme.label(TYPE_TEXT.get(kind, "").get_slice("\n", 0).replace("[b]", "").replace("[/b]", "").to_upper(), "caps", 18, Palette.SILVER.darkened(0.15))
+	type_name.position = Vector2(106, 36)
+	_frame.add_child(type_name)
+	# крупная карта
+	_card = CardView.make(card_id, Vector2(450, 772), false)
+	_card.hover_lift = false
+	_card.smoke_on_hover = false
+	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE   # крупная карта не наклоняется за курсором
+	_card.position = Vector2(40, 96)
+	_frame.add_child(_card)
 	# шапка
 	var title := UITheme.label(c.card_name(card_id), "title_bold", 42, Palette.TEXT)
-	title.position = Vector2(530, 24)
-	frame.add_child(title)
+	title.position = Vector2(530, 20)
+	_frame.add_child(title)
 	var sub := UITheme.label(_type_line(kind), "sans", 21, Palette.TEXT_DIM)
-	sub.position = Vector2(534, 82)
-	frame.add_child(sub)
+	sub.position = Vector2(534, 78)
+	_frame.add_child(sub)
 	var close := Button.new()
 	close.text = "✕"
-	close.position = Vector2(1606, 18)
+	close.position = Vector2(1606, 16)
 	close.custom_minimum_size = Vector2(52, 52)
 	close.add_theme_font_size_override("font_size", 24)
 	close.pressed.connect(_close)
-	frame.add_child(close)
-	# вкладки
+	_frame.add_child(close)
 	var tabs := HBoxContainer.new()
-	tabs.position = Vector2(530, 128)
+	tabs.position = Vector2(530, 120)
 	tabs.add_theme_constant_override("separation", 8)
-	frame.add_child(tabs)
+	_frame.add_child(tabs)
 	for t: Array in [["ОПИСАНИЕ", "info", _emblem_for(kind)], ["СЮЖЕТ", "story", "story"]]:
 		var b := Button.new()
 		b.text = t[0]
@@ -88,37 +125,54 @@ func _ready() -> void:
 		_tabs.append(b)
 	var line := ColorRect.new()
 	line.color = Palette.LINE
-	line.position = Vector2(530, 186)
+	line.position = Vector2(530, 178)
 	line.size = Vector2(1110, 1)
-	frame.add_child(line)
-	# теги (только во вкладке «Описание»)
-	_tags_row = HFlowContainer.new()
-	_tags_row.position = Vector2(530, 200)
-	_tags_row.custom_minimum_size = Vector2(1110, 0)
-	_tags_row.add_theme_constant_override("h_separation", 12)
-	_tags_row.add_theme_constant_override("v_separation", 4)
-	frame.add_child(_tags_row)
-	# текст
-	var sc := ScrollContainer.new()
-	sc.name = "Scroll"
-	sc.position = Vector2(530, 250)
-	sc.custom_minimum_size = Vector2(1110, 680)
-	sc.size = Vector2(1110, 680)
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	frame.add_child(sc)
-	_body = RichTextLabel.new()
-	_body.bbcode_enabled = true
-	_body.fit_content = true
-	_body.scroll_active = false
-	_body.custom_minimum_size = Vector2(1090, 0)
-	_body.add_theme_font_size_override("normal_font_size", 21)
-	_body.add_theme_font_size_override("bold_font_size", 21)
-	_body.meta_underlined = false
-	sc.add_child(_body)
+	_frame.add_child(line)
+	_content = Control.new()
+	_content.position = Vector2(530, 190)
+	_content.size = Vector2(1110, 780)
+	_frame.add_child(_content)
+	# подсказки поверх планшета
 	_info = TagInfoPanel.new()
 	add_child(_info)
+	_info.z_index = 90   # после _ready: панель сама ставит себе 60
+	_hint = PanelContainer.new()
+	_hint.top_level = true
+	_hint.z_index = 90
+	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var st := UITheme.box(Color(0.06, 0.06, 0.08, 0.97), Palette.SILVER.darkened(0.3), 1, 6, 16)
+	st.shadow_color = Color(0, 0, 0, 0.6)
+	st.shadow_size = 16
+	_hint.add_theme_stylebox_override("panel", st)
+	_hint_label = RichTextLabel.new()
+	_hint_label.bbcode_enabled = true
+	_hint_label.fit_content = true
+	_hint_label.scroll_active = false
+	_hint_label.custom_minimum_size = Vector2(440, 0)
+	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_label.add_theme_font_size_override("normal_font_size", 18)
+	_hint_label.add_theme_font_size_override("bold_font_size", 19)
+	_hint.add_child(_hint_label)
+	_hint.visible = false
+	add_child(_hint)
+	EventBus.state_changed.connect(_on_state_changed)
 	_set_tab("info")
 	AudioManager.play("open", -6.0, 1.1)
+
+
+func _on_state_changed() -> void:
+	# кармашек изменился — обновляем карту (облик и теги) и вкладку
+	if not is_inside_tree():
+		return
+	var pos := _card.position
+	_card.queue_free()
+	_card = CardView.make(card_id, Vector2(450, 772), false)
+	_card.hover_lift = false
+	_card.smoke_on_hover = false
+	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card.position = pos
+	_frame.add_child(_card)
+	_set_tab(_tab)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -137,27 +191,209 @@ func _close() -> void:
 	queue_free()
 
 
+func _show_hint(text: String) -> void:
+	if text == "":
+		return
+	_hint_label.text = text
+	_hint.visible = true
+	await get_tree().process_frame
+	if not is_instance_valid(_hint):
+		return
+	_hint.size = _hint.get_combined_minimum_size()
+	var at := get_global_mouse_position()
+	var vp := get_viewport_rect().size
+	_hint.global_position = Vector2(clampf(at.x + 18, 8, vp.x - _hint.size.x - 8), clampf(at.y + 18, 8, vp.y - _hint.size.y - 8))
+
+
+func _hide_hint() -> void:
+	_hint.visible = false
+
+
 func _set_tab(t: String) -> void:
 	_tab = t
 	for b: Button in _tabs:
 		b.button_pressed = b.get_meta("tab") == t
-	for ch in _tags_row.get_children():
+	for ch in _content.get_children():
 		ch.queue_free()
-	var sc: ScrollContainer = _body.get_parent()
+	_hide_hint()
+	_info.visible = false
 	if t == "info":
-		var tags := _combat_tags()
-		_tags_row.visible = not tags.is_empty()
-		for tag: String in tags:
-			var chip := TagChip.make(tag, 19, false)
-			chip.hovered.connect(_on_chip_hover)
-			_tags_row.add_child(chip)
-		sc.position.y = 250 if not tags.is_empty() else 206
-		_body.text = _info_text()
+		_build_info()
 	else:
-		_tags_row.visible = false
-		sc.position.y = 206
-		_body.text = _story_text()
-	sc.scroll_vertical = 0
+		_add_text(_story_text(), 0.0, _content.size.y)
+
+
+# --- вкладка «Описание» -----------------------------------------------------------
+
+func _build_info() -> void:
+	var c := ContentDB.data
+	var kind := c.card_kind(card_id)
+	var y := 0.0
+	var is_hero := kind == "character" and GameState.state != null and GameState.state.characters.has(card_id)
+	if is_hero:
+		y = _build_stats(y)
+	y = _build_tags(y)
+	var pocket_h := 250.0 if is_hero and GameState.state.is_alive(card_id) else 0.0
+	_add_text(_info_text(), y + 6.0, _content.size.y - y - 6.0 - pocket_h)
+	if pocket_h > 0.0:
+		_build_pocket(_content.size.y - pocket_h + 8.0)
+
+
+func _add_text(bb: String, top: float, height: float) -> void:
+	var sc := ScrollContainer.new()
+	sc.position = Vector2(0, top)
+	sc.custom_minimum_size = Vector2(1110, height)
+	sc.size = Vector2(1110, height)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_content.add_child(sc)
+	var body := RichTextLabel.new()
+	body.bbcode_enabled = true
+	body.fit_content = true
+	body.scroll_active = false
+	body.custom_minimum_size = Vector2(1090, 0)
+	body.add_theme_font_size_override("normal_font_size", 21)
+	body.add_theme_font_size_override("bold_font_size", 21)
+	body.text = bb
+	sc.add_child(body)
+
+
+## Характеристики иконками: эмблема, итоговое число, изменение; наведение — описание и разбор.
+func _build_stats(y: float) -> float:
+	var parts := _stat_parts()
+	var row := HBoxContainer.new()
+	row.position = Vector2(0, y)
+	row.add_theme_constant_override("separation", 34)
+	_content.add_child(row)
+	for st: String in ["power", "will", "cunning"]:
+		var p: Dictionary = parts[st]
+		var box := HBoxContainer.new()
+		box.add_theme_constant_override("separation", 10)
+		box.mouse_filter = Control.MOUSE_FILTER_STOP
+		box.mouse_default_cursor_shape = Control.CURSOR_HELP
+		box.mouse_entered.connect(_show_hint.bind(_stat_hint(st, p)))
+		box.mouse_exited.connect(_hide_hint)
+		row.add_child(box)
+		var icon := TextureRect.new()
+		icon.texture = UITheme.emblem(st)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.custom_minimum_size = Vector2(76, 76)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(icon)
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 0)
+		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(col)
+		var num := UITheme.label(str(int(p["total"])), "title_bold", 46, Palette.TEXT)
+		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(num)
+		var delta := int(p["total"]) - int(p["base"])
+		var dl := UITheme.label("%s  %s" % [Palette.STAT_NAMES.get(st, st), ("(%+d)" % delta) if delta != 0 else ""], "sans", 16,
+			Palette.STAT_UP if delta > 0 else (Palette.STAT_DOWN if delta < 0 else Palette.TEXT_DIM))
+		dl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(dl)
+	return y + 92.0
+
+
+## Разбор характеристик персонажа вне события: база стадии, навсегда, кармашек, травмы; условные — отдельно.
+func _stat_parts() -> Dictionary:
+	var c := ContentDB.data
+	var s := GameState.state
+	var ch := s.character(card_id)
+	var d: Dictionary = c.characters.get(card_id, {})
+	var base_stats := c.stage_stats(card_id, str(ch.get("stage", "")))
+	var stage_name := c.stage_name(card_id, str(ch.get("stage", "")))
+	var out := {}
+	for st: String in ["power", "will", "cunning"]:
+		out[st] = {"base": int(base_stats.get(st, 0)), "total": int(base_stats.get(st, 0)), "lines": [], "cond": [], "stage": stage_name}
+	for st2: String in ch.get("perm", {}):
+		var v := int(ch["perm"][st2])
+		if v != 0 and out.has(st2):
+			out[st2]["total"] += v
+			out[st2]["lines"].append(["Навсегда (события)", v])
+	var sources: Array = []
+	for tr: Dictionary in d.get("traits", []):
+		sources.append({"name": "черта «%s»" % tr.get("name", ""), "bonuses": tr.get("bonuses", [])})
+	for aid: String in ch.get("abilities", []):
+		var a: Dictionary = c.abilities.get(aid, {})
+		sources.append({"name": "способность «%s»" % a.get("name", aid), "bonuses": a.get("bonuses", [])})
+	for card: String in _pocket():
+		var e: Dictionary = c.enhancements.get(card, {})
+		sources.append({"name": "кармашек: %s" % e.get("name", card), "bonuses": e.get("bonuses", [])})
+	for src: Dictionary in sources:
+		for b: Dictionary in src["bonuses"]:
+			var st3 := str(b.get("stat", ""))
+			if not out.has(st3):
+				continue
+			var need: Array = b.get("tags", [])
+			if need.is_empty():
+				out[st3]["total"] += int(b["value"])
+				out[st3]["lines"].append([_cap(str(src["name"])), int(b["value"])])
+			else:
+				var names: Array = []
+				for t: String in need:
+					names.append(str(c.tags.get(t, {}).get("name", t)).to_lower())
+				out[st3]["cond"].append(["%s — в событиях: %s" % [_cap(str(src["name"])), ", ".join(names)], int(b["value"])])
+	for tid: String in ch.get("traumas", []):
+		var td: Dictionary = c.traumas.get(tid, {})
+		for st4: String in td.get("mods", {}):
+			if out.has(st4):
+				out[st4]["total"] += int(td["mods"][st4])
+				out[st4]["lines"].append(["Травма «%s»" % td.get("name", tid), int(td["mods"][st4])])
+	for te: Dictionary in s.temp_effects:
+		var st5 := str(te.get("stat", ""))
+		if out.has(st5):
+			out[st5]["cond"].append(["Временно: %s — до следующего события" % te.get("label", ""), int(te.get("value", 0))])
+	return out
+
+
+static func _cap(t: String) -> String:
+	return t.substr(0, 1).to_upper() + t.substr(1)
+
+
+func _stat_hint(st: String, p: Dictionary) -> String:
+	var lines: Array[String] = [STAT_TEXT.get(st, ""), ""]
+	lines.append("База стадии «%s»: [b]%d[/b]" % [p["stage"], int(p["base"])])
+	for l: Array in p["lines"]:
+		var col := "#9FC29A" if int(l[1]) > 0 else "#B65F63"
+		lines.append("[color=%s]%+d[/color]  %s" % [col, int(l[1]), l[0]])
+	lines.append("Итог: [b]%d[/b]" % int(p["total"]))
+	if not Array(p["cond"]).is_empty():
+		lines.append("")
+		lines.append("[color=#9A9CA6]Условные бонусы (в подходящих событиях):[/color]")
+		for l2: Array in p["cond"]:
+			lines.append("[color=#C9CED6]%+d[/color]  %s" % [int(l2[1]), l2[0]])
+	return "\n".join(lines)
+
+
+## Теги карты (наведение — что дают); у персонажа отдельно — теги от кармашка.
+func _build_tags(y: float) -> float:
+	var own := _combat_tags()
+	var extra: Array = []
+	for card: String in _pocket():
+		for t: String in ContentDB.data.enhancements.get(card, {}).get("tags", []):
+			if not own.has(t) and not extra.has(t):
+				extra.append(t)
+	if own.is_empty() and extra.is_empty():
+		return y
+	var flow := HFlowContainer.new()
+	flow.position = Vector2(0, y)
+	flow.custom_minimum_size = Vector2(1110, 0)
+	flow.size = Vector2(1110, 0)
+	flow.add_theme_constant_override("h_separation", 12)
+	flow.add_theme_constant_override("v_separation", 4)
+	_content.add_child(flow)
+	for t: String in own:
+		var chip := TagChip.make(t, 19, false)
+		chip.hovered.connect(_on_chip_hover)
+		flow.add_child(chip)
+	if not extra.is_empty():
+		flow.add_child(UITheme.label("  от кармашка:", "sans", 16, Palette.GOLD.darkened(0.1)))
+		for t2: String in extra:
+			var chip2 := TagChip.make(t2, 19, false)
+			chip2.hovered.connect(_on_chip_hover)
+			flow.add_child(chip2)
+	var rows := 1 + int((own.size() + extra.size()) / 7)
+	return y + rows * 30.0 + 8.0
 
 
 func _on_chip_hover(tag: String, on: bool) -> void:
@@ -167,7 +403,103 @@ func _on_chip_hover(tag: String, on: bool) -> void:
 		_info.visible = false
 
 
-# --- содержимое ------------------------------------------------------------------
+# --- кармашек усилений --------------------------------------------------------------
+
+func _pocket() -> Array:
+	var s := GameState.state
+	if s == null or not s.characters.has(card_id):
+		return []
+	var out: Array = []
+	for card: String in s.character(card_id).get("pocket", []):
+		if s.owns(card):
+			out.append(card)
+	return out
+
+
+## Кармашек: до трёх усилений, которые прикладываются к событию сами, когда персонаж — исполнитель.
+func _build_pocket(y: float) -> void:
+	var s := GameState.state
+	var c := ContentDB.data
+	var line := ColorRect.new()
+	line.color = Palette.LINE
+	line.position = Vector2(0, y - 6)
+	line.size = Vector2(1110, 1)
+	_content.add_child(line)
+	var head := UITheme.label("КАРМАШЕК УСИЛЕНИЙ", "caps", 19, Palette.GOLD)
+	head.position = Vector2(0, y)
+	_content.add_child(head)
+	var tip := UITheme.label("Усиления в кармашке сами прикладываются к событию, когда %s — исполнитель. Их бонусы и теги уже учтены выше. Щелчок — положить или убрать." % c.card_name(card_id),
+		"sans", 16, Palette.TEXT_DIM)
+	tip.position = Vector2(250, y + 2)
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip.custom_minimum_size = Vector2(860, 0)
+	_content.add_child(tip)
+	var row := HBoxContainer.new()
+	row.position = Vector2(0, y + 50)
+	row.add_theme_constant_override("separation", 12)
+	_content.add_child(row)
+	var pocket := _pocket()
+	var slot := Vector2(104, 178)
+	for i in POCKET_MAX:
+		if i < pocket.size():
+			var cv := CardView.make(pocket[i], slot, false)
+			cv.hover_lift = true
+			cv.tooltip_text = ""
+			cv.clicked.connect(func(id: String) -> void: GameState.pocket_remove(card_id, id))
+			row.add_child(cv)
+		else:
+			var empty := Panel.new()
+			empty.custom_minimum_size = slot
+			empty.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.04, 0.06, 0.6), Palette.SILVER.darkened(0.55), 1, 6, 0))
+			row.add_child(empty)
+			var plus := UITheme.label("+", "title", 40, Palette.SILVER.darkened(0.45))
+			plus.position = slot / 2 - Vector2(10, 28)
+			empty.add_child(plus)
+	# доступные усиления
+	var sep := ColorRect.new()
+	sep.color = Palette.LINE
+	sep.custom_minimum_size = Vector2(1, 170)
+	row.add_child(sep)
+	var avail_col := VBoxContainer.new()
+	avail_col.add_theme_constant_override("separation", 4)
+	row.add_child(avail_col)
+	avail_col.add_child(UITheme.label("Можно положить:", "sans", 16, Palette.TEXT_DIM))
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(700, 156)
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	avail_col.add_child(sc)
+	var avail := HBoxContainer.new()
+	avail.add_theme_constant_override("separation", 8)
+	sc.add_child(avail)
+	var any := false
+	for card: String in s.collection:
+		if c.card_kind(card) != "enhancement" or pocket.has(card):
+			continue
+		any = true
+		var small := CardView.make(card, Vector2(86, 147), false)
+		small.tooltip_text = ""
+		var owner := _pocket_owner(card)
+		if owner != "":
+			small.badge = "у: %s" % c.card_name(owner)
+		small.clicked.connect(func(id: String) -> void:
+			if _pocket().size() >= POCKET_MAX:
+				EventBus.toast.emit("В кармашке не больше трёх усилений")
+				return
+			GameState.pocket_add(card_id, id))
+		avail.add_child(small)
+	if not any:
+		avail.add_child(UITheme.label("Свободных усилений нет.", "sans", 16, Palette.TEXT_DIM))
+
+
+func _pocket_owner(card: String) -> String:
+	var s := GameState.state
+	for cid: String in s.characters:
+		if Array(s.characters[cid].get("pocket", [])).has(card):
+			return cid
+	return ""
+
+
+# --- тексты ---------------------------------------------------------------------------
 
 func _def() -> Dictionary:
 	var c := ContentDB.data
@@ -181,7 +513,7 @@ func _def() -> Dictionary:
 
 
 func _emblem_for(kind: String) -> String:
-	return {"character": "character", "enhancement": "enhancement", "enemy": "monster"}.get(kind, "story")
+	return {"character": "character", "enhancement": "enhancement", "enemy": "monster", "trauma": "trauma"}.get(kind, "story")
 
 
 func _type_line(kind: String) -> String:
@@ -233,24 +565,6 @@ func _info_text() -> String:
 			var ch: Dictionary = s.character(card_id) if s else {}
 			if str(d.get("role", "")) != "":
 				out.append(str(d["role"]))
-			var base := c.stage_stats(card_id, str(ch.get("stage", "")))
-			var perm: Dictionary = ch.get("perm", {})
-			var mods := {"power": 0, "will": 0, "cunning": 0}
-			for t: String in ch.get("traumas", []):
-				for st: String in c.traumas.get(t, {}).get("mods", {}):
-					mods[st] = int(mods.get(st, 0)) + int(c.traumas[t]["mods"][st])
-			var rows: Array = []
-			for st: String in ["power", "will", "cunning"]:
-				var b := int(base.get(st, 0))
-				var p := int(perm.get(st, 0))
-				var m := int(mods.get(st, 0))
-				var parts := "%d" % b
-				if p != 0:
-					parts += " %+d навсегда" % p
-				if m != 0:
-					parts += " [color=#B65F63]%+d травмы[/color]" % m
-				rows.append("[b]%s[/b]  %s  →  [b]%d[/b]" % [Palette.STAT_NAMES.get(st, st), parts, maxi(0, b + p + m)])
-			out.append(_h("Характеристики") + "\n".join(rows))
 			var traits: Array = []
 			for tr: Dictionary in d.get("traits", []):
 				traits.append("• [b]%s[/b] — %s" % [tr.get("name", ""), tr.get("text", "")])
@@ -275,7 +589,6 @@ func _info_text() -> String:
 			var sup: Array = d.get("support_tags", [])
 			if not sup.is_empty():
 				out.append(_h("В бою в поддержке") + "Встаёт рядом с исполнителем и добавляет теги: " + ", ".join(sup))
-			out.append(_h("Как использовать") + _dim("Сделайте исполнителем события: перетащите карту в кармашек планшета или нажмите на неё, когда событие открыто. В бою может стоять в поддержке (до двух союзников)."))
 		"enhancement":
 			out.append(_h("Эффект") + str(d.get("text", "")))
 			if s and WearRules.wears(c, s, card_id):
@@ -284,14 +597,19 @@ func _info_text() -> String:
 				out.append(_h("Износ") + "Сейчас не изнашивается.")
 			else:
 				out.append(_h("Износ") + "Не изнашивается.")
-			out.append(_h("Как использовать") + _dim("Приложите к событию: перетащите в веер планшета или нажмите на карту, когда событие открыто. Не больше трёх усилений на событие."))
+			if s:
+				var owner := _pocket_owner(card_id)
+				if owner != "":
+					out.append(_h("Кармашек") + "Лежит в кармашке персонажа «%s» — прикладывается к его событиям сама." % c.card_name(owner))
 		"initiator":
 			out.append(str(d.get("text", "")))
 			var ev: Dictionary = c.events.get(str(d.get("event", "")), {})
 			if not ev.is_empty():
 				out.append(_h("Создаёт событие") + "«%s»" % ev.get("title", ""))
-			out.append(_h("Как использовать") + _dim("Перетащите на карту мира — появится событие, а карта исчезнет."))
 		"trauma":
+			var lore: Dictionary = c.lore.get(card_id, {})
+			if str(lore.get("text", "")) != "":
+				out.append(str(lore["text"]))
 			var ms2: Array = []
 			for st3: String in d.get("mods", {}):
 				ms2.append("%+d %s" % [int(d["mods"][st3]), Palette.STAT_NAMES.get(st3, st3)])
@@ -299,9 +617,6 @@ func _info_text() -> String:
 		"enemy":
 			out.append("%s · %s" % [{"normal": "обычный", "elite": "элита", "boss": "босс"}.get(d.get("kind", "normal"), ""), _type_line(kind)])
 			out.append(_h("Добыча") + "✧ %d осколков душ" % int(d.get("shards", 0)))
-	var lore: Dictionary = c.lore.get(card_id, {})
-	if kind == "trauma" and str(lore.get("text", "")) != "":
-		out.insert(0, str(lore["text"]))
 	return "\n\n".join(out)
 
 

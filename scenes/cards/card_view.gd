@@ -312,7 +312,15 @@ func _combat_tags() -> Array:
 	if kind == "character":
 		var s := GameState.state
 		var stage: String = s.character(card_id).get("stage", "") if s else ""
-		return d.get("stages", {}).get(stage, {}).get("tags", d.get("tags", []))
+		var tags: Array = Array(d.get("stages", {}).get(stage, {}).get("tags", d.get("tags", []))).duplicate()
+		# теги усилений из кармашка — часть облика персонажа
+		if s:
+			for card: String in s.character(card_id).get("pocket", []):
+				if s.owns(card):
+					for t: String in ContentDB.data.enhancements.get(card, {}).get("tags", []):
+						if not tags.has(t):
+							tags.append(t)
+		return tags
 	if kind in ["enhancement", "enemy"]:
 		return d.get("tags", [])
 	return []

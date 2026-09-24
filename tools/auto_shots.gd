@@ -85,10 +85,22 @@ func _run() -> void:
 	await _wait(0.5)
 	await _shot("07_cards")
 	game.call("_close_overlay")
-	# планшет карты: описание и сюжет
+	# планшет карты: описание и сюжет; в кармашке — Импровизированное оружие
+	GameState.pocket_add("P01", "U01")
 	game.call("_inspect", "P01")
 	await _wait(0.5)
 	await _shot("07b_inspect_info")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_show_hint", ch.call("_stat_hint", "power", ch.call("_stat_parts")["power"]))
+	await _wait(0.3)
+	await _shot("07b2_inspect_stat_hint")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_hide_hint")
+			ch.get("_info").call("show_tag", "Цепь", Vector2(900, 400), "")
+	await _wait(0.3)
+	await _shot("07b3_inspect_tag_hint")
 	for ch in game.get_children():
 		if ch is CardInspector:
 			ch.call("_set_tab", "story")
@@ -182,6 +194,23 @@ func _run() -> void:
 	game.call("_do_travel", "dorm")
 	await _wait(1.0)
 	await _shot("18_academy_camp")
+	# окна поверх друг друга: событие + коллекция + планшет карты
+	s = GameState.state
+	s.node = "yard"
+	EventBus.state_changed.emit()
+	game.call("_open_event", "E14")
+	await _wait(1.0)
+	await _shot("19_academy_event")
+	game.call("_on_nav", "cards")
+	await _wait(0.5)
+	await _shot("20_cards_over_event")
+	game.call("_close_overlay")
+	game.call("_inspect", "P01")
+	await _wait(0.5)
+	await _shot("21_inspect_over_event")
+	for ch in game.get_children():
+		if ch is CardInspector:
+			ch.call("_close")
 	# витрина живого облика карт: враги по тегам, герой с травмами
 	var shelf := Control.new()
 	shelf.top_level = true

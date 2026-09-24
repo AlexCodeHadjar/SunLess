@@ -44,7 +44,39 @@ func set_executor(event_id: String, character_id: String) -> void:
 	_detach_everywhere(character_id)
 	var d := _draft_mut(event_id)
 	d["character"] = character_id
+	# кармашек: его усиления прикладываются сами (если есть место)
+	for card: String in state.character(character_id).get("pocket", []):
+		if state.owns(card) and Array(d["enhancements"]).size() < 3 and not Array(d["enhancements"]).has(card):
+			_detach_everywhere(card)
+			d["enhancements"].append(card)
 	EventBus.draft_changed.emit(event_id)
+
+
+## Кармашек персонажа: до трёх усилений по умолчанию. Усиление лежит только в одном кармашке.
+func pocket_add(character_id: String, card: String) -> String:
+	var ch := state.character(character_id)
+	if ch.is_empty() or ContentDB.data.card_kind(card) != "enhancement" or not state.owns(card):
+		return "Это не усиление"
+	var pocket: Array = ch.get("pocket", [])
+	if pocket.has(card):
+		return ""
+	if pocket.size() >= 3:
+		EventBus.toast.emit("В кармашке не больше трёх усилений")
+		return "full"
+	for cid: String in state.characters:
+		Array(state.characters[cid].get("pocket", [])).erase(card)
+	pocket.append(card)
+	ch["pocket"] = pocket
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+	return ""
+
+
+func pocket_remove(character_id: String, card: String) -> void:
+	var ch := state.character(character_id)
+	Array(ch.get("pocket", [])).erase(card)
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
 
 
 func clear_executor(event_id: String) -> void:

@@ -411,6 +411,10 @@ func _rebuild_cards() -> void:
 			var de := s.draft_event_of(card)
 			if de != "":
 				cv.badge = "Черновик: %s" % de
+			elif k == "enhancement":
+				for cid: String in s.characters:
+					if Array(s.characters[cid].get("pocket", [])).has(card):
+						cv.badge = "у: %s" % c.card_name(cid)
 			if _tablet.visible and de == _tablet.event_id:
 				cv.highlight = true
 			cv.clicked.connect(_on_card_clicked)
@@ -440,6 +444,7 @@ func _open_event(eid: String) -> void:
 	if not Chronicle.can_open(ContentDB.data, s, eid):
 		_ask_travel(Chronicle.event_node(ContentDB.data, s, eid))
 		return
+	_close_popups()
 	_tablet.open(eid)
 	_commented_event = ""
 	_refresh()
@@ -471,8 +476,17 @@ func _on_card_clicked(card: String) -> void:
 		_inspect(card)
 
 
+## Всплывающее «Идти?» и мысль героя не должны висеть поверх окон.
+func _close_popups() -> void:
+	if _travel and is_instance_valid(_travel):
+		_travel.queue_free()
+	_travel = null
+	_bubble.hide()
+
+
 ## Планшет карты: крупный вид, описание и сюжет.
 func _inspect(card: String) -> void:
+	_close_popups()
 	for ch in get_children():
 		if ch is CardInspector:
 			ch.queue_free()
@@ -709,6 +723,7 @@ func _close_overlay() -> void:
 
 
 func _open_overlay(content: Control) -> void:
+	_close_popups()
 	_close_overlay()
 	_overlay_layer.mouse_filter = Control.MOUSE_FILTER_STOP
 	move_child(_overlay_layer, get_child_count() - 1)
@@ -954,16 +969,15 @@ func _process(_delta: float) -> void:
 func _ask_travel(nid: String) -> void:
 	var c := ContentDB.data
 	var s := GameState.state
-	if nid == s.node or s.game_over or s.demo_complete:
+	if nid == s.node or s.game_over or s.demo_complete or _overlay_layer.get_child_count() > 0:
 		return
-	if _travel:
+	if _travel and is_instance_valid(_travel):
 		_travel.queue_free()
 	var n := Chronicle.node_def(c, s, nid)
 	var steps := Chronicle.path(c, s, nid)
 	var locked := str(n.get("kind", "")) == "final" and not s.events.has(str(Chronicle.chapter(c, s).get("final", "")))
 	_travel = PanelContainer.new()
 	_travel.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.055, 0.075, 0.97), Palette.GOLD.darkened(0.3), 1, 6, 16))
-	_travel.z_index = 40
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	_travel.add_child(v)
@@ -999,16 +1013,15 @@ func _ask_travel(nid: String) -> void:
 	var cancel := Button.new()
 	cancel.text = "Отмена"
 	cancel.custom_minimum_size = Vector2(130, 44)
-	cancel.pressed.connect(func() -> void: _travel.queue_free())
+	cancel.pressed.connect(_close_popups)
 	row.add_child(cancel)
-	add_child(_travel)
+	_nodes_layer.add_child(_travel)
 	var p := _node_point(n.get("pos", [0.5, 0.5]))
 	_travel.position = Vector2(clampf(p.x - 210, LEFT_W, 1920 - 450), clampf(p.y - 250, MAP_TOP + 10, MAP_BOTTOM - 260))
 
 
 func _do_travel(nid: String) -> void:
-	if _travel:
-		_travel.queue_free()
+	_close_popups()
 	var r := GameState.move_to(nid)
 	if r.get("ok", false):
 		AudioManager.play("place", -4.0, 0.9)
