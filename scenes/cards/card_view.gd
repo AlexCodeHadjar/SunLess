@@ -24,6 +24,8 @@ var highlight := false
 var badge := ""          # короткая метка снизу: «Черновик: E03»
 var sway := false        # лёгкое покачивание (карты событий на карте мира)
 var smoke_on_hover := true
+var aura_enabled := true   # живой облик по тегам и травмам (CardAura)
+var aura_wounds := 0       # раны врага (бой) — добавляют кровь и трещины
 var _hover := false
 var _smoke: CPUParticles2D
 var _phase := randf() * TAU
@@ -91,6 +93,28 @@ func _on_hover(on: bool) -> void:
 func _ready() -> void:
 	pivot_offset = size / 2
 	set_process(sway)
+	refresh_aura()
+
+
+## Пересобирает живой облик карты по текущим тегам, травмам и ранам.
+func refresh_aura() -> void:
+	for ch in get_children():
+		if ch is CardAura:
+			ch.queue_free()
+	if not aura_enabled or size.x < 80 or kind not in ["enemy", "character", "enhancement"]:
+		return
+	var traumas: Array = []
+	if kind == "character" and GameState.state:
+		traumas = GameState.state.character(card_id).get("traumas", [])
+	var motifs := CardAura.motifs_for(_combat_tags(), traumas, aura_wounds)
+	if motifs.is_empty():
+		return
+	var aura := CardAura.new()
+	aura.size = size
+	aura.setup(motifs, card_id)
+	if _combat_tags().has("Коралл"):
+		aura.tint = Color(1.25, 0.85, 0.85)
+	add_child(aura)
 
 
 func _process(_delta: float) -> void:

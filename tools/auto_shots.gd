@@ -114,4 +114,28 @@ func _run() -> void:
 	cs_screen.get("_graph").call("show_for", "Тень")
 	await _wait(0.4)
 	await _shot("13_link_graph")
+	cs_screen.set("_graph_forced", false)
+	cs_screen.get("_graph").visible = false
+	# витрина живого облика карт: враги по тегам, герой с травмами
+	var shelf := Control.new()
+	shelf.top_level = true
+	shelf.z_index = 100
+	shelf.size = Vector2(1920, 1080)
+	var bg := ColorRect.new()
+	bg.color = Color("#0A0B10")
+	bg.size = shelf.size
+	shelf.add_child(bg)
+	get_tree().root.add_child(shelf)
+	s.characters["P01"]["traumas"] = ["T01", "T06"]
+	var ids := ["M01", "M06", "M08", "M16", "M18", "M25", "M26", "M37", "M15", "M19", "M38", "P01"]
+	for i in ids.size():
+		var cv := CardView.make(ids[i], Vector2(190, 326), false)
+		cv.position = Vector2(60 + (i % 6) * 305, 80 + int(i / 6) * 490)
+		shelf.add_child(cv)
+		var cap := Label.new()
+		cap.text = ", ".join(CardAura.motifs_for(cv.call("_combat_tags"), s.characters["P01"]["traumas"] if ids[i] == "P01" else []))
+		cap.position = cv.position + Vector2(-20, 350)
+		shelf.add_child(cap)
+	await _wait(2.5)
+	await _shot("14_card_auras")
 	get_tree().quit()

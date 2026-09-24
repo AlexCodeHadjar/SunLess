@@ -430,11 +430,12 @@ func _layout(cs: CombatSession) -> void:
 	var n := cs.enemies.size()
 	var beside := n <= 3
 	var esz := ENEMY_SIZE if beside else ENEMY_COMPACT
-	var block := esz.x + 10.0 + TAG_COL if beside else esz.x + 50.0
+	var block := esz.x + 16.0 + TAG_COL if beside else esz.x + 50.0
 	var gap := 40.0 if beside else 16.0
 	var x := MID_X - (n * block + (n - 1) * gap) / 2.0
 	for e: Dictionary in cs.enemies:
 		var cv := CardView.make(str(e["id"]), esz, false)
+		cv.aura_wounds = int(cs.state.enemy_wounds.get(cs.event_id, 0)) + cs.session_wounds
 		cv.position = Vector2(x + (0.0 if beside else 25.0), ENEMY_Y)
 		cv.sway = true
 		cv.set_process(true)
@@ -492,7 +493,7 @@ func _place_tags(card: Control, tags: Array, side: String, beside: bool, width: 
 	var pos: Vector2
 	var max_h: float
 	if beside:
-		pos = card.position + Vector2(card.size.x + 10.0, 2.0)
+		pos = card.position + Vector2(card.size.x + 16.0, 2.0)
 		max_h = card.size.y - 2.0
 	else:
 		pos = Vector2(card.position.x + card.size.x / 2.0 - width / 2.0, card.position.y + card.size.y + 4.0)
