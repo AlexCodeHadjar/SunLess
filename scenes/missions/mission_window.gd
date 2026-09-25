@@ -1,6 +1,6 @@
 class_name MissionWindow
 extends Control
-## Окно миссий (docs/15): локация → брифинг и сбор отряда → прибытие и выбор действия → отчёт.
+## Окно миссии (docs/15): брифинг и сбор отряда → прибытие и выбор действия → отчёт.
 
 signal closed
 signal watch_combat(setup: Dictionary)
@@ -15,8 +15,7 @@ const OUTCOME := {
 	"ok": ["успех", "#6FB27A"], "partial": ["частично", "#D08A48"], "fail": ["провал", "#C0414C"],
 }
 
-var mode := ""              # location | brief | arrival | report
-var location_id := ""
+var mode := ""              # brief | arrival | report
 var mission_id := ""
 var squad_id := 0
 var report: Dictionary = {}
@@ -73,7 +72,6 @@ func _ready() -> void:
 	_footer = HBoxContainer.new()
 	_footer.add_theme_constant_override("separation", 24)
 	v.add_child(_footer)
-	GameState.missions_changed.connect(_on_missions_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -98,84 +96,6 @@ func _clear() -> void:
 		c.queue_free()
 	for c in _footer.get_children():
 		c.queue_free()
-
-
-func _on_missions_changed() -> void:
-	# список локации живой: таймеры отрядов и новые миссии
-	if mode == "location":
-		show_location(location_id)
-
-
-# --- локация ----------------------------------------------------------------------------
-
-func show_location(lid: String) -> void:
-	mode = "location"
-	location_id = lid
-	_clear()
-	var c := _content()
-	var s := GameState.state
-	var loc: Dictionary = c.locations.get(lid, {})
-	_title.text = str(loc.get("name", lid))
-	_body.add_child(_para(str(loc.get("text", "")), "serif_italic", 19, Palette.SILVER))
-	var any := false
-	for mid: String in _sorted(c.missions):
-		if str(c.missions[mid].get("location", "")) != lid:
-			continue
-		var st: Dictionary = s.missions.get(mid, {})
-		var status := str(st.get("status", ""))
-		if status != "open" and status != "active":
-			continue
-		any = true
-		_body.add_child(_mission_row(mid, status))
-	if not any:
-		_body.add_child(_para("Здесь пока тихо — новых миссий нет.", "serif_italic", 19, Palette.TEXT_DIM))
-
-
-func _mission_row(mid: String, status: String) -> Control:
-	var c := _content()
-	var m: Dictionary = c.missions[mid]
-	var sq := _squad_for(mid)
-	var b := Button.new()
-	b.custom_minimum_size = Vector2(0, 96)
-	b.add_theme_stylebox_override("normal", UITheme.box(Color(0.08, 0.085, 0.11), Palette.LINE, 1, 6, 0))
-	b.add_theme_stylebox_override("hover", UITheme.box(Color(0.11, 0.1, 0.09), Palette.GOLD, 1, 6, 0))
-	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 20
-	row.offset_right = -20
-	row.add_theme_constant_override("separation", 18)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(row)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(col)
-	var star := "★ " if str(m.get("type", "")) == "story" else ""
-	col.add_child(_ignore(UITheme.label(star + str(m.get("title", mid)), "title_bold", 28, Palette.TEXT)))
-	var sub := "Угроза %s · в пути ~%d с · отряд %s" % [_dots(int(m.get("threat", 1))), int(m.get("duration", 8)), _squad_size(m)]
-	if int(GameState.state.missions.get(mid, {}).get("attempts", 0)) > 0:
-		sub += " · попыток: %d" % int(GameState.state.missions[mid]["attempts"])
-	col.add_child(_ignore(UITheme.label(sub, "sans", 17, Palette.TEXT_DIM)))
-	var right := ""
-	var rc := Palette.SILVER
-	if sq.is_empty():
-		right = "Собрать отряд ›"
-	elif sq["phase"] == "arrived":
-		right = "Отряд прибыл — что делать? ›"
-		rc = Color("#E3C98E")
-	else:
-		right = "Отряд в пути · %d с" % int(ceil(float(sq["arrive_at"]) - GameState.state.clock))
-	row.add_child(_ignore(UITheme.label(right, "sans_bold", 19, rc)))
-	b.pressed.connect(func() -> void:
-		var s2 := _squad_for(mid)
-		if s2.is_empty():
-			show_brief(mid)
-		elif s2["phase"] == "arrived":
-			show_arrival(int(s2["id"]))
-		else:
-			EventBus.toast.emit("Отряд ещё в пути"))
-	return b
 
 
 # --- брифинг и отряд -------------------------------------------------------------------

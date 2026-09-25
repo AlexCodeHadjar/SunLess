@@ -1,5 +1,6 @@
 extends Control
-## Экран режима миссий (docs/15): карта главы с локациями и кольцами отрядов, внизу — герои.
+## Экран режима миссий (docs/15): карта главы — миссии лежат картами у своих локаций,
+## над картой с отрядом — кольцо таймера; внизу — герои.
 ## Часы идут, пока открыт этот экран (таймеры только в игре).
 
 const MAP_TOP := 72.0
@@ -8,7 +9,8 @@ const LEFT_W := 250.0
 
 var _backdrop: MapBackdrop
 var _pins_layer: Control
-var _pins := {}               # location_id -> LocationPin
+var _markers := {}            # mission_id -> MissionMarker
+var _shown_missions: Array = []
 var _top_labels := {}
 var _heroes_row: HBoxContainer
 var _hero_cards := {}          # cid -> CardView
@@ -39,7 +41,7 @@ func _ready() -> void:
 	AudioManager.play_ambient()
 	_refresh()
 	if GameState.state.completed_missions == 0 and GameState.state.squads.is_empty():
-		_show_toast("Выберите локацию на карте, прочтите миссию и отправьте отряд.")
+		_show_toast("Щёлкните по карте миссии, прочтите её и отправьте отряд — или перетащите героя прямо на карту.")
 
 
 func _process(delta: float) -> void:
@@ -71,18 +73,6 @@ func _build_map() -> void:
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_pins_layer)
-	var c := ContentDB.data
-	for lid: String in MissionWindow._sorted(c.locations):
-		var loc: Dictionary = c.locations[lid]
-		if str(loc.get("chapter", "")) != GameState.state.chapter:
-			continue
-		var pin := LocationPin.new()
-		pin.location_id = lid
-		pin.title = str(loc.get("name", lid))
-		pin.pressed.connect(_open_location)
-		_pins_layer.add_child(pin)
-		pin.position = _map_point(loc.get("pos", [0.5, 0.5])) - Vector2(100, 42)
-		_pins[lid] = pin
 
 
 func _region() -> String:
@@ -177,7 +167,7 @@ func _build_bottom() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	panel.add_child(v)
-	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · перетащите героя в отряд миссии · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
+	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · перетащите героя на карту миссии · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
 	head.custom_minimum_size.y = 34
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	v.add_child(head)
@@ -223,6 +213,8 @@ func _refresh() -> void:
 	if s.collection != _shown_collection:
 		_rebuild_cards()
 	_update_badges()
+	if _map_missions() != _shown_missions:
+		_rebuild_markers()
 	_update_pins()
 
 
@@ -271,19 +263,74 @@ func _update_badges() -> void:
 			cv.queue_redraw()
 
 
+## Миссии, которые лежат на карте: открытые и те, к которым идёт или уже пришёл отряд.
+func _map_missions() -> Array:
+	var s := GameState.state
+	var out: Array = MissionFlow.open_missions(s)
+	for sq: Dictionary in s.squads:
+		if not out.has(sq["mission"]):
+			out.append(sq["mission"])
+	out.sort()
+	return out
+
+
+func _rebuild_markers() -> void:
+	var c := ContentDB.data
+	_shown_missions = _map_missions()
+	for ch in _pins_layer.get_children():
+		ch.queue_free()
+	_markers.clear()
+	var by_loc := {}
+	for mid: String in _shown_missions:
+		var lid := str(c.missions[mid].get("location", ""))
+		if not by_loc.has(lid):
+			by_loc[lid] = []
+		by_loc[lid].append(mid)
+	for lid: String in by_loc:
+		var loc: Dictionary = c.locations.get(lid, {})
+		var foot := _map_point(loc.get("pos", [0.5, 0.5]))
+		var here: Array = by_loc[lid]
+		# сюжетные — крупнее и первыми; несколько миссий одной локации лежат веером
+		here.sort_custom(func(a: String, b: String) -> bool:
+			var sa := str(c.missions[a].get("type", "")) == "story"
+			var sb := str(c.missions[b].get("type", "")) == "story"
+			return sa and not sb if sa != sb else a < b)
+		var sizes: Array = []
+		var total_w := 0.0
+		for mid: String in here:
+			var sz := CardView.SIZE_PANEL * (1.1 if str(c.missions[mid].get("type", "")) == "story" else 0.95)
+			sizes.append(sz)
+			total_w += sz.x + 14.0
+		var x := foot.x - (total_w - 14.0) / 2.0
+		for i in here.size():
+			var mid: String = here[i]
+			var sz: Vector2 = sizes[i]
+			var mk := MissionMarker.make(mid, sz)
+			mk.position = Vector2(x, foot.y - sz.y)
+			mk.pressed.connect(_open_mission)
+			mk.hero_dropped.connect(_on_hero_dropped)
+			_pins_layer.add_child(mk)
+			_markers[mid] = mk
+			x += sz.x + 14.0
+		var name := UITheme.label(str(loc.get("name", lid)), "title", 20, Palette.SILVER)
+		name.add_theme_constant_override("outline_size", 6)
+		name.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name.size = Vector2(maxf(total_w, 260.0), 28)
+		name.position = Vector2(foot.x - name.size.x / 2.0, foot.y + 6.0)
+		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_pins_layer.add_child(name)
+
+
 func _update_pins() -> void:
 	var s := GameState.state
-	for lid: String in _pins:
-		var pin: LocationPin = _pins[lid]
-		var open := 0
-		for mid: String in MissionFlow.open_missions(s):
-			if str(ContentDB.data.missions[mid].get("location", "")) == lid:
-				open += 1
+	for mid: String in _markers:
+		var mk: MissionMarker = _markers[mid]
 		var progress := -1.0
 		var remaining := 0.0
 		var arrived := false
 		for sq: Dictionary in s.squads:
-			if str(ContentDB.data.missions[sq["mission"]].get("location", "")) != lid:
+			if sq["mission"] != mid:
 				continue
 			if sq["phase"] == "arrived":
 				arrived = true
@@ -291,12 +338,7 @@ func _update_pins() -> void:
 				var total := maxf(0.1, float(sq["arrive_at"]) - float(sq["launched_at"]))
 				progress = clampf((s.clock - float(sq["launched_at"])) / total, 0.0, 1.0)
 				remaining = maxf(0.0, float(sq["arrive_at"]) - s.clock)
-		if pin.open_count != open or pin.arrived != arrived or not is_equal_approx(pin.progress, progress):
-			pin.open_count = open
-			pin.arrived = arrived
-			pin.progress = progress
-			pin.remaining = remaining
-			pin.queue_redraw()
+		mk.set_state(progress, remaining, arrived)
 
 
 func _on_events(events: Array) -> void:
@@ -304,7 +346,7 @@ func _on_events(events: Array) -> void:
 		match str(e.get("kind", "")):
 			"arrived":
 				AudioManager.play("bell", -6.0, 1.2)
-				_show_toast("%s — щёлкните по локации" % e["text"])
+				_show_toast("%s — щёлкните по карте миссии" % e["text"])
 			"rested":
 				_show_toast(str(e["text"]))
 			"mission":
@@ -315,14 +357,26 @@ func _on_events(events: Array) -> void:
 
 # --- окна -----------------------------------------------------------------------
 
-func _open_location(lid: String) -> void:
-	_open_window()
-	# если отряд этой локации уже прибыл — сразу к выбору действия
+## Щелчок по карте миссии: нет отряда — брифинг; отряд прибыл — выбор действия; в пути — ждём.
+func _open_mission(mid: String) -> void:
 	for sq: Dictionary in GameState.state.squads:
-		if sq["phase"] == "arrived" and str(ContentDB.data.missions[sq["mission"]].get("location", "")) == lid:
+		if sq["mission"] != mid:
+			continue
+		if sq["phase"] == "arrived":
+			_open_window()
 			_window.show_arrival(int(sq["id"]))
-			return
-	_window.show_location(lid)
+		else:
+			_show_toast("Отряд ещё в пути: %d с" % int(ceil(float(sq["arrive_at"]) - GameState.state.clock)))
+		return
+	_open_window()
+	_window.show_brief(mid)
+
+
+## Героя бросили прямо на карту миссии — открываем брифинг, герой уже в отряде.
+func _on_hero_dropped(mid: String, cid: String) -> void:
+	_open_mission(mid)
+	if _window and _window.mode == "brief":
+		_window.call("_add_hero", cid)
 
 
 func _open_window() -> void:

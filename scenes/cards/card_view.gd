@@ -17,7 +17,7 @@ const RANKS := ["Спящий", "Пробуждённый", "Падший", "П�
 const CLASSES := ["", "Зверь", "Монстр", "Демон", "Дьявол", "Тиран", "Ужас", "Титан"]
 
 var card_id := ""
-var kind := ""          # character | enhancement | initiator | trauma | event
+var kind := ""          # character | enhancement | initiator | trauma | event | mission
 var draggable := true
 var hover_lift := true
 var dimmed := false
@@ -50,19 +50,25 @@ static func make(id: String, size_px: Vector2, can_drag: bool = true) -> CardVie
 func _init_card() -> void:
 	var content := ContentDB.data
 	kind = content.card_kind(card_id)
+	if kind == "" and content.missions.has(card_id):
+		kind = "mission"
 	if kind == "" and content.events.has(card_id):
 		kind = "event"
 	var def := _def()
 	var art: String = def.get("art", "")
 	var auto := false
 	if art == "" or not ResourceLoader.exists(art):
-		# готовая карта из дизайна (art/cards/<ID>.webp) — с рамкой и названием в рисунке
-		for ext: String in ["webp", "png"]:
-			var p := "res://art/cards/%s.%s" % [card_id, ext]
-			if ResourceLoader.exists(p):
-				art = p
-				auto = true
-				break
+		# готовая карта из дизайна (art/cards/<ID>.webp) — с рамкой и названием в рисунке;
+		# миссия без своей — берёт карту события, из которого выросла
+		for base: String in [card_id, str(def.get("from_event", ""))]:
+			if base == "" or art != "":
+				continue
+			for ext: String in ["webp", "png"]:
+				var p := "res://art/cards/%s.%s" % [base, ext]
+				if ResourceLoader.exists(p):
+					art = p
+					auto = true
+					break
 	if art != "" and ResourceLoader.exists(art):
 		_tex = load(art)
 		_art_framed = bool(def.get("art_has_frame", auto or kind == "enemy"))
@@ -79,6 +85,7 @@ func _def() -> Dictionary:
 		"initiator": return c.initiators.get(card_id, {})
 		"trauma": return c.traumas.get(card_id, {})
 		"event": return c.events.get(card_id, {})
+		"mission": return c.missions.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
 	return {}
 
@@ -295,6 +302,8 @@ func describe() -> String:
 			lines.append(", ".join(mods))
 		"event":
 			lines.append(str(d.get("text", "")))
+		"mission":
+			lines.append(str(d.get("briefing", "")))
 		"enemy":
 			lines.append("%s · %s · %s" % [RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CLASSES[clampi(int(d.get("class", 1)), 1, 7)],
 				{"normal": "обычный", "elite": "элита", "boss": "босс"}.get(d.get("kind", "normal"), "")])
@@ -353,6 +362,8 @@ func _border_color(d: Dictionary) -> Color:
 		"initiator": return Palette.INITIATOR.lightened(0.2)
 		"trauma": return Palette.TRAUMA_BRIGHT
 		"enemy": return Palette.STAT_DOWN
+		"mission":
+			return Palette.GOLD if d.get("type", "") == "story" else Palette.SILVER.darkened(0.2)
 		"event":
 			return Palette.GOLD if d.get("type", "") in ["story", "reward"] else (Palette.INITIATOR.lightened(0.2) if d.get("source_kind", "") == "initiator" else Palette.SILVER.darkened(0.2))
 	return Palette.LINE
@@ -415,6 +426,9 @@ func _subtitle(d: Dictionary) -> String:
 			return st2 if st2 != "" else str(d.get("role", "")).split(" /")[0]
 		"enemy":
 			return "%s · %s" % [RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CLASSES[clampi(int(d.get("class", 1)), 1, 7)]]
+		"mission":
+			var kinds := {"story": "Сюжет", "side": "Побочная", "random": "Случайная"}
+			return "%s · угроза %s" % [kinds.get(d.get("type", ""), ""), "●".repeat(clampi(int(d.get("threat", 1)), 1, 5))]
 		"event":
 			var tags: Array = []
 			for t: String in Array(d.get("tags", [])).slice(0, 2):
@@ -446,6 +460,7 @@ func _draw_art_placeholder(art: Rect2, d: Dictionary, k: float) -> void:
 		"enhancement": em = "enhancement"
 		"enemy": em = "monster"
 		"event": em = "story" if d.get("type", "") in ["story", "reward"] else ""
+		"mission": em = "story" if d.get("type", "") == "story" else ""
 	var tex := UITheme.emblem(em) if em != "" else null
 	if tex:
 		var es := minf(art.size.x, art.size.y) * 0.62

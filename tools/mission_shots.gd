@@ -1,6 +1,6 @@
 extends Node
 ## Автоснимки режима миссий (docs/15): Godot --path . -- --mshots=<папка>
-## Меню → карта → локация → брифинг → отряд в пути → прибытие → отчёт → вторая миссия с боем → просмотр боя.
+## Меню → карта с картами миссий → брифинг → отряд в пути → прибытие → отчёт → вторая миссия с боем → просмотр боя.
 
 var out_dir := ""
 
@@ -41,18 +41,17 @@ func _run() -> void:
 	await _wait(1.2)
 	await _shot("m02_map")
 	var game := get_tree().current_scene
-	game.call("_open_location", "slave_caravan")
-	await _wait(0.6)
-	await _shot("m03_location")
-	_window().show_brief("MS02")
+	game.call("_open_mission", "MS02")
 	await _wait(0.8)
 	await _shot("m04_brief_ms02")
 	_window().call("_launch")
 	await _wait(2.5)
 	await _shot("m05_travel")
-	await _wait(5.0)
+	await _wait(1.5)
+	await _shot("m05b_travel")
+	await _wait(3.5)
 	await _shot("m06_arrived_map")
-	game.call("_open_location", "slave_caravan")
+	game.call("_open_mission", "MS02")
 	await _wait(0.8)
 	await _shot("m07_arrival")
 	_window().call("_choose", "MS02_watch")
@@ -62,18 +61,18 @@ func _run() -> void:
 	# вторая миссия: Санни отдыхает — подождём
 	GameState.state.rest_until.clear()
 	GameState.missions_changed.emit()
-	await _wait(0.5)
-	game.call("_open_location", "fallen_caravan")
-	await _wait(0.4)
 	if not GameState.state.missions.has("MS03"):
 		GameState.state.missions["MS03"] = {"status": "open", "attempts": 0}
-	_window().show_brief("MS03")
+	GameState.missions_changed.emit()
+	await _wait(0.8)
+	await _shot("m08b_map_ms03")
+	game.call("_open_mission", "MS03")
 	await _wait(0.8)
 	await _shot("m09_brief_ms03")
 	_window().call("_launch")
 	GameState.mission_tick(20.0)
 	await _wait(0.6)
-	game.call("_open_location", "fallen_caravan")
+	game.call("_open_mission", "MS03")
 	await _wait(0.8)
 	await _shot("m10_arrival_ms03")
 	_window().call("_choose", "MS03_fight")
