@@ -42,6 +42,19 @@ var game_over: bool = false
 var demo_complete: bool = false
 var rng_seed: int = 0
 var rng_state: int = 0
+# --- миссии и отряды (docs/15, ветка gameplay/missions) ---
+var mode: String = ""               # "missions" — новая механика; "" — события по неделям
+var clock: float = 0.0              # игровые секунды (идут только в игре)
+## mission_id -> {status: "open"|"active"|"done", attempts, opened_at}
+var missions: Dictionary = {}
+## [{id, mission, heroes:[], launched_at, arrive_at, phase: "travel"|"arrived"}]
+var squads: Array = []
+var next_squad: int = 1
+## character_id -> игровое время, до которого герой отдыхает
+var rest_until: Dictionary = {}
+var completed_missions: int = 0
+## location_id -> игровое время следующей случайной миссии
+var loc_timers: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -75,6 +88,14 @@ func to_dict() -> Dictionary:
 		# RNG хранится строкой: JSON теряет точность больших целых.
 		"rng_seed": str(rng_seed),
 		"rng_state": str(rng_state),
+		"mode": mode,
+		"clock": clock,
+		"missions": missions.duplicate(true),
+		"squads": squads.duplicate(true),
+		"next_squad": next_squad,
+		"rest_until": rest_until.duplicate(true),
+		"completed_missions": completed_missions,
+		"loc_timers": loc_timers.duplicate(true),
 	}
 
 
@@ -127,6 +148,20 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.demo_complete = bool(d.get("demo_complete", false))
 	s.rng_seed = int(str(d.get("rng_seed", "0")))
 	s.rng_state = int(str(d.get("rng_state", "0")))
+	s.mode = str(d.get("mode", ""))
+	s.clock = float(d.get("clock", 0.0))
+	s.missions = Dictionary(d.get("missions", {})).duplicate(true)
+	for mid: String in s.missions:
+		s.missions[mid]["attempts"] = int(s.missions[mid].get("attempts", 0))
+	s.squads = Array(d.get("squads", [])).duplicate(true)
+	for sq: Dictionary in s.squads:
+		sq["id"] = int(sq.get("id", 0))
+	s.next_squad = int(d.get("next_squad", 1))
+	s.rest_until = Dictionary(d.get("rest_until", {})).duplicate(true)
+	for cid: String in s.rest_until:
+		s.rest_until[cid] = float(s.rest_until[cid])
+	s.completed_missions = int(d.get("completed_missions", 0))
+	s.loc_timers = Dictionary(d.get("loc_timers", {})).duplicate(true)
 	return s
 
 

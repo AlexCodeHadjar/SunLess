@@ -56,6 +56,10 @@ var rounds_log: Array = []
 var entries: Array = []
 var discovered: Array = []        # id связей, сработавших в сыгранных раундах
 var result: Dictionary = {"traumas": [], "death": {}, "wear": [], "loot": {}, "progressed": false}
+# бой из миссии (docs/15): вместо события — описание боя и теги проверки миссии/этапа
+var ctx_event: Dictionary = {}
+var ctx_option: Dictionary = {}
+var hidden_enemy_tags: Array = []   # для прогноза: теги врага, которых игрок ещё не знает
 
 
 static func create(p_content: Content, state_in: RunState, p_event_id: String, p_option_id: String,
@@ -87,6 +91,61 @@ static func create(p_content: Content, state_in: RunState, p_event_id: String, p
 		if a != s.hero and s.state.owns(a) and s.state.is_alive(a) and not s.allies.has(a) and s.allies.size() < 2:
 			s.allies.append(a)
 	return s
+
+
+## Бой этапа миссии. key — ключ ран и настороженности врага (id миссии), spec — {enemies, field, kind},
+## hero — ведущий героя, support — остальные герои отряда (до двух в поддержке).
+static func create_for_mission(p_content: Content, state_in: RunState, key: String, spec: Dictionary,
+		p_hero: String, p_enh: Array, support: Array, p_ctx_event: Dictionary, p_ctx_option: Dictionary) -> CombatSession:
+	var s := CombatSession.new()
+	s.content = p_content
+	s.state = state_in.copy()
+	s.rng = RandomNumberGenerator.new()
+	s.rng.seed = s.state.rng_seed
+	s.rng.state = s.state.rng_state
+	s.event_id = key
+	s.option_id = str(p_ctx_option.get("id", ""))
+	s.hero = p_hero
+	s.enh = p_enh.duplicate()
+	s.ctx_event = p_ctx_event
+	s.ctx_option = p_ctx_option
+	s.mods = s.state.combat_mods.get(key, {})
+	for eid: String in Array(spec.get("enemies", [])) + Array(s.mods.get("add_enemies", [])):
+		if p_content.enemies.has(eid):
+			s.enemies.append(p_content.enemies[eid].duplicate(true))
+	var fid: String = s.mods.get("field", spec.get("field", ""))
+	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
+	s.kind = str(spec.get("kind", "normal"))
+	for e: Dictionary in s.enemies:
+		if e.get("kind", "normal") == "boss" or (e.get("kind", "") == "elite" and s.kind == "normal"):
+			s.kind = str(e["kind"])
+	for a: String in support:
+		if a != p_hero and s.state.is_alive(a) and not s.allies.has(a) and s.allies.size() < 2:
+			s.allies.append(a)
+	return s
+
+
+## Автобой: отряд сам выбирает приём с лучшим шансом в каждом раунде (docs/15 — вмешаться нельзя).
+func auto_play() -> void:
+	while not finished:
+		begin_round()
+		var best := ""
+		var best_chance := int(ledger({})["chance"])
+		for tid: String in hand:
+			var t: Dictionary = content.tactics.get(tid, {})
+			if int(t.get("mana", 0)) > 0:
+				continue
+			var ch := int(ledger(t)["chance"])
+			if ch > best_chance:
+				best_chance = ch
+				best = tid
+		play_round(best)
+
+
+## Шанс выиграть бой целиком при шансе раунда p (до 2 побед из 3 раундов).
+static func fight_chance(round_chance: int) -> float:
+	var p := clampf(round_chance / 100.0, 0.0, 1.0)
+	return p * p * (3.0 - 2.0 * p)
 
 
 func rounds_total_label() -> String:
@@ -368,6 +427,8 @@ func _enemy_tags(tactic: Dictionary) -> Array:
 		_add_unique(out, "Настороженность")
 	for t: String in tactic.get("cancel_enemy_tags", []):
 		out.erase(t)
+	for t: String in hidden_enemy_tags:
+		out.erase(t)
 	return out
 
 
@@ -613,6 +674,8 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 
 
 func _hero_totals() -> Dictionary:
+	if not ctx_event.is_empty():
+		return StatResolver.resolve(content, state, hero, enh, ctx_event, ctx_option)["totals"]
 	var ev: Dictionary = content.events.get(event_id, {})
 	var o := content.option(event_id, option_id)
 	return StatResolver.resolve(content, state, hero, enh, ev, o)["totals"]

@@ -266,7 +266,13 @@ static func _kill(content: Content, state: RunState, cid: String, entries: Array
 	state.characters[cid]["alive"] = false
 	state.collection.erase(cid)
 	state.note(cid, "Погиб")
-	if cid == DEATH_CHARACTER:
+	if state.mode == "missions":
+		# новая механика: смерть навсегда, конец — когда героев не осталось (docs/15)
+		entries.append({"kind": "death", "text": "%s погибает." % content.card_name(cid), "card": cid})
+		if MissionFlow.heroes(content, state).is_empty():
+			state.game_over = true
+			entries.append({"kind": "death", "text": "Героев не осталось — прохождение окончено."})
+	elif cid == DEATH_CHARACTER:
 		state.game_over = true
 		entries.append({"kind": "death", "text": "Тень угасла. %s погибает — прохождение окончено." % content.card_name(cid), "card": cid})
 	else:
