@@ -11,9 +11,12 @@ var _backdrop: MapBackdrop
 var _pins_layer: Control
 var _markers := {}            # mission_id -> MissionMarker
 var _shown_missions: Array = []
+var _shops := {}              # shop_id -> ShopIcon
+var _shop_window: ShopWindow
 var _top_labels := {}
 var _heroes_row: HBoxContainer
 var _hero_cards := {}          # cid -> CardView
+var _enh_cards := {}           # card -> CardView (метка — чей кармашек)
 var _shown_collection: Array = []
 var _window: MissionWindow
 var _toast: Label
@@ -52,7 +55,7 @@ func _process(delta: float) -> void:
 	if _badge_timer <= 0.0:
 		_badge_timer = 0.5
 		_update_badges()
-	if GameState.state.game_over and _end == null and _window == null and not _combat_open:
+	if GameState.state.game_over and _end == null and _window == null and _shop_window == null and not _combat_open:
 		_show_end()
 
 
@@ -73,6 +76,15 @@ func _build_map() -> void:
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_pins_layer)
+	var c := ContentDB.data
+	for sid: String in ShopRules.shops_of(c, GameState.state):
+		var icon := ShopIcon.new()
+		icon.shop_id = sid
+		icon.title = str(c.shops[sid].get("name", sid))
+		icon.pressed.connect(_open_shop)
+		add_child(icon)
+		icon.position = _map_point(c.shops[sid].get("pos", [0.5, 0.5])) - Vector2(110, 42)
+		_shops[sid] = icon
 
 
 func _region() -> String:
@@ -150,7 +162,7 @@ func _build_top() -> void:
 		sep.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(sep)
 	_top_labels["shards"].add_theme_color_override("font_color", Palette.COINS)
-	_top_labels["shards"].tooltip_text = "Осколки душ: добыча с убитых тварей. Скоро — магазин (раз в 7 миссий новый товар)."
+	_top_labels["shards"].tooltip_text = "Осколки душ: добыча с убитых тварей. Тратятся в магазине на карты усилений и персонажей."
 	_top_labels["shards"].mouse_filter = Control.MOUSE_FILTER_STOP
 
 
@@ -167,7 +179,7 @@ func _build_bottom() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	panel.add_child(v)
-	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · перетащите героя на карту миссии · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
+	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · героя — на карту миссии · усиление — на героя (в кармашек) · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
 	head.custom_minimum_size.y = 34
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	v.add_child(head)
@@ -206,7 +218,8 @@ func _refresh() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
 	_top_labels["chapter"].text = str(c.regions.get(_region(), {}).get("arc_name", "Глава"))
-	_top_labels["shards"].text = "✧ %d осколков душ" % int(s.resources.get("shards", 0))
+	var shards := int(s.resources.get("shards", 0))
+	_top_labels["shards"].text = "✧ %d %s душ" % [shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])]
 	var travelling := s.squads.filter(func(sq: Dictionary) -> bool: return sq["phase"] == "travel").size()
 	var arrived := s.squads.size() - travelling
 	_top_labels["squads"].text = "Отрядов в пути: %d%s" % [travelling, (" · прибыли: %d" % arrived) if arrived > 0 else ""]
@@ -225,6 +238,7 @@ func _rebuild_cards() -> void:
 	for ch in _heroes_row.get_children():
 		ch.queue_free()
 	_hero_cards.clear()
+	_enh_cards.clear()
 	var enh: Array = []
 	for card: String in s.collection:
 		var kind := c.card_kind(card)
@@ -232,6 +246,10 @@ func _rebuild_cards() -> void:
 			var cv := CardView.make(card, CardView.SIZE_PANEL, true)
 			cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 			cv.clicked.connect(func(id: String) -> void: CardInspector.open_for(self, id))
+			# усиление, брошенное на героя, ложится в его кармашек
+			cv.set_drag_forwarding(Callable(cv, "_get_drag_data"),
+				func(_at: Vector2, data: Variant) -> bool: return data is Dictionary and data.get("kind", "") == "enhancement",
+				_on_pocket_drop.bind(card))
 			_heroes_row.add_child(cv)
 			_hero_cards[card] = cv
 		elif kind == "enhancement":
@@ -242,10 +260,11 @@ func _rebuild_cards() -> void:
 		sep.custom_minimum_size = Vector2(1, 200)
 		_heroes_row.add_child(sep)
 		for card: String in enh:
-			var cv := CardView.make(card, CardView.SIZE_PANEL * 0.9, false)
+			var cv := CardView.make(card, CardView.SIZE_PANEL * 0.9, true)
 			cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 			cv.clicked.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 			_heroes_row.add_child(cv)
+			_enh_cards[card] = cv
 
 
 func _update_badges() -> void:
@@ -261,6 +280,16 @@ func _update_badges() -> void:
 			cv.badge = b
 			cv.draggable = why == ""
 			cv.queue_redraw()
+	for card: String in _enh_cards:
+		var ev: CardView = _enh_cards[card]
+		if not is_instance_valid(ev):
+			continue
+		var owner := MissionFlow.pocket_owner(s, card)
+		var eb := ("у героя: %s" % c.card_name(owner)) if owner != "" else "не в кармашке"
+		if ev.badge != eb:
+			ev.badge = eb
+			ev.draggable = owner == "" or not MissionFlow.on_mission(s, owner)
+			ev.queue_redraw()
 
 
 ## Миссии, которые лежат на карте: открытые и те, к которым идёт или уже пришёл отряд.
@@ -339,6 +368,9 @@ func _update_pins() -> void:
 				progress = clampf((s.clock - float(sq["launched_at"])) / total, 0.0, 1.0)
 				remaining = maxf(0.0, float(sq["arrive_at"]) - s.clock)
 		mk.set_state(progress, remaining, arrived)
+	for sid: String in _shops:
+		var icon: ShopIcon = _shops[sid]
+		icon.set_state(ShopRules.has_news(ContentDB.data, s, sid), ShopRules.missions_to_refresh(ContentDB.data, s, sid))
 
 
 func _on_events(events: Array) -> void:
@@ -372,11 +404,31 @@ func _open_mission(mid: String) -> void:
 	_window.show_brief(mid)
 
 
+func _on_pocket_drop(_at: Vector2, data: Variant, cid: String) -> void:
+	var card := str(data["card"])
+	if GameState.pocket_add(cid, card) == "":
+		AudioManager.play("place")
+		_show_toast("%s — в кармашке героя %s" % [ContentDB.data.card_name(card), ContentDB.data.card_name(cid)])
+		_update_badges()
+
+
+func _open_shop(sid: String) -> void:
+	if is_instance_valid(_shop_window):
+		_shop_window.queue_free()
+	_shop_window = ShopWindow.open_for(self, sid)
+	_shop_window.closed.connect(func() -> void:
+		_shop_window = null
+		_refresh())
+	move_child(_toast, get_child_count() - 1)
+
+
 ## Героя бросили прямо на карту миссии — открываем брифинг, герой уже в отряде.
 func _on_hero_dropped(mid: String, cid: String) -> void:
-	_open_mission(mid)
-	if _window and _window.mode == "brief":
-		_window.call("_add_hero", cid)
+	for sq: Dictionary in GameState.state.squads:
+		if sq["mission"] == mid:
+			return
+	_open_window()
+	_window.show_brief(mid, cid)
 
 
 func _open_window() -> void:

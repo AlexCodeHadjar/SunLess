@@ -55,6 +55,8 @@ var rest_until: Dictionary = {}
 var completed_missions: int = 0
 ## location_id -> игровое время следующей случайной миссии
 var loc_timers: Dictionary = {}
+## shop_id -> {gen, items: [{card, price, sold}], seen} — ассортимент магазинов (ShopRules)
+var shops: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -96,6 +98,7 @@ func to_dict() -> Dictionary:
 		"rest_until": rest_until.duplicate(true),
 		"completed_missions": completed_missions,
 		"loc_timers": loc_timers.duplicate(true),
+		"shops": shops.duplicate(true),
 	}
 
 
@@ -162,6 +165,12 @@ static func from_dict(d: Dictionary) -> RunState:
 		s.rest_until[cid] = float(s.rest_until[cid])
 	s.completed_missions = int(d.get("completed_missions", 0))
 	s.loc_timers = Dictionary(d.get("loc_timers", {})).duplicate(true)
+	s.shops = Dictionary(d.get("shops", {})).duplicate(true)
+	for sid: String in s.shops:
+		s.shops[sid]["gen"] = int(s.shops[sid].get("gen", 0))
+		s.shops[sid]["seen"] = int(s.shops[sid].get("seen", -1))
+		for it: Dictionary in s.shops[sid].get("items", []):
+			it["price"] = int(it.get("price", 0))
 	return s
 
 

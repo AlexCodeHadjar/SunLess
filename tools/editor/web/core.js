@@ -20,6 +20,7 @@ const F = {
   chapters: "data/chapters.json",
   regions: "data/regions.json",
   locations: "data/locations.json",
+  shops: "data/shops.json",
 };
 
 const STATS = ["power", "will", "cunning"];

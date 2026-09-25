@@ -88,6 +88,31 @@ static func busy_reason(content: Content, state: RunState, cid: String) -> Strin
 	return ""
 
 
+static func on_mission(state: RunState, cid: String) -> bool:
+	for sq: Dictionary in state.squads:
+		if Array(sq.get("heroes", [])).has(cid):
+			return true
+	return false
+
+
+## Кармашек героя на миссии не меняется: ни его, ни усилений, которые ушли с другим отрядом.
+static func pocket_lock(content: Content, state: RunState, cid: String, card: String) -> String:
+	if on_mission(state, cid):
+		return "%s на миссии — кармашек не поменять" % content.card_name(cid)
+	for other: String in state.characters:
+		if other != cid and on_mission(state, other) and Array(state.characters[other].get("pocket", [])).has(card):
+			return "%s сейчас на миссии у героя %s" % [content.card_name(card), content.card_name(other)]
+	return ""
+
+
+## Чей кармашек держит усиление ("" — ничей).
+static func pocket_owner(state: RunState, card: String) -> String:
+	for cid: String in state.characters:
+		if Array(state.characters[cid].get("pocket", [])).has(card):
+			return cid
+	return ""
+
+
 static func free_heroes(content: Content, state: RunState) -> Array:
 	var out: Array = []
 	for cid: String in heroes(content, state):

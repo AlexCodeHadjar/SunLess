@@ -60,6 +60,11 @@ func pocket_add(character_id: String, card: String) -> String:
 	var pocket: Array = ch.get("pocket", [])
 	if pocket.has(card):
 		return ""
+	if is_missions():
+		var lock := MissionFlow.pocket_lock(ContentDB.data, state, character_id, card)
+		if lock != "":
+			EventBus.toast.emit(lock)
+			return "locked"
 	if pocket.size() >= 3:
 		EventBus.toast.emit("В кармашке не больше трёх усилений")
 		return "full"
@@ -74,6 +79,11 @@ func pocket_add(character_id: String, card: String) -> String:
 
 func pocket_remove(character_id: String, card: String) -> void:
 	var ch := state.character(character_id)
+	if is_missions():
+		var lock := MissionFlow.pocket_lock(ContentDB.data, state, character_id, card)
+		if lock != "":
+			EventBus.toast.emit(lock)
+			return
 	Array(ch.get("pocket", [])).erase(card)
 	SaveService.save_state(state)
 	EventBus.state_changed.emit()
@@ -318,3 +328,21 @@ func resolve_squad(squad_id: int, action_id: String) -> Dictionary:
 	missions_changed.emit()
 	EventBus.state_changed.emit()
 	return r["report"]
+
+
+## Покупка в магазине главы: "" — куплено, иначе причина отказа.
+func shop_buy(shop_id: String, card: String) -> String:
+	var out: Array = []
+	var err := ShopRules.buy(content(), state, shop_id, card, out)
+	if err != "":
+		return err
+	AudioManager.play("new_event", -4.0)
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return ""
+
+
+func shop_seen(shop_id: String) -> void:
+	ShopRules.mark_seen(content(), state, shop_id)
+	SaveService.save_state(state)

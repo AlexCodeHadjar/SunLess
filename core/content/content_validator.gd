@@ -270,6 +270,40 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 				errors.append("Локация %s: в пуле нет миссии %s" % [lid, mid])
 	for mid: String in c.missions:
 		_validate_mission(c, mid, errors)
+	for sid: String in c.shops:
+		_validate_shop(c, sid, errors)
+
+
+static func _validate_shop(c: Content, sid: String, errors: Array[String]) -> void:
+	var sh: Dictionary = c.shops[sid]
+	var w := "Магазин %s" % sid
+	if str(sh.get("name", "")) == "":
+		errors.append("%s: нет названия" % w)
+	if Array(sh.get("pos", [])).size() != 2:
+		errors.append("%s: pos должен быть [x, y]" % w)
+	if not c.chapters.has(str(sh.get("chapter", ""))) and not _chapter_has_locations(c, str(sh.get("chapter", ""))):
+		errors.append("%s: неизвестная глава «%s»" % [w, sh.get("chapter", "")])
+	if int(sh.get("slots", 0)) < 1:
+		errors.append("%s: slots должен быть не меньше 1" % w)
+	if int(sh.get("refresh_every", 0)) < 1:
+		errors.append("%s: refresh_every должен быть не меньше 1" % w)
+	var stock: Array = sh.get("stock", [])
+	if stock.is_empty():
+		errors.append("%s: пустой stock" % w)
+	for it: Dictionary in stock:
+		var card := str(it.get("card", ""))
+		var kind := c.card_kind(card)
+		if kind != "character" and kind != "enhancement":
+			errors.append("%s: в продаже может быть только персонаж или усиление, а не «%s»" % [w, card])
+		if it.has("price") and int(it["price"]) < 1:
+			errors.append("%s: у %s цена меньше 1" % [w, card])
+
+
+static func _chapter_has_locations(c: Content, chapter: String) -> bool:
+	for lid: String in c.locations:
+		if str(c.locations[lid].get("chapter", "")) == chapter:
+			return true
+	return false
 
 
 static func _validate_mission(c: Content, mid: String, errors: Array[String]) -> void:

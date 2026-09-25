@@ -6,10 +6,10 @@ const MISSION_TYPES = { story: "Сюжетная", side: "Побочная", ran
 const THREAT_WORDS = ["", "Пустяк", "Неприятно", "Опасно", "Очень опасно", "Смертельно"];
 
 const MissionsView = {
-  selected: null, locSel: null, page: "brief", actIdx: 0,
+  selected: null, locSel: null, shopSel: null, page: "brief", actIdx: 0,
 
   render(root, params = {}) {
-    if (params.select) { this.selected = params.select; this.locSel = null; }
+    if (params.select) { this.selected = params.select; this.locSel = null; this.shopSel = null; }
     this.side = h("aside", { class: "side ms-side" });
     this.main = h("section", { class: "detail ms-main" });
     this.preview = h("section", { class: "ms-preview" });
@@ -34,7 +34,7 @@ const MissionsView = {
     S.append(h("h4", null, "Локации и миссии"));
     const box = h("div", { class: "side-list" });
     for (const loc of locs) {
-      box.append(h("button", { class: "side-item ms-loc" + (this.locSel === loc.id ? " on" : ""), onclick: () => { this.locSel = loc.id; this.selected = null; this.renderSide(); this.renderMain(); } },
+      box.append(h("button", { class: "side-item ms-loc" + (this.locSel === loc.id ? " on" : ""), onclick: () => { this.locSel = loc.id; this.selected = null; this.shopSel = null; this.renderSide(); this.renderMain(); } },
         h("span", { class: "pin-dot" }), loc.name, h("span", { class: "n" }, (byLoc[loc.id] || []).length)));
       for (const r of byLoc[loc.id] || []) box.append(this.missionItem(r));
     }
@@ -43,9 +43,15 @@ const MissionsView = {
       box.append(h("div", { class: "muted ms-orphan" }, "Без локации"));
       orphans.forEach((r) => box.append(this.missionItem(r)));
     }
+    box.append(h("div", { class: "muted ms-orphan" }, "Магазины"));
+    for (const sh of list(F.shops)) {
+      box.append(h("button", { class: "side-item ms-loc" + (this.shopSel === sh.id ? " on" : ""), onclick: () => { this.shopSel = sh.id; this.locSel = null; this.selected = null; this.renderSide(); this.renderMain(); } },
+        h("span", { class: "pin-dot", style: { background: "#B9A7E6" } }), sh.name || sh.id, h("span", { class: "n", title: "Карт в ассортименте" }, (sh.stock || []).length)));
+    }
     S.append(box,
       h("button", { class: "btn add", onclick: () => this.createMission() }, "+ Миссия"),
       h("button", { class: "btn", onclick: () => this.createLocation() }, "+ Локация"),
+      h("button", { class: "btn", onclick: () => this.createShop() }, "+ Магазин"),
       h("p", { class: "muted", style: { fontSize: "12px", padding: "0 6px" } }, "Новая механика из ветки gameplay/missions: локации, отряды, действия после прибытия. См. docs/15."));
   },
 
@@ -59,6 +65,7 @@ const MissionsView = {
   select(id) {
     this.selected = id;
     this.locSel = null;
+    this.shopSel = null;
     this.actIdx = 0;
     App.params = { select: id };
     this.renderSide();
@@ -70,6 +77,7 @@ const MissionsView = {
     const M = this.main;
     M.innerHTML = "";
     if (this.locSel) { this.renderLocation(M, byId(F.locations, this.locSel)); this.renderPreview(null); return; }
+    if (this.shopSel) { this.renderShop(M, byId(F.shops, this.shopSel)); this.renderPreview(null); return; }
     const r = this.selected && this.rec(this.selected);
     if (!r) {
       M.append(h("div", { class: "detail-body" }, h("div", { class: "muted", style: { margin: "auto", textAlign: "center", maxWidth: "440px" } },
@@ -334,6 +342,80 @@ const MissionsView = {
     applyTips(M);
   },
 
+  // ---- магазин (docs/15 §11) -----------------------------------------------------------
+  renderShop(M, sh) {
+    if (!sh) return;
+    const changed = () => { touch(F.shops); };
+    const title = bindInput(sh, "name", () => { changed(); this.renderSide(); }, { cls: "title-input", keepEmpty: true });
+    const stockBox = h("div", { class: "shop-stock" });
+    const renderStock = () => {
+      stockBox.innerHTML = "";
+      sh.stock = sh.stock || [];
+      sh.stock.forEach((it, i) => {
+        const c = findCard(it.card);
+        const price = h("input", { type: "number", min: "1", value: it.price ?? "", placeholder: String(shopDefaultPrice(it.card)), style: { width: "90px" } });
+        price.dataset.tip = "Цена в осколках душ. Пусто — по редкости карты (серое число).";
+        price.oninput = () => { if (price.value === "") delete it.price; else it.price = Math.max(1, Number(price.value) || 1); changed(); };
+        stockBox.append(h("div", { class: "shop-row" },
+          h("span", { class: "type-dot", style: { background: c && c.kind === "character" ? "#C9CED6" : "#8C6B45" } }),
+          h("span", { class: "grow" }, cardName(it.card), h("span", { class: "muted" }, "  · " + (c ? (c.kind === "character" ? "персонаж" : "усиление") : "нет такой карты"))),
+          h("span", { class: "muted" }, "✧"), price,
+          h("button", { class: "chip-x", title: "Убрать из ассортимента", onclick: () => { sh.stock.splice(i, 1); changed(); renderStock(); this.renderSide(); } }, "×")));
+      });
+      const have = new Set(sh.stock.map((it) => it.card));
+      const sel = h("select", { class: "enemy-add" }, h("option", { value: "" }, "+ карта в продажу…"),
+        allCards().filter((c) => (c.kind === "character" || c.kind === "enhancement") && !have.has(c.id))
+          .map((c) => h("option", { value: c.id }, (c.obj.name || c.id) + " (" + (c.kind === "character" ? "персонаж" : "усиление") + ")")));
+      sel.onchange = () => { if (sel.value) { sh.stock.push({ card: sel.value }); changed(); renderStock(); this.renderSide(); } };
+      stockBox.append(sel);
+    };
+    renderStock();
+    M.append(
+      h("div", { class: "detail-head" }, h("div", { class: "head-info" }, h("div", { class: "kind" }, h("span", { class: "pin-dot", style: { background: "#B9A7E6" } }), "Магазин"), title)),
+      h("div", { class: "detail-body" },
+        field("Описание (видит игрок)", bindInput(sh, "text", changed, { type: "textarea", rows: 4, keepEmpty: true })),
+        h("div", { class: "cols" },
+          field("Глава", bindInput(sh, "chapter", changed)),
+          field("Позиция X (0–1)", this.posInput(sh, 0, changed)),
+          field("Позиция Y (0–1)", this.posInput(sh, 1, changed))),
+        h("div", { class: "cols" },
+          field("Карт на витрине", bindInput(sh, "slots", changed, { type: "number" }), "Сколько карт из ассортимента выставлено за раз."),
+          field("Персонажей не меньше", bindInput(sh, "min_characters", changed, { type: "number" }), "Сколько мест витрины гарантированно отдаётся картам персонажей (если есть кого продать)."),
+          field("Обновление раз в N миссий", bindInput(sh, "refresh_every", changed, { type: "number" }), "После каждых N завершённых миссий витрина перекладывается заново.")),
+        h("div", { class: "section" }, h("h4", null, "Ассортимент (" + (sh.stock || []).length + ")"),
+          h("p", { class: "muted" }, "Из этих карт магазин случайно выбирает витрину. Карты, которые уже у игрока, и погибшие герои не выставляются."), stockBox)),
+      h("div", { class: "detail-foot" }, h("span", { class: "grow" }),
+        h("button", { class: "btn danger", onclick: () => this.deleteShop(sh) }, "Удалить магазин")));
+    applyTips(M);
+  },
+
+  async createShop() {
+    const r = await ask("Новый магазин", [
+      { key: "id", label: "Код (латиницей)", value: "", hint: "например, academy_store" },
+      { key: "name", label: "Название", value: "" },
+      { key: "chapter", label: "Глава", value: "nightmare" },
+    ]);
+    if (!r || !r.id) return;
+    if (!DB.files[F.shops]) DB.files[F.shops] = [];
+    if (byId(F.shops, r.id)) { toast("Такой код уже есть", "err"); return; }
+    list(F.shops).push({ id: r.id, chapter: r.chapter, name: r.name || r.id, text: "", pos: [0.5, 0.3], slots: 4, min_characters: 1, refresh_every: 7, stock: [] });
+    touch(F.shops);
+    this.shopSel = r.id;
+    this.locSel = null;
+    this.selected = null;
+    this.renderSide();
+    this.renderMain();
+  },
+
+  async deleteShop(sh) {
+    if (!(await confirmBox("Удалить магазин", "Удалить «" + sh.name + "»?"))) return;
+    DB.files[F.shops] = list(F.shops).filter((x) => x !== sh);
+    touch(F.shops);
+    this.shopSel = null;
+    this.renderSide();
+    this.renderMain();
+  },
+
   posInput(loc, i, changed) {
     loc.pos = loc.pos || [0.5, 0.5];
     const inp = h("input", { type: "number", step: "0.01", min: "0", max: "1", value: loc.pos[i] });
@@ -440,6 +522,17 @@ const MissionsView = {
   },
 };
 
+// Цена по умолчанию — как ShopRules.PRICE (core/rules/shop_rules.gd).
+const SHOP_PRICE = {
+  enhancement: { common: 5, rare: 9, epic: 16, legendary: 28 },
+  character: { common: 8, rare: 14, epic: 20, legendary: 35 },
+};
+function shopDefaultPrice(id) {
+  const c = findCard(id);
+  if (!c) return 10;
+  return (SHOP_PRICE[c.kind] || SHOP_PRICE.enhancement)[c.obj.rarity || "common"] || 10;
+}
+
 // Проверка миссий — те же правила, что в core/content/content_validator.gd (_validate_missions).
 function validateMissions(add) {
   const locs = new Set(list(F.locations).map((l) => l.id));
@@ -447,6 +540,17 @@ function validateMissions(add) {
   for (const f of missionFiles()) for (const m of list(f)) all[m.id] = m;
   const tagOk = (t) => !!combatTag(t);
   for (const l of list(F.locations)) for (const id of (l.random || {}).pool || []) if (!all[id]) add(l.id, `в пуле нет миссии ${id}`);
+  for (const sh of list(F.shops)) {
+    const w = "Магазин " + (sh.name || sh.id);
+    if (!(sh.slots >= 1)) add(w, "карт на витрине должно быть не меньше 1");
+    if (!(sh.refresh_every >= 1)) add(w, "обновление — не реже чем раз в 1 миссию");
+    if (!(sh.stock || []).length) add(w, "пустой ассортимент");
+    for (const it of sh.stock || []) {
+      const c = findCard(it.card);
+      if (!c || (c.kind !== "character" && c.kind !== "enhancement")) add(w, "в продаже может быть только персонаж или усиление, а не «" + it.card + "»");
+      if (it.price !== undefined && !(it.price >= 1)) add(w, "у " + it.card + " цена меньше 1");
+    }
+  }
   for (const [id, m] of Object.entries(all)) {
     const nav = { mission: id };
     const w = `${m.title || id}`;

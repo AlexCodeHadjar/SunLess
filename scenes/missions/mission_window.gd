@@ -72,6 +72,10 @@ func _ready() -> void:
 	_footer = HBoxContainer.new()
 	_footer.add_theme_constant_override("separation", 24)
 	v.add_child(_footer)
+	# кармашек поменяли в планшете героя — прогноз пересчитывается
+	EventBus.state_changed.connect(func() -> void:
+		if mode == "brief" and is_instance_valid(_forecast_box):
+			_refresh_squad())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -100,10 +104,13 @@ func _clear() -> void:
 
 # --- брифинг и отряд -------------------------------------------------------------------
 
-func show_brief(mid: String) -> void:
+## with_hero — герой, которого бросили прямо на карту миссии: он встаёт в отряд первым.
+func show_brief(mid: String, with_hero: String = "") -> void:
 	mode = "brief"
 	mission_id = mid
 	picked = []
+	if with_hero != "" and MissionFlow.busy_reason(_content(), GameState.state, with_hero) == "":
+		picked.append(with_hero)
 	var c := _content()
 	var m: Dictionary = c.missions[mid]
 	_clear()
@@ -142,9 +149,11 @@ func show_brief(mid: String) -> void:
 	_go.pressed.connect(_launch)
 	_footer.add_child(_go)
 	# по умолчанию — первые свободные герои (сколько нужно минимум)
-	var free := MissionFlow.free_heroes(c, GameState.state)
-	for i in mini(int(m.get("squad", {}).get("min", 1)), free.size()):
-		picked.append(free[i])
+	for cid: String in MissionFlow.free_heroes(c, GameState.state):
+		if picked.size() >= int(m.get("squad", {}).get("min", 1)):
+			break
+		if not picked.has(cid):
+			picked.append(cid)
 	_refresh_squad()
 
 
@@ -160,7 +169,8 @@ func _refresh_squad() -> void:
 			var cid: String = picked[i]
 			var cv := CardView.make(cid, Vector2(118, 202), false)
 			cv.highlight = true
-			cv.tooltip_text = "Щёлкните, чтобы убрать из отряда"
+			cv.tooltip_text = "Щёлкните, чтобы убрать из отряда · правый щелчок — кармашек"
+			cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 			cv.clicked.connect(func(card: String) -> void:
 				picked.erase(card)
 				AudioManager.play("place", -6.0)
@@ -190,6 +200,7 @@ func _refresh_squad() -> void:
 		cv.dimmed = why != ""
 		cv.badge = why
 		cv.clicked.connect(_add_hero)
+		cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 		row.add_child(cv)
 	if row.get_child_count() == 0:
 		row.add_child(UITheme.label("Все герои в отряде", "serif_italic", 17, Palette.TEXT_DIM))

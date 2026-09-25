@@ -25,6 +25,7 @@ var chapters: Dictionary = {}      # главы свободного режим�
 # миссии и отряды (docs/15, ветка gameplay/missions)
 var locations: Dictionary = {}     # локации глав: data/locations.json
 var missions: Dictionary = {}      # миссии: data/missions/*.json
+var shops: Dictionary = {}         # магазины глав: data/shops.json
 var load_errors: Array[String] = []
 
 
@@ -51,6 +52,8 @@ static func load_from(dir: String = "res://data") -> Content:
 	if FileAccess.file_exists(dir + "/locations.json"):
 		c.locations = c._load_map(dir + "/locations.json")
 	c.missions = c._load_dir(dir + "/missions", "миссии")
+	if FileAccess.file_exists(dir + "/shops.json"):
+		c.shops = c._load_map(dir + "/shops.json")
 	var ev_dir := DirAccess.open(dir + "/events")
 	if ev_dir == null:
 		c.load_errors.append("Нет папки %s/events" % dir)
