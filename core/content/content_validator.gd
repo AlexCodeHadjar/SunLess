@@ -344,6 +344,9 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 			_validate_stage(c, aw + " / " + str(st.get("name", "?")), st, errors)
 		for key: String in ["on_success", "on_partial", "on_failure"]:
 			_validate_effects(c, aw + " " + key, a.get(key, []), errors)
+			for e: Dictionary in a.get(key, []):
+				if str(e.get("resource", "")) == "mana":
+					errors.append("%s %s: маны в миссиях нет (решение владельца)" % [aw, key])
 	if working == 0:
 		errors.append("%s: нет ни одного действия, кроме отступления" % w)
 	if str(m.get("type", "")) == "story" and story == 0:

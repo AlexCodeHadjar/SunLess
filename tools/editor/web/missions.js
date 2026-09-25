@@ -476,6 +476,8 @@ function validateMissions(add) {
         else if (!s.auto && !Object.values(s.req || {}).some((v) => v > 0)) add(w, `«${a.label}» / ${s.name}: этап без требований`, nav);
       }
       for (const t of a.requires_any || []) if (!tagOk(t)) add(w, `«${a.label}»: нет боевого тега «${t}»`, nav);
+      for (const k of ["on_success", "on_partial", "on_failure"]) for (const e of a[k] || [])
+        if (e.resource === "mana") add(w, `«${a.label}»: маны в миссиях нет`, nav);
     }
   }
 }

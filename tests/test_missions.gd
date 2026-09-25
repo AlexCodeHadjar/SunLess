@@ -43,3 +43,11 @@ func test_mission_needs_real_action() -> void:
 	m["actions"] = [{"id": "x", "label": "Уйти", "retreat": true}]
 	c.missions["MS02"] = m
 	check("\n".join(ContentValidator.validate(c)).contains("кроме отступления"), "одного отступления мало")
+
+
+func test_missions_have_no_mana() -> void:
+	var c := content()
+	var m: Dictionary = c.missions["MS03"].duplicate(true)
+	m["actions"][0]["on_success"].append({"cmd": "adjust_resource", "resource": "mana", "value": 2})
+	c.missions["MS03"] = m
+	check("\n".join(ContentValidator.validate(c)).contains("маны в миссиях нет"), "мана в миссиях запрещена")
