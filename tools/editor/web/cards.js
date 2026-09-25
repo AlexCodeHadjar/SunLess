@@ -11,6 +11,8 @@ const CardsView = {
   render(root, params = {}) {
     if (params.select) { this.selected = params.select; this.stage = null; }
     if (params.kind) this.kind = params.kind;
+    // тип карт мог исчезнуть из игры с прошлого запуска — тогда показываем все
+    if (this.kind !== "all" && this.kind !== "lore" && !KIND[this.kind]) this.kind = "all";
     this.root = root;
     this.side = h("aside", { class: "side" });
     this.gridWrap = h("section", { class: "grid-wrap" });
