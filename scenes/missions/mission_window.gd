@@ -109,7 +109,11 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	mode = "brief"
 	mission_id = mid
 	picked = []
-	if with_hero != "" and MissionFlow.busy_reason(_content(), GameState.state, with_hero) == "":
+	# обязательные герои миссии — первыми, затем брошенный на карту
+	for need: String in _content().missions[mid].get("requires_heroes", []):
+		if MissionFlow.busy_reason(_content(), GameState.state, need) == "":
+			picked.append(need)
+	if with_hero != "" and not picked.has(with_hero) and MissionFlow.busy_reason(_content(), GameState.state, with_hero) == "" 			and not MissionFlow.excluded(_content(), mid, with_hero) and picked.size() < int(_content().missions[mid].get("squad", {}).get("max", 1)):
 		picked.append(with_hero)
 	var c := _content()
 	var m: Dictionary = c.missions[mid]
@@ -152,7 +156,7 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	for cid: String in MissionFlow.free_heroes(c, GameState.state):
 		if picked.size() >= int(m.get("squad", {}).get("min", 1)):
 			break
-		if not picked.has(cid):
+		if not picked.has(cid) and not MissionFlow.excluded(c, mid, cid):
 			picked.append(cid)
 	_refresh_squad()
 
@@ -196,6 +200,8 @@ func _refresh_squad() -> void:
 		if picked.has(cid):
 			continue
 		var why := MissionFlow.busy_reason(c, s, cid)
+		if why == "" and MissionFlow.excluded(c, mission_id, cid):
+			why = "не может"
 		var cv := CardView.make(cid, Vector2(96, 164), false)
 		cv.dimmed = why != ""
 		cv.badge = why
@@ -212,6 +218,8 @@ func _add_hero(cid: String) -> void:
 	var c := _content()
 	var m: Dictionary = c.missions[mission_id]
 	var why := MissionFlow.busy_reason(c, GameState.state, cid)
+	if why == "" and MissionFlow.excluded(c, mission_id, cid):
+		why = "не может идти на эту миссию"
 	if why != "":
 		EventBus.toast.emit("%s: %s" % [c.card_name(cid), why])
 		return

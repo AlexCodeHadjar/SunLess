@@ -49,6 +49,15 @@ func _run() -> void:
 	await _wait(1.2)
 	await _shot("m02_map")
 	var game := get_tree().current_scene
+	game.call("_open_mission", "MS01")
+	await _wait(0.8)
+	await _shot("m02b_brief_ms01")
+	_window().close()
+	# сразу к каравану: MS01 считаем пройденной
+	GameState.state.missions["MS01"] = {"status": "done", "attempts": 0}
+	MissionFlow.open(ContentDB.data, GameState.state, "MS02")
+	GameState.missions_changed.emit()
+	await _wait(0.4)
 	# магазин: на стартовые осколки — первый попутчик
 	game.call("_open_shop", "nightmare_trader")
 	await _wait(0.8)
@@ -109,4 +118,23 @@ func _run() -> void:
 		game.call("_watch_combat", rep["combats"][0]["setup"])
 		await _wait(4.5)
 		await _shot("m12_replay")
+		get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is CombatScreen).map(func(n: Node) -> void: n.queue_free())
+		game.set("_combat_open", false)
+	await _wait(0.5)
+	if is_instance_valid(_window()):
+		_window().close()
+	# середина главы: несколько мест, побочная и случайная миссии веером
+	var st := GameState.state
+	st.squads.clear()
+	st.rest_until.clear()
+	for mid: String in ["MS01", "MS02", "MS03", "MS04"]:
+		st.missions[mid] = {"status": "done", "attempts": 0}
+	for mid: String in ["MS05", "RM01", "SM01", "RM04"]:
+		MissionFlow.open(ContentDB.data, st, mid)
+	GameState.missions_changed.emit()
+	await _wait(1.0)
+	await _shot("m14_mid_chapter")
+	st.demo_complete = true
+	await _wait(1.0)
+	await _shot("m15_chapter_end")
 	get_tree().quit()

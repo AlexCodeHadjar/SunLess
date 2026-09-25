@@ -2,8 +2,11 @@ extends TestCase
 ## Ядро миссий (docs/15, Ф2): отряды, часы, действия, этапы, прогноз, отдых, смерть навсегда.
 
 
+## Прохождение, где уже открыт «Караван рабов» (MS02) — на нём проверяются правила.
 func _run(seed_value: int = 7) -> RunState:
-	return MissionFlow.new_run(content(), seed_value)
+	var s := MissionFlow.new_run(content(), seed_value)
+	MissionFlow.open(content(), s, "MS02")
+	return s
 
 
 ## Отправить отряд и промотать часы до прибытия. Возвращает id отряда.
@@ -15,10 +18,10 @@ func _arrive(c: Content, s: RunState, mid: String, heroes: Array) -> int:
 
 
 func test_new_run() -> void:
-	var s := _run()
+	var s := MissionFlow.new_run(content(), 7)
 	eq(s.mode, "missions", "режим:")
 	check(s.is_alive("P01"), "Санни жив")
-	eq(MissionFlow.open_missions(s), ["MS02"], "с начала открыта только стартовая миссия:")
+	eq(MissionFlow.open_missions(s), ["MS01"], "с начала открыта только стартовая миссия:")
 	check(not s.resources.has("mana"), "маны в режиме миссий нет")
 
 
@@ -153,14 +156,32 @@ func test_save_roundtrip() -> void:
 	eq(MissionFlow.busy_reason(c, s2, "P01"), "на миссии", "Санни всё ещё на миссии:")
 
 
-func test_death_is_permanent_and_game_over_when_nobody_left() -> void:
+func test_death_is_permanent_and_key_hero() -> void:
 	var c := content()
 	var s := _run()
 	EffectApplier.add_card(c, s, "P09")
+	EffectApplier.add_card(c, s, "P10")
+	var entries: Array = []
+	TurnResolver._kill(c, s, "P10", entries)
+	check(not s.game_over, "Шифти погиб, но Санни и Шолар живы — игра идёт")
+	check(not MissionFlow.heroes(c, s).has("P10"), "погибший уходит из состава")
+	check(not ShopRules.can_offer(c, s, "P10"), "погибшего не вернуть и в магазине")
+	# Санни обязателен для финала главы (MS10, MS11: requires_heroes) — без него сюжет обрывается
+	eq(MissionFlow.key_mission_for(c, s, "P01"), "Храм Бога Теней", "Санни нужен сюжету:")
+	eq(MissionFlow.key_mission_for(c, s, "P09"), "", "Шолар сюжету не обязателен:")
+	TurnResolver._kill(c, s, "P01", entries)
+	check(s.game_over, "Санни погиб до Храма — конец, хотя Шолар жив")
+
+
+func test_game_over_when_nobody_left() -> void:
+	var c := content()
+	var s := _run()
+	EffectApplier.add_card(c, s, "P09")
+	for mid: String in ["MS10", "MS11"]:
+		s.missions[mid] = {"status": "done", "attempts": 0}
 	var entries: Array = []
 	TurnResolver._kill(c, s, "P01", entries)
-	check(not s.game_over, "Санни погиб, но Шолар жив — игра идёт")
-	check(not MissionFlow.heroes(c, s).has("P01"), "погибший уходит из состава")
+	check(not s.game_over, "сюжетные миссии Санни пройдены — его гибель не конец")
 	TurnResolver._kill(c, s, "P09", entries)
 	check(s.game_over, "героев не осталось — конец")
 
@@ -212,26 +233,41 @@ func test_forecast_is_honest() -> void:
 		check(absi(real - int(fc["value"])) <= 15, "%s/%s: прогноз %d, на деле %d" % [mid, aid, int(fc["value"]), real])
 
 
-## Бот играет миссии главы: отправляет свободных героев, ждёт прибытия, выбирает действие
-## с лучшим прогнозом (или отступает, если всё безнадёжно). Игра не должна застревать.
-func _bot(c: Content, seed_value: int) -> Dictionary:
+## Бот играет Первый Кошмар целиком: покупает попутчика, когда хватает осколков, отправляет свободных
+## героев (сюжетные миссии — первыми), выбирает действие с лучшим прогнозом или отступает от безнадёжного.
+func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	var s := MissionFlow.new_run(c, seed_value)
 	var steps := 0
 	var attempts := 0
-	while steps < 400 and not s.game_over:
+	while steps < 6000 and not s.game_over and not s.demo_complete:
 		steps += 1
+		for sid: String in ShopRules.shops_of(c, s):
+			for it: Dictionary in ShopRules.ensure(c, s, sid)["items"]:
+				if c.card_kind(it["card"]) == "character" and not it["sold"] and int(s.resources.get("shards", 0)) >= int(it["price"]):
+					ShopRules.buy(c, s, sid, it["card"])
 		var open := MissionFlow.open_missions(s)
-		if open.is_empty() and s.squads.is_empty():
-			break
+		open.sort_custom(func(x: String, y: String) -> bool:
+			var sx := str(c.missions[x]["type"]) == "story"
+			var sy := str(c.missions[y]["type"]) == "story"
+			return sx and not sy if sx != sy else x < y)
 		for mid: String in open:
-			var free := MissionFlow.free_heroes(c, s)
+			var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h))
+			if free.is_empty():
+				continue
 			var mx := int(c.missions[mid]["squad"]["max"])
-			var team := free.slice(0, mini(mx, free.size()))
+			var team: Array = []
+			for need: String in c.missions[mid].get("requires_heroes", []):
+				if free.has(need):
+					team.append(need)
+			for h: String in free:
+				if team.size() < mx and not team.has(h):
+					team.append(h)
 			if MissionFlow.can_launch(c, s, mid, team) == "":
 				MissionFlow.launch(c, s, mid, team)
 		MissionFlow.tick(c, s, 1.0)
 		for sq: Dictionary in s.squads.duplicate():
-			if sq["phase"] != "arrived":
+			# отряд мог исчезнуть: сюжет увёл его единственного героя (remove_card)
+			if sq["phase"] != "arrived" or MissionFlow.squad(s, int(sq["id"])).is_empty():
 				continue
 			var best := ""
 			var best_v := -1
@@ -251,23 +287,27 @@ func _bot(c: Content, seed_value: int) -> Dictionary:
 				return {"stuck": true, "error": r["error"]}
 			s = r["state"]
 			attempts += 1
-	var done := 0
-	for mid: String in s.missions:
-		if s.missions[mid]["status"] == "done":
-			done += 1
-	return {"stuck": steps >= 400, "over": s.game_over, "done": done, "attempts": attempts, "clock": s.clock,
-		"story_done": s.missions.get("MS03", {}).get("status", "") == "done"}
+			var rep: Dictionary = r["report"]
+			var st: Dictionary = stats.get(sq["mission"], {"tries": 0, "ok": 0, "retreat": 0, "deaths": 0})
+			st["tries"] += 1
+			st["ok"] += 1 if rep["outcome"] in ["success", "partial"] else 0
+			st["retreat"] += 1 if rep["outcome"] == "retreat" else 0
+			st["deaths"] += Array(rep["deaths"]).size()
+			stats[sq["mission"]] = st
+	return {"stuck": steps >= 6000, "over": s.game_over, "attempts": attempts, "clock": s.clock,
+		"story_done": s.demo_complete, "heroes": MissionFlow.heroes(c, s).size()}
 
 
 func test_mission_simulation() -> void:
 	var c := content()
-	var n := 200
+	var n := 120
 	var finished := 0
 	var over := 0
 	var total_attempts := 0
 	var total_clock := 0.0
+	var stats := {}
 	for i in n:
-		var r := _bot(c, 5000 + i)
+		var r := _bot(c, 5000 + i, stats)
 		check(not r.get("stuck", false), "бот застрял (сид %d): %s" % [5000 + i, r.get("error", "")])
 		if r.get("story_done", false):
 			finished += 1
@@ -275,9 +315,14 @@ func test_mission_simulation() -> void:
 			over += 1
 		total_attempts += int(r.get("attempts", 0))
 		total_clock += float(r.get("clock", 0.0))
-	print("   [миссии] прохождений: %d, сюжет главы пройден: %d, гибель всех героев: %d" % [n, finished, over])
-	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с" % [float(total_attempts) / n, total_clock / n])
-	check(finished >= n * 0.8, "сюжет пробных миссий проходится в большинстве прохождений")
+	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, гибель всех героев: %d" % [n, finished, over])
+	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
+	var ids: Array = stats.keys()
+	ids.sort()
+	for mid: String in ids:
+		var st: Dictionary = stats[mid]
+		print("   [миссии] %s: попыток %d, удачно %d%%, отступлений %d, погибло героев %d" % [mid, st["tries"], int(100.0 * st["ok"] / maxf(1, st["tries"])), st["retreat"], st["deaths"]])
+	check(finished >= n * 0.6, "Первый Кошмар проходится в большинстве прохождений (%d из %d)" % [finished, n])
 
 
 func test_combat_replay_matches() -> void:

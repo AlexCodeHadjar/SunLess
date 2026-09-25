@@ -181,6 +181,19 @@ static func add_card(content: Content, state: RunState, card: String) -> Array:
 static func _remove_card(state: RunState, card: String) -> void:
 	state.collection.erase(card)
 	state.note(card, "Покинула коллекцию")
+	# режим миссий: ушедший герой покидает отряд в пути, его кармашек пустеет
+	if state.characters.has(card):
+		state.characters[card]["pocket"] = []
+		state.rest_until.erase(card)
+		for sq: Dictionary in state.squads.duplicate():
+			var hs: Array = sq.get("heroes", [])
+			if hs.has(card):
+				hs.erase(card)
+				if hs.is_empty():
+					state.squads.erase(sq)
+					var st: Dictionary = state.missions.get(str(sq.get("mission", "")), {})
+					if not st.is_empty():
+						st["status"] = "open"
 	for eid: String in state.drafts:
 		var d: Dictionary = state.drafts[eid]
 		if d.get("character", "") == card:

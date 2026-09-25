@@ -64,6 +64,9 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		var key: String = {"success": "on_success", "partial": "on_partial", "failure": "on_failure"}[report["outcome"]]
 		if executor != "" and not state.game_over:
 			entries.append_array(EffectApplier.apply_all(content, state, a.get(key, []), executor, rng))
+			# общее для любого удачного действия: последствия самой миссии
+			if report["outcome"] in ["success", "partial"]:
+				entries.append_array(EffectApplier.apply_all(content, state, m.get("on_complete", []), executor, rng))
 		# износ усилений из кармашков участников
 		var pockets: Array = []
 		for cid: String in heroes:
@@ -74,9 +77,11 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	var status: Dictionary = state.missions.get(mid, {"attempts": 0})
 	if report["outcome"] in ["success", "partial"]:
 		status["status"] = "done"
-		entries.append({"kind": "story" if bool(a.get("story", false)) else "info",
+		var story := bool(a.get("story", false)) or str(m.get("type", "")) == "story"
+		entries.append({"kind": "story" if story else "info",
 			"text": ("Миссия выполнена: %s" if report["outcome"] == "success" else "Миссия выполнена с потерями: %s") % m.get("title", mid)})
-		if bool(a.get("story", false)):
+		# сюжетная миссия продвигает сюжет любым удачным действием: действия — разные пути к одной цели
+		if story:
 			for nid: String in m.get("next", []):
 				var opened := MissionFlow.open(content, state, nid)
 				entries.append_array(opened)
@@ -86,6 +91,10 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		entries.append_array(more)
 		for e: Dictionary in more:
 			report["opened"].append(e.get("card", ""))
+		if bool(m.get("end_chapter", false)) and not state.game_over:
+			state.demo_complete = true
+			report["chapter_done"] = MissionFlow.chapter_of(content, mid)
+			entries.append({"kind": "story", "text": "Глава пройдена"})
 	else:
 		status["status"] = "open"
 		if report["outcome"] == "failure":

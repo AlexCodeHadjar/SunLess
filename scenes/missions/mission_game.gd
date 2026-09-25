@@ -55,8 +55,11 @@ func _process(delta: float) -> void:
 	if _badge_timer <= 0.0:
 		_badge_timer = 0.5
 		_update_badges()
-	if GameState.state.game_over and _end == null and _window == null and _shop_window == null and not _combat_open:
+	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open
+	if GameState.state.game_over and quiet:
 		_show_end()
+	elif GameState.state.demo_complete and quiet:
+		_show_chapter_end()
 
 
 # --- построение ---------------------------------------------------------------
@@ -490,6 +493,47 @@ func _show_toast(text: String) -> void:
 	_toast.modulate.a = 1.0
 	_toast_tw.tween_interval(3.0)
 	_toast_tw.tween_property(_toast, "modulate:a", 0.0, 0.8)
+
+
+## Глава пройдена (миссия с end_chapter). Следующая глава на миссиях — Академия (Ф6).
+func _show_chapter_end() -> void:
+	var s := GameState.state
+	var c := ContentDB.data
+	_end = Control.new()
+	_end.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_end)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.84)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_end.add_child(dim)
+	var v := VBoxContainer.new()
+	v.position = Vector2(560, 300)
+	v.custom_minimum_size.x = 800
+	v.add_theme_constant_override("separation", 18)
+	_end.add_child(v)
+	v.add_child(UITheme.label("%s пройден" % str(c.regions.get(_region(), {}).get("arc_name", "Кошмар")), "title_bold", 64, Palette.GOLD))
+	var t := UITheme.label("[Ты пробудился.] Всё, что было в горах, осталось в горах. Санни уносит с собой только себя — и тени, которые теперь идут за ним.", "serif_italic", 24, Palette.SILVER)
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.custom_minimum_size.x = 800
+	v.add_child(t)
+	var names: Array = MissionFlow.heroes(c, s).map(func(cid: String) -> String: return c.card_name(cid))
+	var shards := int(s.resources.get("shards", 0))
+	v.add_child(UITheme.label("Миссий выполнено: %d  ·  героев с вами: %s  ·  ✧ %d %s душ" % [s.completed_missions, ", ".join(names), shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])], "sans", 20, Palette.TEXT_DIM))
+	v.add_child(UITheme.label("Академия Пробуждённых на миссиях — следующий этап работы.", "sans", 18, Palette.TEXT_DIM))
+	var b := Button.new()
+	b.text = "НОВАЯ ИГРА"
+	b.custom_minimum_size = Vector2(360, 64)
+	b.add_theme_font_override("font", UITheme.font("caps"))
+	b.add_theme_font_size_override("font_size", 28)
+	b.pressed.connect(func() -> void:
+		GameState.new_mission_run()
+		get_tree().reload_current_scene())
+	v.add_child(b)
+	var menu := Button.new()
+	menu.text = "В МЕНЮ"
+	menu.custom_minimum_size = Vector2(360, 56)
+	menu.pressed.connect(_on_nav.bind("menu"))
+	v.add_child(menu)
 
 
 func _show_end() -> void:

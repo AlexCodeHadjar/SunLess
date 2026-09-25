@@ -4,7 +4,10 @@ extends TestCase
 
 func test_missions_load() -> void:
 	var c := content()
-	check(c.missions.has("MS02") and c.missions.has("MS03"), "пробные миссии MS02 и MS03 загружены")
+	for i in range(1, 12):
+		check(c.missions.has("MS%02d" % i), "сюжетная миссия MS%02d загружена" % i)
+	eq(c.missions["MS01"].get("start", false), true, "Первый Кошмар начинается с MS01:")
+	eq(c.missions["MS11"].get("end_chapter", false), true, "MS11 завершает главу:")
 	check(c.locations.has("fallen_caravan"), "локация «Павший караван» загружена")
 	eq(c.missions["MS02"]["next"], ["MS03"], "MS02 открывает MS03:")
 

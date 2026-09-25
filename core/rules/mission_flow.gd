@@ -183,9 +183,14 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 		seen[cid] = true
 		if not heroes(content, state).has(cid):
 			return "%s не может идти" % content.card_name(cid)
+		if excluded(content, mission_id, cid):
+			return "%s не может идти на эту миссию" % content.card_name(cid)
 		var why := busy_reason(content, state, cid)
 		if why != "":
 			return "%s: %s" % [content.card_name(cid), why]
+	for need: String in m.get("requires_heroes", []):
+		if not heroes_ids.has(need):
+			return "Нужен в отряде: %s" % content.card_name(need)
 	return ""
 
 
@@ -236,8 +241,20 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 	return out
 
 
+## Локация «достигнута»: сюжет уже открывал здесь хотя бы одну не случайную миссию.
+static func reached(content: Content, state: RunState, lid: String) -> bool:
+	for mid: String in state.missions:
+		var m: Dictionary = content.missions.get(mid, {})
+		if str(m.get("location", "")) == lid and str(m.get("type", "")) != "random":
+			return true
+	return false
+
+
 ## Случайная миссия локации: первая по порядку из пула, которая сейчас не открыта.
+## Только там, куда сюжет уже привёл (не спойлерим места раньше времени).
 static func _spawn_random(content: Content, state: RunState, lid: String) -> Array:
+	if not reached(content, state, lid):
+		return []
 	for mid: String in content.locations.get(lid, {}).get("random", {}).get("pool", []):
 		var st := str(state.missions.get(mid, {}).get("status", ""))
 		var m: Dictionary = content.missions.get(mid, {})
@@ -269,7 +286,27 @@ static func after_completion(content: Content, state: RunState) -> Array:
 
 # --- действия после прибытия -------------------------------------------------------------
 
-## [{action, available, reason}] для прибывшего отряда (особые действия открывают теги отряда).
+## Незавершённая сюжетная миссия главы, без которой не обойтись без этого героя (`requires_heroes`).
+## Его гибель обрывает сюжет — прохождение окончено. "" — герой сюжету не обязателен.
+static func key_mission_for(content: Content, state: RunState, cid: String) -> String:
+	for mid: String in _sorted(content.missions):
+		var m: Dictionary = content.missions[mid]
+		if str(m.get("type", "")) != "story" or chapter_of(content, mid) != state.chapter:
+			continue
+		if str(state.missions.get(mid, {}).get("status", "")) == "done":
+			continue
+		if Array(m.get("requires_heroes", [])).has(cid):
+			return str(m.get("title", mid))
+	return ""
+
+
+## Герой не может идти на эту миссию (`exclude_heroes`: сюжет — например, беда случилась с ним самим).
+static func excluded(content: Content, mission_id: String, cid: String) -> bool:
+	return Array(content.missions.get(mission_id, {}).get("exclude_heroes", [])).has(cid)
+
+
+## [{action, available, reason}] для прибывшего отряда: особые действия открывают теги отряда
+## (`requires_any`) или конкретный герой в отряде (`requires_hero`).
 static func actions_for(content: Content, state: RunState, mission_id: String, heroes_ids: Array) -> Array:
 	var tags := squad_tags(content, state, heroes_ids)
 	var out: Array = []
@@ -280,7 +317,13 @@ static func actions_for(content: Content, state: RunState, mission_id: String, h
 			if tags.has(t):
 				ok = true
 				break
-		out.append({"action": a, "available": ok, "reason": "" if ok else "Нужен тег: %s" % " или ".join(need)})
+		var reason := "" if ok else "Нужен тег: %s" % " или ".join(need)
+		var who: Array = a.get("requires_hero", [])
+		if ok and not who.is_empty():
+			ok = who.any(func(cid: String) -> bool: return heroes_ids.has(cid))
+			if not ok:
+				reason = "Нужен в отряде: %s" % " или ".join(who.map(func(cid: String) -> String: return content.card_name(cid)))
+		out.append({"action": a, "available": ok, "reason": reason})
 	return out
 
 

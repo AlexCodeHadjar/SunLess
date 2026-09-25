@@ -350,6 +350,17 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 	for nid: String in m.get("next", []):
 		if not c.missions.has(nid):
 			errors.append("%s: next → нет миссии %s" % [w, nid])
+	for cid: String in m.get("requires_heroes", []):
+		if not c.characters.has(cid):
+			errors.append("%s: requires_heroes → нет персонажа %s" % [w, cid])
+		elif Array(m.get("exclude_heroes", [])).has(cid):
+			errors.append("%s: %s и обязателен, и исключён" % [w, cid])
+	if Array(m.get("requires_heroes", [])).size() > int(squad.get("max", 1)):
+		errors.append("%s: обязательных героев больше, чем мест в отряде" % w)
+	for cid: String in m.get("exclude_heroes", []):
+		if not c.characters.has(cid):
+			errors.append("%s: exclude_heroes → нет персонажа %s" % [w, cid])
+	_validate_effects(c, w + " on_complete", m.get("on_complete", []), errors)
 
 	var acts: Array = m.get("actions", [])
 	var ids := {}
@@ -366,6 +377,9 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 		for t: String in a.get("requires_any", []):
 			if not c.combat_tags.has(t):
 				errors.append("%s: нет боевого тега «%s»" % [aw, t])
+		for cid: String in a.get("requires_hero", []):
+			if not c.characters.has(cid):
+				errors.append("%s: requires_hero → нет персонажа %s" % [aw, cid])
 		if bool(a.get("story", false)):
 			story += 1
 		if bool(a.get("retreat", false)):

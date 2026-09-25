@@ -5,7 +5,9 @@ const SHOP := "nightmare_trader"
 
 
 func _run(seed_value: int = 7) -> RunState:
-	return MissionFlow.new_run(content(), seed_value)
+	var s := MissionFlow.new_run(content(), seed_value)
+	MissionFlow.open(content(), s, "MS02")
+	return s
 
 
 func _items(s: RunState) -> Array:

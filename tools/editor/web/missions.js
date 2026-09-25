@@ -172,6 +172,9 @@ const MissionsView = {
       h("div", { class: "cols" },
         field("Противники", EventsView.enemyPicker(enemySpec, enemyChanged)),
         field("Поле боя", bindSelect(m, "field", Object.fromEntries(list(F.fields).map((f) => [f.id, f.name])), changed, { allowEmpty: true }))),
+      h("div", { class: "cols" },
+        field("Обязательные герои", heroChips(m, "requires_heroes", changed), "Без них отряд не уйдёт. Если такой герой погибнет до этой сюжетной миссии — прохождение окончено."),
+        field("Не могут идти", heroChips(m, "exclude_heroes", changed), "Сюжет: например, беда случилась с самим героем.")),
       h("div", { class: "section" }, h("h4", null, "Известные теги"), tagRow(m.known_tags = m.known_tags || [], changed)),
       h("div", { class: "section" }, h("h4", null, "Скрытые теги"), tagRow(m.hidden_tags = m.hidden_tags || [], changed)),
       h("div", { class: "section" }, h("h4", null, "Теги проверки миссии"), tagRow(m.context = m.context || [], changed, { context: true })));
@@ -209,6 +212,7 @@ const MissionsView = {
     card.append(h("div", { class: "field" }, h("span", null, "Открывается тегами отряда"),
       tagRow(a.requires_any, () => { if (!a.requires_any.length) delete a.requires_any; changed(); })));
     if (!a.requires_any.length) delete a.requires_any;
+    card.append(field("Открывается героем в отряде", heroChips(a, "requires_hero", changed), "Действие доступно, если в отряде есть хотя бы один из этих героев."));
     if (!a.retreat) {
       const stages = a.stages = a.stages || [];
       const sBox = h("div", { class: "opt-block" }, h("div", { class: "mini-h" }, "Этапы",
@@ -283,6 +287,8 @@ const MissionsView = {
     const unlockChanged = () => { if (!Object.keys(m.unlock).length) delete m.unlock; changed(); };
     body.append(
       h("label", { class: "field inline" }, bindInput(m, "start", changed, { type: "checkbox" }), h("span", null, "Доступна с начала главы")),
+      h("label", { class: "field inline" }, bindInput(m, "end_chapter", changed, { type: "checkbox" }), h("span", null, "Завершает главу")),
+      h("div", { class: "opt-block ok-block" }, EventsView.cmdList("После любого удачного действия", m, "on_complete", EFFECTS, "cmd", structural, () => changed())),
       h("div", { class: "section" }, h("h4", null, "Открывает после успеха"), nextBox),
       h("div", { class: "section" }, h("h4", null, "Откуда приходит"),
         incoming.length || pools.length || m.start ? h("ul", { class: "edge-list" },
@@ -521,6 +527,23 @@ const MissionsView = {
     this.renderMain();
   },
 };
+
+// Список героев-чипов (requires_heroes, exclude_heroes, requires_hero): пустой — ключ удаляется.
+function heroChips(obj, key, changed) {
+  const box = h("div", { class: "chips" });
+  const render = () => {
+    box.innerHTML = "";
+    const arr = obj[key] || [];
+    arr.forEach((id, i) => box.append(h("span", { class: "chip ctx" }, h("span", { class: "chip-name" }, cardName(id)),
+      h("button", { class: "chip-x", onclick: () => { arr.splice(i, 1); if (!arr.length) delete obj[key]; changed(); render(); } }, "×"))));
+    const sel = h("select", { class: "enemy-add" }, h("option", { value: "" }, "+ герой…"),
+      allCards().filter((c) => c.kind === "character" && !arr.includes(c.id)).map((c) => h("option", { value: c.id }, c.obj.name || c.id)));
+    sel.onchange = () => { if (sel.value) { obj[key] = [...arr, sel.value]; changed(); render(); } };
+    box.append(sel);
+  };
+  render();
+  return box;
+}
 
 // Цена по умолчанию — как ShopRules.PRICE (core/rules/shop_rules.gd).
 const SHOP_PRICE = {
