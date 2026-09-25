@@ -310,3 +310,6 @@ select.enemy-add { width: auto; padding: 2px 6px; font-size: 12px; }
 .tile-art .planned-badge { position: absolute; top: 6px; right: 6px; background: #2A2418; border: 1px solid #6B5A33; color: #E3C98E; font-size: 10px; padding: 1px 5px; border-radius: 4px; }
 .grid-head .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dim); white-space: nowrap; cursor: pointer; }
 .grid-head .toggle:hover { color: var(--text); }
+
+.banner { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #2A2418; border-bottom: 1px solid #6B5A33; color: #E3C98E; font-size: 13px; flex: none; }
+.banner .btn { color: var(--text); }

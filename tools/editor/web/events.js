@@ -15,7 +15,13 @@ const EDGE_STYLE = {
   pool: { color: "#5A5E6E", dash: "3 4", label: "случайное в регионе" },
   reveal: { color: "#8FB6C9", dash: "1 4", label: "раскрывает" },
   combat_mod: { color: "#D9975A", dash: "1 4", label: "меняет бой" },
+  other: { color: "#C9CED6", dash: "5 4", label: "другая связь" },
 };
+
+// Команды и поля, связи которых древо рисует своим видом; остальные ссылки на события — «другая связь».
+const KNOWN_LINK_CMDS = ["spawn_event", "add_card", "start_chapter", "reveal", "combat_mod"];
+const KNOWN_EVENT_KEYS = ["id", "next", "options", "on_appear", "on_success_common", "title", "text"];
+const KNOWN_OPTION_KEYS = ["id", "on_success", "on_failure", "label", "ok_text", "fail_text"];
 
 const EventsView = {
   selected: null, query: "", t: { x: 40, y: 60, k: 0.8 }, showReveal: false, showCombat: false, fitted: false,
@@ -28,7 +34,7 @@ const EventsView = {
     this.buildToolbar();
     this.draw();
     this.renderPanel();
-    if (params.select && this.nodes[params.select]) this.centerOn(params.select);
+    if (params.select && !params.keep && this.nodes[params.select]) this.centerOn(params.select);
     else if (!this.fitted) { this.t = { x: 30, y: 70, k: 0.75 }; this.applyTransform(); this.fitted = true; }
   },
 
@@ -59,6 +65,12 @@ const EventsView = {
         if (e.cmd === "start_chapter") edges.push({ from, port, to: pseudo("chapter:" + e.chapter, "chapter", (byId(F.chapters, e.chapter) || {}).title || e.chapter, "глава"), type: "chapter", effs, eff: e });
         if (e.cmd === "reveal" && e.event && this.showReveal) edges.push({ from, port, to: e.event, type: "reveal", effs, eff: e });
         if (e.cmd === "combat_mod" && e.event && this.showCombat) edges.push({ from, port, to: e.event, type: "combat_mod", effs, eff: e });
+        // новые команды из кода игры, которые ссылаются на событие, — тоже связи
+        if (!KNOWN_LINK_CMDS.includes(e.cmd)) {
+          for (const [k, v] of Object.entries(e)) {
+            for (const x of Array.isArray(v) ? v : [v]) if (typeof x === "string" && evs[x] && k !== "cmd") edges.push({ from, port, to: x, type: "other", label: (EFFECTS[e.cmd] || {}).name || e.cmd, effs, eff: e });
+          }
+        }
       }
     };
     for (const [id, { ev }] of Object.entries(evs)) {
@@ -66,6 +78,15 @@ const EventsView = {
       opts.forEach((o, i) => { scanEffects(id, i, o.on_success, false); scanEffects(id, i, o.on_failure, true); });
       scanEffects(id, "head", ev.on_appear, false);
       scanEffects(id, "head", ev.on_success_common, false);
+      // новые поля событий и вариантов, в которых стоит код другого события
+      const scanFields = (obj, port, skip) => {
+        for (const [k, v] of Object.entries(obj)) {
+          if (skip.includes(k)) continue;
+          for (const x of Array.isArray(v) ? v : [v]) if (typeof x === "string" && x !== id && evs[x]) edges.push({ from: id, port, to: x, type: "other", label: k, obj, key: k, val: x });
+        }
+      };
+      scanFields(ev, "head", KNOWN_EVENT_KEYS);
+      opts.forEach((o, i) => scanFields(o, i, KNOWN_OPTION_KEYS));
       if (ev.next) {
         const si = opts.findIndex((o) => o.story);
         edges.push({ from: id, port: si >= 0 ? si : "head", to: ev.next, type: "next", label: ev.next_immediate ? "сразу" : null });
@@ -507,7 +528,11 @@ const EventsView = {
     const evs = this.events();
     if (e.type === "next") { delete evs[e.from].ev.next; delete evs[e.from].ev.next_immediate; touch(evs[e.from].file); }
     else if (e.eff && e.effs) { e.effs.splice(e.effs.indexOf(e.eff), 1); touch(evs[e.from].file); }
-    else if (e.init) { e.init.event = ""; touch(F.initiators); toast("У инициатора не осталось события — выберите новое в карточке", "warn"); }
+    else if (e.obj && e.key) {
+      const v = e.obj[e.key];
+      if (Array.isArray(v)) e.obj[e.key] = v.filter((x) => x !== e.val); else delete e.obj[e.key];
+      touch(evs[e.from].file);
+    } else if (e.init) { e.init.event = ""; touch(F.initiators); toast("У инициатора не осталось события — выберите новое в карточке", "warn"); }
     else if (e.region) { e.region.random_pool = e.region.random_pool.filter((x) => x !== e.to); touch(F.regions); }
     else if (e.chapter && e.anchor) {
       if (e.dep) e.anchor.after = e.anchor.after.filter((x) => x !== e.dep);
@@ -850,7 +875,7 @@ const EventsView = {
     const labels = typeKey === "cmd" ? FIELD_LABELS : { ...FIELD_LABELS, ...COND_LABELS };
     for (const [k, t] of Object.entries(fields)) {
       let inp;
-      if (t === "card") inp = idSelect(e, k, ["character", "enhancement", "initiator", "ability", "trauma", "enemy"], changed);
+      if (t === "card") inp = idSelect(e, k, KINDS.filter((x) => x.id !== "event").map((x) => x.id), changed);
       else if (t === "ability") inp = idSelect(e, k, ["ability"], changed);
       else if (t === "trauma") inp = idSelect(e, k, ["trauma"], changed);
       else if (t === "character") inp = idSelect(e, k, ["character"], changed);

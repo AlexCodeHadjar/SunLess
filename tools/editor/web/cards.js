@@ -325,6 +325,16 @@ const CardsView = {
         "trauma_pool", "map_pos", "source_kind", "once", "enemy", "danger");
     }
 
+    // тип карт, найденный в коде игры автоматически: общая форма по тому, что есть в карте
+    if (KIND[c.kind] && KIND[c.kind].auto) {
+      use("text", "tags", "stats", "bonuses");
+      if ("text" in o) body.append(sec("Описание на карте", bindInput(o, "text", changed, { type: "textarea", rows: 3, keepEmpty: true })));
+      if (o.stats && typeof o.stats === "object") body.append(sec("Характеристики", statsEditor(o.stats, changed)));
+      if (Array.isArray(o.bonuses)) body.append(this.bonusSection("Бонусы к характеристикам", o, "bonuses", changed));
+      if (Array.isArray(o.tags)) body.append(sec("Боевые теги", tagRow(o.tags, changed)));
+      body.append(h("p", { class: "muted" }, "Этот тип карт найден в коде игры автоматически (Content.card_kind). Редкие поля — ниже и во вкладке JSON."));
+    }
+
     body.append(this.extraFields(o, handled, changed));
   },
 
@@ -484,7 +494,10 @@ const CardsView = {
       case "initiator": return { id, name, event: "", text: "" };
       case "enemy": return { id, name, rank: 0, class: 1, tags: [], kind: "normal", trauma_pool: "physical", shards: 1 };
     }
-    return null;
+    // новый тип карт: берём набор полей у первой карты этого типа
+    const sample = (list((KIND[kind] || {}).file || "")[0]) || {};
+    const blank = (v) => Array.isArray(v) ? [] : v && typeof v === "object" ? {} : typeof v === "number" ? 0 : typeof v === "boolean" ? false : "";
+    return Object.assign(Object.fromEntries(Object.entries(sample).map(([k, v]) => [k, blank(v)])), { id, name });
   },
 
   async createCard() {

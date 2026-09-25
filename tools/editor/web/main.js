@@ -18,7 +18,7 @@ const App = {
     try { localStorage.setItem("sunless-editor-view", JSON.stringify({ name, params })); } catch (_) { /* нет хранилища */ }
   },
 
-  refresh() { this.go(this.view, this.params); },
+  refresh() { this.go(this.view, { ...this.params, keep: true }); },
 
   refreshStatus() {
     const n = DB.dirty.size + DB.images.size + (DB.layoutDirty ? 1 : 0);
@@ -41,7 +41,20 @@ const App = {
     btn.disabled = true;
     btn.textContent = "Сохраняю…";
     try {
-      const res = await saveAll();
+      let res;
+      try {
+        res = await saveAll();
+      } catch (e) {
+        if (!e.conflict) throw e;
+        const choice = await modal("Файлы изменились вне редактора", h("div", null,
+          h("p", null, "Пока вы работали, эти файлы изменили снаружи (другой человек, Claude или генератор данных):"),
+          h("ul", { class: "issues" }, e.conflict.map((f) => h("li", null, f))),
+          h("p", null, "Если сохранить сейчас, те изменения пропадут. Можно загрузить свежую версию — тогда пропадут ваши несохранённые правки.")),
+          [{ label: "Отмена", value: null }, { label: "Загрузить свежие данные", value: "reload" }, { label: "Перезаписать всё равно", danger: true, value: "force" }], { wide: true });
+        if (choice === "reload") { await reloadFromDisk(true); btn.textContent = "Сохранить"; this.refreshStatus(); return; }
+        if (choice !== "force") { btn.textContent = "Сохранить"; this.refreshStatus(); return; }
+        res = await saveAll(true);
+      }
       const parts = [];
       if (res.written.length) parts.push("файлов: " + res.written.length);
       if (res.images.length) parts.push("картинок: " + res.images.length);
@@ -59,9 +72,12 @@ const App = {
 
   async check() {
     const all = validate();
-    if (!all.length) { toast("Проверка пройдена: ошибок нет", "ok"); return; }
+    if (!all.length && !AUTO_NOTES.length) { toast("Проверка пройдена: ошибок нет", "ok"); return; }
     const errs = all.filter((e) => !e.warn), warns = all.filter((e) => e.warn);
     modal(`Ошибок: ${errs.length} · предупреждений: ${warns.length}`, h("div", null,
+      AUTO_NOTES.length ? h("div", { style: { marginBottom: "14px" } }, h("h4", { style: { color: "var(--mana)" } }, "Подхвачено из кода игры автоматически"),
+        h("p", { class: "muted" }, "Это уже работает в редакторе с общими формами. Русские названия и подсказки можно добавить в tools/editor/web (core.js, tips.js)."),
+        h("ul", { class: "issues" }, AUTO_NOTES.map((n) => h("li", null, n)))) : null,
       errs.length ? h("div", null, h("h4", { class: "err" }, "Ошибки — игра их не пропустит"), issuesList(errs, 200)) : h("p", { class: "ok" }, "Ошибок нет — игра запустится."),
       warns.length ? h("div", { style: { marginTop: "14px" } }, h("h4", { style: { color: "var(--warn)" } }, "Предупреждения — игра их не проверяет, но стоит взглянуть"), issuesList(warns, 200)) : null),
       undefined, { wide: true });
@@ -96,6 +112,62 @@ async function runJob(name, quiet = false) {
   setTimeout(poll, 1500);
 }
 
+// --- слежение за проектом ----------------------------------------------------------------
+// Раз в пару секунд спрашиваем сервер, не изменились ли data/ и art/. Если правок в редакторе нет —
+// тихо подгружаем свежие данные (новые карты, события, картинки); если есть — предупреждаем.
+const idsByKind = () => {
+  const out = {};
+  for (const c of allCards()) (out[c.kind] = out[c.kind] || new Set()).add(c.id);
+  out.tag = new Set(list(F.tags).map((t) => t.id));
+  return out;
+};
+
+async function reloadFromDisk(quietIfSame = false) {
+  const before = idsByKind();
+  await loadData();
+  const after = idsByKind();
+  const names = { ...Object.fromEntries(KINDS.map((k) => [k.id, k.name.toLowerCase()])), tag: "теги" };
+  const parts = [];
+  for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const a = before[k] || new Set(), b = after[k] || new Set();
+    const added = [...b].filter((x) => !a.has(x)).length, gone = [...a].filter((x) => !b.has(x)).length;
+    if (added) parts.push(`${names[k] || k}: +${added}`);
+    if (gone) parts.push(`${names[k] || k}: −${gone}`);
+  }
+  hideBanner();
+  App.refresh();
+  App.refreshStatus();
+  if (parts.length) toast("Подхвачены изменения проекта — " + parts.join(", "), "ok", 6000);
+  else if (!quietIfSame) toast("Данные проекта обновлены", "info");
+}
+
+function showBanner() {
+  if (document.getElementById("disk-banner")) return;
+  const bar = h("div", { id: "disk-banner", class: "banner" },
+    "Файлы проекта изменились на диске (новые карты, события или правки). У вас есть несохранённые изменения.",
+    h("button", { class: "btn small", onclick: async () => {
+      if (await confirmBox("Загрузить свежие данные", "Ваши несохранённые правки пропадут. Продолжить?", "Загрузить")) reloadFromDisk();
+    } }, "Загрузить свежие"),
+    h("button", { class: "btn small ghost", onclick: hideBanner }, "Позже"));
+  document.body.insertBefore(bar, document.getElementById("view"));
+}
+function hideBanner() { document.getElementById("disk-banner")?.remove(); }
+
+let watching = false;
+async function watchProject() {
+  if (watching) return;
+  watching = true;
+  try {
+    const v = await (await fetch("/api/version")).json();
+    if (v.signature && v.signature !== DB.signature) {
+      const busy = DB.dirty.size || DB.images.size || DB.layoutDirty || !document.getElementById("overlay").hidden;
+      if (!busy) await reloadFromDisk(true);
+      else if (DB.bannerFor !== v.signature) { DB.bannerFor = v.signature; showBanner(); }
+    }
+  } catch (_) { /* сервер недоступен — попробуем позже */ }
+  watching = false;
+}
+
 async function boot() {
   document.querySelectorAll("#tabs button").forEach((b) => (b.onclick = () => App.go(b.dataset.view)));
   document.getElementById("btn-save").onclick = () => App.save();
@@ -120,6 +192,9 @@ async function boot() {
   let start = { name: "cards", params: {} };
   try { start = JSON.parse(localStorage.getItem("sunless-editor-view")) || start; } catch (_) { /* нет хранилища */ }
   App.go(Views[start.name] ? start.name : "cards", start.params || {});
+  if (AUTO_NOTES.length) toast(`Из кода игры подхвачено новое: ${AUTO_NOTES.length} (подробнее — «Проверить»)`, "info", 6000);
+  setInterval(watchProject, 2500);
+  document.addEventListener("visibilitychange", watchProject);
 }
 
 boot();

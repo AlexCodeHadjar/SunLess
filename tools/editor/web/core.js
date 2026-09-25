@@ -141,9 +141,13 @@ async function loadData() {
   DB.art = new Set(d.art);
   DB.layout = d.layout || {};
   DB.godot = d.godot;
+  DB.versions = d.versions || {};
+  DB.signature = d.signature || "";
+  DB.game = d.game || {};
   DB.dirty.clear();
   DB.images.clear();
   DB.layoutDirty = false;
+  applyGameDefs();
   snapshot();
 }
 
@@ -186,16 +190,20 @@ function updateOverrides() {
   DB.dirty.add(OVERRIDES);
 }
 
-async function saveAll() {
+// force — записать, даже если файл успели изменить вне редактора.
+async function saveAll(force = false) {
   updateOverrides();
-  const files = {};
-  for (const rel of DB.dirty) files[rel] = DB.files[rel];
+  const files = {}, base = {};
+  for (const rel of DB.dirty) { files[rel] = DB.files[rel]; if (DB.versions[rel]) base[rel] = DB.versions[rel]; }
   const images = [...DB.images.values()].map((im) => ({ name: im.name, data: im.data, remove: im.remove }));
-  const body = { files, images };
+  const body = { files, images, base, force };
   if (DB.layoutDirty) body.layout = DB.layout;
   const r = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const res = await r.json();
+  if (res.conflict) { const e = new Error("файлы изменены вне редактора"); e.conflict = res.conflict; throw e; }
   if (!res.ok) throw new Error(res.error || "ошибка сохранения");
+  DB.versions = res.versions || DB.versions;
+  DB.signature = res.signature || DB.signature;
   for (const im of DB.images.values()) {
     for (const rm of im.remove || []) DB.art.delete(rm);
     DB.art.add("art/cards/" + im.name);
@@ -220,6 +228,67 @@ const KINDS = [
   { id: "event", name: "События", file: null, emblem: "art/ui/emblems/story.png", prefix: "E" },
 ];
 const KIND = Object.fromEntries(KINDS.map((k) => [k.id, k]));
+
+// --- определения из кода игры --------------------------------------------------------
+// Сервер читает их из core/content/*.gd, core/rules/*.gd и tag_text.gd. Всё новое, что появилось
+// в игре (тип карт, команда последствия, условие, категория тегов, тип события), редактор
+// подхватывает сам: русские названия и подсказки можно добавить позже, но работать можно сразу.
+const AUTO_NOTES = [];
+
+function guessFieldType(key) {
+  if (["value", "min", "max", "remaining", "count", "chance", "delta", "weeks", "amount"].includes(key)) return "number";
+  if (["card", "cards_card"].includes(key)) return "card";
+  if (key === "event") return "event";
+  if (key === "character" || key === "target") return "character";
+  if (key === "ability") return "ability";
+  if (key === "trauma") return "trauma";
+  if (key === "stat") return "stat";
+  if (key === "chapter") return "chapter";
+  if (key === "region") return "region";
+  if (key === "field") return "field";
+  if (key === "tags") return "ctxtags";
+  if (key.endsWith("_tags")) return "tags";
+  if (/(s|ies)$/.test(key) && !["text", "status"].includes(key)) return "list";
+  return "text";
+}
+
+function applyGameDefs() {
+  const g = DB.game || {};
+  AUTO_NOTES.length = 0;
+  // категории боевых тегов
+  for (const [k, name] of Object.entries(g.category_names || {})) {
+    if (!CATEGORIES[k]) AUTO_NOTES.push(`категория тегов «${name}»`);
+    CATEGORIES[k] = [name, (g.category_colors || {})[k] || (CATEGORIES[k] || [0, "#8A8D96"])[1]];
+  }
+  for (const t of g.event_types || []) if (!EVENT_TYPES[t]) { EVENT_TYPES[t] = t; AUTO_NOTES.push(`тип события «${t}»`); }
+  for (const t of g.pools || []) if (!POOLS[t]) POOLS[t] = t;
+  // команды последствий и условия: неизвестным — форма по ключам, которые читает код игры
+  const merge = (schema, names, keys, what) => {
+    for (const cmd of names || []) {
+      const ks = ((keys || {})[cmd] || []).filter((k) => !["cmd", "type", "if_flag", "unless_flag"].includes(k));
+      if (!schema[cmd]) {
+        schema[cmd] = { name: cmd, auto: true, fields: Object.fromEntries(ks.map((k) => [k, guessFieldType(k)])) };
+        AUTO_NOTES.push(`${what} «${cmd}» (поля: ${ks.join(", ") || "нет"})`);
+      } else {
+        for (const k of ks) if (!(k in schema[cmd].fields)) schema[cmd].fields[k] = guessFieldType(k);
+      }
+    }
+  };
+  merge(EFFECTS, g.commands, g.command_keys, "команда последствия");
+  merge(CONDITIONS, g.conditions, g.condition_keys, "условие");
+  // типы карт: всё, что игра считает картой (Content.card_kind), попадает в галерею
+  for (const ck of g.card_kinds || []) {
+    if (KIND[ck.kind]) { KIND[ck.kind].file = ck.file; continue; }
+    const arr = DB.files[ck.file] || [];
+    const prefix = arr.length ? String(arr[0].id).replace(/\d+$/, "") : ck.kind[0].toUpperCase();
+    const k = { id: ck.kind, name: ck.var.charAt(0).toUpperCase() + ck.var.slice(1), file: ck.file, emblem: "art/ui/emblems/story.png", prefix, auto: true };
+    KINDS.splice(KINDS.length - 1, 0, k);
+    KIND[k.id] = k;
+    if (typeof PREFIX_KIND !== "undefined" && prefix && !PREFIX_KIND[prefix[0]]) PREFIX_KIND[prefix[0]] = k.id;
+    if (arr.some((o) => (o.tags || []).some((t) => combatTag(t)))) COMBAT_TAG_PATHS[ck.file] = ["tags[]"];
+    AUTO_NOTES.push(`тип карт «${ck.kind}» (${ck.file})`);
+  }
+}
 
 function allCards() {
   const out = [];

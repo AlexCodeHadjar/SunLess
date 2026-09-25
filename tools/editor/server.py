@@ -10,6 +10,7 @@
 import argparse
 import base64
 import datetime
+import hashlib
 import http.server
 import io
 import json
@@ -165,6 +166,88 @@ def safe_path(rel):
     return full, rel
 
 
+def versions():
+    """Отпечаток каждого файла данных (время изменения + размер) — чтобы замечать правки извне."""
+    out = {}
+    for rel in data_files():
+        st = os.stat(os.path.join(ROOT, rel))
+        out[rel] = "%d-%d" % (st.st_mtime_ns, st.st_size)
+    return out
+
+
+def signature():
+    """Общий отпечаток данных и картинок: меняется, если что-то добавили, удалили или изменили."""
+    parts = sorted(versions().items())
+    art_dir = os.path.join(ROOT, "art")
+    for base, _dirs, fs in os.walk(art_dir):
+        for fn in fs:
+            if fn.lower().endswith(IMAGE_EXT):
+                st = os.stat(os.path.join(base, fn))
+                parts.append((os.path.relpath(os.path.join(base, fn), ROOT), "%d" % st.st_mtime_ns))
+    return hashlib.md5(repr(parts).encode("utf-8")).hexdigest()
+
+
+# --- определения из кода игры: редактор подхватывает новое сам -------------------------
+
+def _read_code(rel):
+    full = os.path.join(ROOT, rel)
+    if not os.path.exists(full):
+        return ""
+    with io.open(full, encoding="utf-8") as f:
+        return f.read()
+
+
+def _const_list(code, name):
+    m = re.search(r"const " + name + r"\s*:?=\s*\[(.*?)\]", code, re.S)
+    return re.findall(r'"([^"]+)"', m.group(1)) if m else []
+
+
+def _const_dict(code, name):
+    m = re.search(r"const " + name + r"\s*:?=\s*\{(.*?)\}", code, re.S)
+    return dict(re.findall(r'"([^"]+)"\s*:\s*"([^"]*)"', m.group(1))) if m else {}
+
+
+def _match_keys(code, var):
+    """Для каждой ветки match "имя": — какие ключи читаются из словаря var (e["x"], e.get("x"), e.has("x"))."""
+    out = {}
+    cur = None
+    tab = chr(9)
+    for line in code.splitlines():
+        m = re.match(tab * 2 + r'"(\w+)":\s*$', line)
+        if m:
+            cur = m.group(1)
+            out.setdefault(cur, [])
+            continue
+        if line.strip() and not line.startswith(tab * 3):
+            cur = None  # вышли из ветки match
+        if cur:
+            for k in re.findall(var + r'(?:\[|\.get\(|\.has\()"(\w+)"', line):
+                if k not in out[cur]:
+                    out[cur].append(k)
+    return out
+
+
+def game_defs():
+    validator = _read_code("core/content/content_validator.gd")
+    content = _read_code("core/content/content.gd")
+    tag_text = _read_code("scenes/combat/tag_text.gd")
+    kinds = re.findall(r'if (\w+)\.has\(card_id\):\s*return "(\w+)"', content)
+    files = dict(re.findall(r'c\.(\w+) = c\._load_map\(dir \+ "/([^"]+)"\)', content))
+    return {
+        "commands": _const_list(validator, "KNOWN_CMDS"),
+        "conditions": _const_list(validator, "KNOWN_CONDITIONS"),
+        "checks": _const_list(validator, "CHECKS"),
+        "pools": _const_list(validator, "POOLS"),
+        "event_types": _const_list(validator, "EVENT_TYPES"),
+        "stats": _const_list(validator, "STATS"),
+        "command_keys": _match_keys(_read_code("core/rules/effect_applier.gd"), "e"),
+        "condition_keys": _match_keys(_read_code("core/rules/condition_checker.gd"), "c"),
+        "card_kinds": [{"var": v, "kind": k, "file": "data/" + files[v]} for v, k in kinds if v in files],
+        "category_names": _const_dict(tag_text, "CATEGORY_NAMES"),
+        "category_colors": _const_dict(tag_text, "CATEGORY_COLORS"),
+    }
+
+
 def load_all():
     files = {}
     for rel in data_files():
@@ -179,7 +262,8 @@ def load_all():
     if os.path.exists(LAYOUT):
         with io.open(LAYOUT, encoding="utf-8") as f:
             layout = json.load(f)
-    return {"files": files, "art": sorted(arts), "layout": layout, "godot": bool(find_godot())}
+    return {"files": files, "art": sorted(arts), "layout": layout, "godot": bool(find_godot()),
+            "versions": versions(), "signature": signature(), "game": game_defs()}
 
 
 def backup(rels, stamp):
@@ -201,6 +285,8 @@ def save(payload):
     files = payload.get("files", {})
     images = payload.get("images", [])
     layout = payload.get("layout")
+    base = payload.get("base") or {}
+    force = bool(payload.get("force"))
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     written, image_paths, removed = [], [], []
     with _lock:
@@ -210,6 +296,11 @@ def save(payload):
             if not rel2.startswith("data/") or not rel2.endswith(".json"):
                 raise ValueError("писать можно только data/*.json: " + rel)
             targets.append((full, rel2, files[rel]))
+        # файл изменили вне редактора после загрузки — не затираем чужие правки
+        now = versions()
+        conflicts = [rel for _full, rel, _d in targets if rel in base and now.get(rel) and now[rel] != base[rel]]
+        if conflicts and not force:
+            return {"ok": False, "conflict": conflicts}
         img_targets = []
         for im in images:
             name = os.path.basename(im["name"])
@@ -239,7 +330,8 @@ def save(payload):
             with io.open(LAYOUT, "w", encoding="utf-8") as f:
                 json.dump(layout, f, ensure_ascii=False, indent=1)
     return {"ok": True, "written": written, "images": image_paths,
-            "removed": [r[1] for r in removed], "backup": stamp}
+            "removed": [r[1] for r in removed], "backup": stamp,
+            "versions": versions(), "signature": signature()}
 
 
 # --- Godot -----------------------------------------------------------------------
@@ -322,6 +414,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if path == "/api/data":
                 return self._send(200, load_all())
+            if path == "/api/version":
+                return self._send(200, {"signature": signature()})
             if path == "/api/job":
                 name = urllib.parse.parse_qs(url.query).get("name", [""])[0]
                 return self._send(200, _jobs.get(name, {"running": False, "code": None, "log": ""}))
