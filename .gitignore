@@ -8,3 +8,8 @@ export/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Редактор контента: резервные копии и локальные настройки
+tools/editor/backups/
+tools/editor/config.json
+__pycache__/

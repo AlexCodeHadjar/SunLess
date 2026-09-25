@@ -44,6 +44,10 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tests/run_tes
 
 Правило архитектуры: `core/` не знает о сценах. Интерфейс вызывает API `GameState` и слушает сигналы `EventBus`.
 
+## Редактор контента
+
+Карты, теги и древо событий удобно править во внешнем редакторе: двойной щелчок по `Редактор SunLess.bat` (или `python tools/editor/server.py`) откроет его в браузере. Кнопка «Сохранить» записывает изменения прямо в `data/` и `art/cards/`. Подробности — [`tools/editor/README.md`](tools/editor/README.md).
+
 ## Как добавить событие
 
 Событие — объект в `data/events/*.json`: ровно три варианта, у сюжетного события ровно один вариант с `"story": true`. Последствия — команды из закрытого списка (`add_card`, `add_temp`, `reveal`, `set_flag`…, см. `core/rules/effect_applier.gd`). При запуске данные проверяет `ContentValidator`; при ошибках вместо игры откроется их список.

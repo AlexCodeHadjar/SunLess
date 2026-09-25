@@ -292,6 +292,61 @@ CON_EXTRA = [
 for c in CON_EXTRA:
     c["id"] = "CON_" + str(len(conflicts) + 1).zfill(3)
     conflicts.append(c)
+# --- правки из редактора контента (tools/editor): генератор их не затирает -------------
+# editor_overrides.json: {"renamed_tags": {старое: новое}, "removed_tags": [...], "tags": {имя: тег},
+#                         "enemies": {id: противник}, "removed_enemies": [...]}
+OVERRIDES = os.path.join(OUT, "editor_overrides.json")
+ov = json.load(io.open(OVERRIDES, encoding="utf-8")) if os.path.exists(OVERRIDES) else {}
+
+
+def swap_tag(old, new):
+    """Переименовывает тег во всех боевых данных; new=None — убирает его."""
+    def fix(lst):
+        return [new if x == old else x for x in lst if not (new is None and x == old)]
+    for s in synergies:
+        s["tags"] = fix(s["tags"])
+    for c in conflicts:
+        for k in ("a", "b"):
+            if c[k] == old:
+                c[k] = new
+    for f in fields + round_cards:
+        f["tags"] = fix(f["tags"])
+        f["effects"] = [e for e in f.get("effects", []) if not (new is None and e.get("tag") == old)]
+        for e in f["effects"]:
+            if e.get("tag") == old:
+                e["tag"] = new
+    for v in carriers["characters"].values():
+        v["tags"] = fix(v["tags"])
+    for k in carriers["enhancements"]:
+        carriers["enhancements"][k] = fix(carriers["enhancements"][k])
+    for e in carriers["enemies"] + enemies:
+        e["tags"] = fix(e["tags"])
+
+
+for old, new in ov.get("renamed_tags", {}).items():
+    if old in tags:
+        ent = tags.pop(old)
+        ent["id"] = ent["name"] = new
+        tags.setdefault(new, ent)
+    swap_tag(old, new)
+for t in ov.get("removed_tags", []):
+    tags.pop(t, None)
+    swap_tag(t, None)
+synergies[:] = [s for s in synergies if len(s["tags"]) >= 2]
+conflicts[:] = [c for c in conflicts if c["a"] and c["b"]]
+for name, ent in ov.get("tags", {}).items():
+    tags[name] = ent
+removed_enemies = set(ov.get("removed_enemies", []))
+dump_later = [e for e in dump_later if e["id"] not in removed_enemies]
+for eid, ent in ov.get("enemies", {}).items():
+    idx = next((i for i, e in enumerate(dump_later) if e["id"] == eid), None)
+    if idx is None:
+        dump_later.append(ent)
+    else:
+        dump_later[idx] = ent
+if ov:
+    print("правки редактора применены:", {k: len(v) for k, v in ov.items()})
+
 dump("tags.json", list(tags.values()))
 dump("synergies.json", synergies)
 dump("conflicts.json", conflicts)

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SunLess · Редактор</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">SunLess <span>редактор контента</span></div>
+  <nav class="tabs" id="tabs">
+    <button data-view="cards">Карточки</button>
+    <button data-view="tags">Теги</button>
+    <button data-view="events">Древо событий</button>
+  </nav>
+  <div class="actions">
+    <span class="dirty" id="dirty"></span>
+    <button class="btn ghost" id="btn-check" title="Проверить ссылки и правила данных">Проверить</button>
+    <div class="menu">
+      <button class="btn ghost" id="btn-godot" title="Действия с Godot">Godot ▾</button>
+      <div class="menu-list" id="godot-menu">
+        <button data-job="import">Импортировать картинки</button>
+        <button data-job="test">Запустить тесты</button>
+      </div>
+    </div>
+    <button class="btn primary" id="btn-save" disabled>Сохранить</button>
+  </div>
+</header>
+<main id="view"></main>
+<div id="toasts"></div>
+<div id="overlay" hidden></div>
+<script src="core.js"></script>
+<script src="widgets.js"></script>
+<script src="cards.js"></script>
+<script src="tags.js"></script>
+<script src="events.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

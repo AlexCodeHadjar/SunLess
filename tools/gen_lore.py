@@ -97,6 +97,13 @@ for cid, cols in table_rows(tm, r"M\d{2}"):
     if len(cols) >= 7:
         put(cid, cols[0], cols[5], "«%s», %s" % (cols[1], cols[2]), cols[6])
 
+# описания, изменённые в редакторе контента (tools/editor, флаг "edited"), не перезаписываем
+if os.path.exists(OUT):
+    with io.open(OUT, encoding="utf-8") as f:
+        for old in json.load(f):
+            if old.get("edited"):
+                lore[old["id"]] = {k: v for k, v in old.items() if k != "id"}
+
 with io.open(OUT, "w", encoding="utf-8") as f:
     json.dump([dict(id=k, **lore[k]) for k in sorted(lore)], f, ensure_ascii=False, indent=1)
 with_text = sum(1 for v in lore.values() if v["text"])
