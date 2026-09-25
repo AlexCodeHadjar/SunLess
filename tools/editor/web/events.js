@@ -538,9 +538,12 @@ const EventsView = {
   },
 
   // ---- панель события --------------------------------------------------------------------------
+  // Две страницы: «Общее» (что это за событие, откуда и куда ведёт) и «Варианты выбора».
   renderPanel() {
     const P = this.panel;
     P.innerHTML = "";
+    P.classList.toggle("max", !!this.maxed);
+    P.append(this.resizer());
     const rec = this.selected && this.events()[this.selected];
     if (!rec) {
       const g = this.graph || { dangling: [] };
@@ -548,124 +551,243 @@ const EventsView = {
         h("h3", null, "Древо событий"),
         h("p", { class: "muted" }, "Каждый узел — событие с тремя вариантами выбора. Линии показывают, что происходит дальше: какое событие откроется после сюжетного варианта, какие события создаются последствиями, что открывают инициаторы и главы."),
         h("ul", { class: "muted" },
-          h("li", null, "Щелчок по событию — редактор справа."),
+          h("li", null, "Щелчок по событию — планшет события справа."),
           h("li", null, "Тяните от кружка ● справа у варианта к другому событию — новая связь."),
           h("li", null, "Щелчок по линии — удалить связь или перейти."),
-          h("li", null, "Узлы можно двигать; колесо — масштаб, фон — сдвиг.")),
+          h("li", null, "Узлы можно двигать; колесо — масштаб, фон — сдвиг."),
+          h("li", null, "Край планшета слева можно тянуть мышью — он станет шире или уже.")),
         g.dangling.length ? h("div", { class: "section" }, h("h4", null, "Связи в никуда"),
-          h("ul", { class: "issues" }, g.dangling.map((e) => h("li", { class: "err" }, `${e.from} → ${e.to} (${EDGE_STYLE[e.type].label})`)))) : null));
+          h("ul", { class: "issues" }, g.dangling.map((e) => h("li", { class: "err" }, `${this.nodeName(e.from)} → ${e.to} (${EDGE_STYLE[e.type].label})`)))) : null));
       return;
     }
     const { ev, file } = rec;
+    if (this.panelFor !== ev.id) {
+      this.panelFor = ev.id;
+      this.optIdx = Math.max(0, (ev.options || []).findIndex((o) => o.story));
+    }
     const changed = () => { touch(file); this.redrawNode(ev.id); this.drawEdges(); };
     const structural = () => { touch(file); this.draw(); this.renderPanel(); };
-    const handled = new Set(["id", "type", "title", "text", "tags", "options", "next", "next_immediate", "on_appear", "on_success_common",
-      "arc", "region", "chapter", "node", "numeral", "trauma_pool", "source", "source_kind", "once", "map_pos", "art", "enemy", "danger"]);
-    const regions = Object.fromEntries(list(F.regions).map((r) => [r.id, r.name]));
-    const chapter = byId(F.chapters, ev.chapter);
-    const evOpts = Object.fromEntries(Object.entries(this.events()).filter(([id]) => id !== ev.id).map(([id, r]) => [id, `${id} — ${r.ev.title}`]));
+    const tab = this.evTab || "general";
+    const place = [(byId(F.regions, ev.region) || {}).name, this.placeName(ev)].filter(Boolean).join(" · ");
 
+    const title = bindInput(ev, "title", changed, { cls: "title-input", keepEmpty: true });
+    title.dataset.tip = TIPS["Название события"];
     const head = h("div", { class: "detail-head" }, h("div", { class: "head-info" },
       h("div", { class: "kind" }, h("span", { class: "type-dot", style: { background: EVENT_COLORS[ev.type] } }), EVENT_TYPES[ev.type] || ev.type,
-        h("span", { class: "id" }, ev.id), h("span", { class: "muted" }, file)),
-      bindInput(ev, "title", changed, { cls: "title-input", keepEmpty: true }),
+        ev.numeral ? h("span", { class: "muted" }, "· " + ev.numeral) : null, place ? h("span", { class: "muted" }, "· " + place) : null),
+      title,
       h("div", { class: "row" },
         h("button", { class: "btn small", onclick: () => App.go("cards", { select: ev.id, kind: "event" }) }, "Карточка и картинка"),
-        h("button", { class: "btn small", onclick: () => this.centerOn(ev.id) }, "Показать на древе"))));
+        h("button", { class: "btn small", onclick: () => this.centerOn(ev.id) }, "Показать на древе"),
+        h("span", { class: "grow" }),
+        h("button", { class: "btn small", title: "Сделать планшет шире или вернуть обычный размер", onclick: () => { this.maxed = !this.maxed; this.renderPanel(); } },
+          this.maxed ? "⇥ Обычный размер" : "⇤ Во всю ширину"))));
+
+    const nOpts = (ev.options || []).length;
+    const tabs = h("div", { class: "detail-tabs" }, [["general", "Общее"], ["options", "Варианты выбора"]].map(([t, label]) =>
+      h("button", { class: tab === t ? "on" : "", onclick: () => { this.evTab = t; this.renderPanel(); } }, label, t === "options" ? ` (${nOpts})` : "")));
 
     const body = h("div", { class: "detail-body" });
-    body.append(
-      h("div", { class: "cols" },
-        field("Тип", bindSelect(ev, "type", EVENT_TYPES, structural)),
-        field("Номер (римский)", bindInput(ev, "numeral", changed)),
-        field("Регион", bindSelect(ev, "region", regions, changed, { allowEmpty: true })),
-        chapter ? field("Место в главе", bindSelect(ev, "node", Object.fromEntries((chapter.nodes || []).map((n) => [n.id, n.name])), changed, { allowEmpty: true })) : null,
-        field("Пул травм", bindSelect(ev, "trauma_pool", POOLS, changed, { allowEmpty: true })),
-        field("Источник", bindInput(ev, "source", changed))),
-      field("Текст события", bindInput(ev, "text", changed, { type: "textarea", rows: 4, keepEmpty: true })),
-      h("div", { class: "section" }, h("h4", null, "Теги проверки"), tagRow(ev.tags = ev.tags || [], changed, { context: true })),
-      h("div", { class: "section" }, h("h4", null, "Дальше"),
-        h("div", { class: "cols" },
-          field("Следующее по сюжету", bindSelect(ev, "next", evOpts, structural, { allowEmpty: true, emptyLabel: "— нет —" }), "появится после успеха сюжетного варианта ★"),
-          h("label", { class: "field inline" }, bindInput(ev, "next_immediate", changed, { type: "checkbox" }), h("span", null, "сразу, без задержки")))),
-      this.effectsBlock("При появлении события", ev, "on_appear", structural),
-      this.effectsBlock("Общее при любом успехе", ev, "on_success_common", structural));
-
-    const optsBox = h("div", { class: "section" }, h("h4", null, "Варианты выбора",
-      h("button", { class: "btn small add", onclick: () => {
-        const n = (ev.options || []).length + 1;
-        (ev.options = ev.options || []).push({ id: `${ev.id}_${n}`, label: `Вариант ${n}`, req: { power: 3 }, on_success: [], ok_text: "", fail_text: "" });
-        structural();
-      } }, "+ вариант")));
-    (ev.options || []).forEach((o, i) => optsBox.append(this.optionCard(ev, o, i, changed, structural)));
-    if ((ev.options || []).length !== 3) optsBox.append(h("p", { class: "err" }, `Вариантов ${(ev.options || []).length} — игре нужно ровно 3.`));
-    body.append(optsBox, CardsView.extraFields(ev, handled, changed));
+    if (tab === "general") this.generalPage(body, ev, changed, structural);
+    else this.optionsPage(body, ev, changed, structural);
 
     const foot = h("div", { class: "detail-foot" },
       h("button", { class: "btn", onclick: () => this.duplicateEvent(ev, file) }, "Дублировать"),
-      h("button", { class: "btn", onclick: async () => {
-        const r = await ask("Сменить id события", [{ key: "id", label: "Новый id", value: ev.id, hint: "Ссылки и id вариантов обновятся" }]);
-        if (!r || !r.id || r.id === ev.id) return;
-        if (this.events()[r.id]) { toast("Такой id уже есть", "err"); return; }
-        renameIdEverywhere(ev.id, r.id);
-        this.selected = r.id;
-        this.draw();
-        this.renderPanel();
-      } }, "Сменить id"),
       h("span", { class: "grow" }),
       h("button", { class: "btn danger", onclick: () => this.deleteEvent(ev, file) }, "Удалить событие"));
-    P.append(head, body, foot);
+    P.append(head, tabs, body, foot);
+    applyTips(P);
+  },
+
+  // Край планшета тянется мышью; ширина запоминается.
+  resizer() {
+    const grip = h("div", { class: "resizer", title: "Потяните, чтобы изменить ширину планшета" });
+    try { const w = localStorage.getItem("sunless-evw"); if (w) this.panel.style.setProperty("--evw", w); } catch (_) { /* нет хранилища */ }
+    grip.onmousedown = (e) => {
+      e.preventDefault();
+      const x0 = e.clientX, w0 = this.panel.offsetWidth;
+      this.maxed = false;
+      this.panel.classList.remove("max");
+      const move = (ev) => {
+        const w = Math.max(420, Math.min(window.innerWidth - 200, w0 + x0 - ev.clientX));
+        this.panel.style.setProperty("--evw", w + "px");
+      };
+      const up = () => {
+        window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up);
+        try { localStorage.setItem("sunless-evw", this.panel.style.getPropertyValue("--evw")); } catch (_) { /* нет хранилища */ }
+      };
+      window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+    };
+    return grip;
+  },
+
+  nodeName(id) {
+    const n = this.nodes && this.nodes[id];
+    if (!n) return id;
+    return n.type === "event" ? `«${n.ev.title || id}»` : `${{ init: "Инициатор", chapter: "Глава", region: "Регион" }[n.type]} «${n.title}»`;
+  },
+
+  placeName(ev) {
+    const ch = byId(F.chapters, ev.chapter);
+    return ch && ev.node ? ((ch.nodes || []).find((n) => n.id === ev.node) || {}).name : "";
+  },
+
+  // --- страница «Общее» ---
+  generalPage(body, ev, changed, structural) {
+    const regions = Object.fromEntries(list(F.regions).map((r) => [r.id, r.name]));
+    const chapter = byId(F.chapters, ev.chapter);
+    const evOpts = Object.fromEntries(Object.entries(this.events()).filter(([id]) => id !== ev.id).map(([, r]) => [r.ev.id, r.ev.title || r.ev.id]));
+    body.append(...[
+      h("div", { class: "cols" },
+        field("Тип", bindSelect(ev, "type", EVENT_TYPES, structural)),
+        field("Регион", bindSelect(ev, "region", regions, changed, { allowEmpty: true })),
+        chapter ? field("Место в главе", bindSelect(ev, "node", Object.fromEntries((chapter.nodes || []).map((n) => [n.id, n.name])), changed, { allowEmpty: true })) : null,
+        field("Номер (римский)", bindInput(ev, "numeral", changed)),
+        field("Пул травм", bindSelect(ev, "trauma_pool", POOLS, changed, { allowEmpty: true })),
+        field("Источник", bindInput(ev, "source", changed))),
+      field("Текст события", bindInput(ev, "text", changed, { type: "textarea", rows: 6, keepEmpty: true })),
+      h("div", { class: "section" }, h("h4", null, "Теги проверки"), tagRow(ev.tags = ev.tags || [], changed, { context: true })),
+      ev.type !== "story" ? h("label", { class: "field inline" }, bindInput(ev, "once", changed, { type: "checkbox" }), h("span", null, "Одноразовое")) : null,
+      h("div", { class: "section" }, h("h4", null, "Откуда приходит"), this.edgeList(ev.id, "in")),
+      h("div", { class: "section" }, h("h4", null, "Куда ведёт"),
+        h("div", { class: "cols" },
+          field("Следующее по сюжету", bindSelect(ev, "next", evOpts, structural, { allowEmpty: true, emptyLabel: "— нет —" })),
+          h("label", { class: "field inline" }, bindInput(ev, "next_immediate", changed, { type: "checkbox" }), h("span", null, "сразу, без задержки"))),
+        this.edgeList(ev.id, "out")),
+      this.effectsBlock("При появлении события", ev, "on_appear", structural)].filter(Boolean));
+  },
+
+  // Входящие или исходящие связи события — чтобы было видно, откуда оно и к чему ведёт.
+  edgeList(id, dir) {
+    const edges = (this.graph ? this.graph.edges : []).filter((e) => (dir === "in" ? e.to === id : e.from === id) && !(dir === "out" && e.type === "next"));
+    if (!edges.length) return h("p", { class: "muted" }, dir === "in" ? "Ни одно событие его не открывает — событие недостижимо." : "Других связей нет.");
+    return h("ul", { class: "edge-list" }, edges.map((e) => {
+      const other = dir === "in" ? e.from : e.to;
+      const src = this.nodes[e.from];
+      const opt = typeof e.port === "number" && src.type === "event" ? src.ev.options[e.port] : null;
+      const st = EDGE_STYLE[e.type];
+      const clickable = this.nodes[other] && this.nodes[other].type === "event";
+      return h("li", null,
+        h("span", { class: "dot", style: { background: st.color } }),
+        h("span", { class: "muted" }, st.label),
+        clickable ? h("button", { class: "link", onclick: () => { this.select(other); this.centerOn(other); } }, this.nodeName(other)) : h("b", null, this.nodeName(other)),
+        opt ? h("span", { class: "muted" }, `· вариант «${opt.label}»`) : null,
+        e.label ? h("span", { class: "muted" }, `· ${e.label}`) : null);
+    }));
+  },
+
+  // --- страница «Варианты выбора» ---
+  optionsPage(body, ev, changed, structural) {
+    const opts = ev.options = ev.options || [];
+    if (this.optIdx >= opts.length) this.optIdx = 0;
+    const reqText = (o) => o.check === "auto" ? "автоуспех" : o.check === "combat" ? "бой" :
+      Object.entries(o.req || {}).map(([s, v]) => `${STAT_NAMES[s] || s} ${v}`).join(", ") || "без требований";
+    body.append(h("div", { class: "opt-tabs" },
+      opts.map((o, i) => h("button", {
+        class: (i === this.optIdx ? "on" : "") + (o.story ? " story" : ""),
+        onclick: () => { this.optIdx = i; this.renderPanel(); },
+      }, h("span", { class: "n" }, i + 1), h("span", { class: "t" }, (o.label || "без названия") + (o.story ? " ★" : "")), h("small", null, reqText(o)))),
+      h("button", { class: "btn small add", title: "Добавить вариант выбора", onclick: () => {
+        let n = opts.length + 1;
+        while (opts.some((o) => o.id === `${ev.id}_${n}`)) n++;
+        opts.push({ id: `${ev.id}_${n}`, label: `Вариант ${opts.length + 1}`, req: { power: 3 }, on_success: [], ok_text: "", fail_text: "" });
+        this.optIdx = opts.length - 1;
+        structural();
+      } }, "+ вариант")));
+    if (opts.length !== 3) body.append(h("p", { class: "err" }, `Вариантов ${opts.length} — игре нужно ровно 3.`));
+    if (opts[this.optIdx]) body.append(this.optionCard(ev, opts[this.optIdx], this.optIdx, changed, structural));
+    body.append(h("div", { class: "opt-block" }, this.effectsBlock("Общее при любом успехе", ev, "on_success_common", structural)));
   },
 
   optionCard(ev, o, i, changed, structural) {
     const checks = { stat: "Проверка характеристик", gate_stat: "Проверка с условием", auto: "Автоуспех", combat: "Бой" };
-    const card = h("div", { class: "opt-card" + (o.story ? " story" : "") });
     const check = o.check || "stat";
-    card.append(
-      h("div", { class: "opt-head" }, h("span", { class: "num" }, i + 1), bindInput(o, "label", changed, { keepEmpty: true }),
-        h("label", { class: "field inline", title: "Сюжетный вариант продвигает историю (next)" },
-          h("input", { type: "checkbox", checked: !!o.story, onchange: (e) => {
-            if (e.target.checked) { for (const x of ev.options) delete x.story; o.story = true; } else delete o.story;
-            structural();
-          } }), h("span", null, "★ сюжет")),
-        h("button", { class: "icon-btn del", title: "Удалить вариант", onclick: async () => {
-          if (!(await confirmBox("Удалить вариант", `Удалить «${o.label}»?`))) return;
-          ev.options.splice(i, 1); structural();
-        } }, "×")),
+    const card = h("div", { class: "opt-card" + (o.story ? " story" : "") });
+    card.append(h("div", { class: "opt-head" },
+      h("span", { class: "num" }, i + 1),
+      field("Название варианта", bindInput(o, "label", changed, { keepEmpty: true })),
+      h("label", { class: "field inline" },
+        h("input", { type: "checkbox", checked: !!o.story, onchange: (e) => {
+          if (e.target.checked) { for (const x of ev.options) delete x.story; o.story = true; } else delete o.story;
+          structural();
+        } }), h("span", null, "★ сюжет")),
+      h("button", { class: "icon-btn del", title: "Удалить вариант", onclick: async () => {
+        if (!(await confirmBox("Удалить вариант", `Удалить «${o.label}»?`))) return;
+        ev.options.splice(i, 1); this.optIdx = 0; structural();
+      } }, "×")));
+
+    // проверка
+    const checkBox = h("div", { class: "opt-block" }, h("h5", { class: "mini-h" }, "Проверка"),
       h("div", { class: "cols" },
         field("Проверка", h("select", { onchange: (e) => { if (e.target.value === "stat") delete o.check; else o.check = e.target.value; structural(); } },
           Object.entries(checks).map(([k, v]) => h("option", { value: k, selected: k === check }, v)))),
-        field("Травм при провале", bindInput(o, "failure_traumas", changed, { type: "number" })),
-        field("Пул травм", bindSelect(o, "trauma_pool", POOLS, changed, { allowEmpty: true, emptyLabel: "как у события" })),
+        check !== "auto" ? field("Травм при провале", bindInput(o, "failure_traumas", changed, { type: "number", placeholder: "1" })) : null,
+        check !== "auto" ? field("Пул травм", bindSelect(o, "trauma_pool", POOLS, changed, { allowEmpty: true, emptyLabel: "как у события" })) : null,
         field("Цена: осколки", this.costInput(o, "shards", changed)),
         field("Цена: мана", this.costInput(o, "mana", changed))));
     if (check === "stat" || check === "gate_stat") {
       o.req = o.req || {};
-      card.append(h("div", { class: "mini-h" }, "Требования"), statsEditor(o.req, changed));
+      checkBox.append(h("div", { class: "mini-h" }, "Требования"), statsEditor(o.req, changed));
     }
     if (check === "combat") {
       const spec = o.combat = o.combat || { enemies: [] };
-      card.append(h("div", { class: "mini-h" }, "Бой"), h("div", { class: "cols" },
-        field("Противники (id через запятую)", listInput(spec, "enemies", changed, "M01, M01")),
-        field("Поле боя", bindSelect(spec, "field", Object.fromEntries(list(F.fields).map((f) => [f.id, `${f.id} — ${f.name}`])), changed, { allowEmpty: true })),
-        field("Вид", bindSelect(spec, "kind", { normal: "обычный", elite: "элита", boss: "босс" }, changed, { allowEmpty: true }))));
+      checkBox.append(h("div", { class: "mini-h" }, "Бой"), h("div", { class: "cols" },
+        field("Противники", this.enemyPicker(spec, changed)),
+        field("Поле боя", bindSelect(spec, "field", Object.fromEntries(list(F.fields).map((f) => [f.id, f.name])), changed, { allowEmpty: true })),
+        field("Вид боя", bindSelect(spec, "kind", { normal: "обычный", elite: "элита", boss: "босс" }, changed, { allowEmpty: true }))));
     }
     o.tags = o.tags || [];
     const tagsRow = tagRow(o.tags, () => { if (!o.tags.length) delete o.tags; changed(); }, { context: true, small: true });
     if (!o.tags.length) delete o.tags;
-    card.append(h("div", { class: "row" }, h("span", { class: "mini-h" }, "Доп. теги проверки"), tagsRow));
-    card.append(
-      field("Текст успеха", bindInput(o, "ok_text", changed, { type: "textarea", rows: 2 })),
-      this.effectsBlock("Последствия успеха", o, "on_success", structural),
-      check !== "auto" ? field("Текст провала", bindInput(o, "fail_text", changed, { type: "textarea", rows: 2 })) : null,
-      check !== "auto" ? this.effectsBlock("Последствия провала", o, "on_failure", structural) : null,
-      this.jsonField("Условия доступности", o, "conditions", changed, "[{\"type\": \"in_collection\", \"card\": \"U02\", \"text\": \"Нужен Колокольчик\"}]"),
-      o.req_mods ? this.jsonField("Модификаторы требований", o, "req_mods", changed) : null);
+    checkBox.append(h("div", { class: "field" }, h("span", null, "Доп. теги проверки"), tagsRow));
+    if (check !== "auto" && check !== "combat") checkBox.append(this.reqModsBlock(o, changed, structural));
+
+    const okBox = h("div", { class: "opt-block ok-block" }, h("h5", { class: "mini-h" }, "Успех"),
+      field("Текст успеха", bindInput(o, "ok_text", changed, { type: "textarea", rows: 3 })),
+      this.effectsBlock("Последствия успеха", o, "on_success", structural));
+    const failBox = check !== "auto" ? h("div", { class: "opt-block fail-block" }, h("h5", { class: "mini-h" }, "Провал"),
+      field("Текст провала", bindInput(o, "fail_text", changed, { type: "textarea", rows: 3 })),
+      this.effectsBlock("Последствия провала", o, "on_failure", structural)) : null;
+    const condBox = h("div", { class: "opt-block" }, this.cmdList("Условия доступности", o, "conditions", CONDITIONS, "type", structural));
+
+    card.append(h("div", { class: "opt-grid" }, checkBox, condBox, okBox, failBox));
     return card;
   },
 
+  // Противники боя: чипы с именами + выбор из списка.
+  enemyPicker(spec, changed) {
+    const box = h("div", { class: "chips small" });
+    const render = () => {
+      box.innerHTML = "";
+      (spec.enemies || []).forEach((id, i) => {
+        const en = byId(F.enemies, id);
+        box.append(h("span", { class: "chip ctx" + (en ? "" : " missing") }, h("span", { class: "chip-name" }, en ? en.name : id),
+          h("button", { class: "chip-x", title: "Убрать", onclick: () => { spec.enemies.splice(i, 1); changed(); render(); } }, "×")));
+      });
+      const sel = h("select", { class: "enemy-add" }, h("option", { value: "" }, "+ противник…"),
+        list(F.enemies).map((e) => h("option", { value: e.id }, `${e.name} (ранг ${e.rank}, класс ${e.class})`)));
+      sel.onchange = () => { if (sel.value) { (spec.enemies = spec.enemies || []).push(sel.value); changed(); render(); } };
+      box.append(sel);
+    };
+    render();
+    return box;
+  },
+
+  // Изменения требований по флагам: [{flag, stat, delta}]
+  reqModsBlock(o, changed, structural) {
+    const box = h("div", { class: "effects" }, h("div", { class: "mini-h" }, "Изменение требований",
+      h("button", { class: "btn small add", onclick: () => { (o.req_mods = o.req_mods || []).push({ flag: "", stat: "will", delta: -1 }); structural(); } }, "+")));
+    (o.req_mods || []).forEach((m, i) => box.append(h("div", { class: "effect-form mods" },
+      h("span", null, "Если флаг"), bindInput(m, "flag", changed, { keepEmpty: true }),
+      h("span", null, "Характеристика"), bindSelect(m, "stat", STAT_NAMES, changed),
+      h("span", null, "Изменить на"), h("div", { class: "row" }, bindInput(m, "delta", changed, { type: "number" }),
+        h("button", { class: "icon-btn del", title: "Удалить", onclick: () => { o.req_mods.splice(i, 1); if (!o.req_mods.length) delete o.req_mods; structural(); } }, "×")))));
+    if (!(o.req_mods || []).length) box.append(h("div", { class: "muted small-note" }, "нет"));
+    return box;
+  },
+
   costInput(o, res, changed) {
-    const inp = h("input", { type: "number", value: (o.cost || {})[res] ?? "" });
+    const inp = h("input", { type: "number", value: (o.cost || {})[res] ?? "", placeholder: "0" });
     inp.oninput = () => {
       const c = o.cost || {};
       if (inp.value === "") delete c[res]; else c[res] = Number(inp.value);
@@ -675,59 +797,57 @@ const EventsView = {
     return inp;
   },
 
-  jsonField(label, o, key, changed, placeholder = "") {
-    const ta = h("textarea", { class: "json", rows: o[key] ? Math.min(8, JSON.stringify(o[key], null, 1).split("\n").length) : 1, placeholder },
-      o[key] ? JSON.stringify(o[key], null, 1) : "");
-    const msg = h("small");
-    ta.onchange = () => {
-      try {
-        if (!ta.value.trim()) delete o[key]; else o[key] = JSON.parse(ta.value);
-        msg.textContent = ""; changed();
-      } catch (e) { msg.textContent = "Ошибка JSON: " + e.message; msg.className = "err"; }
-    };
-    return h("div", { class: "field" }, h("span", null, label), ta, msg);
+  effectsBlock(title, obj, key, structural) {
+    return this.cmdList(title, obj, key, EFFECTS, "cmd", structural);
   },
 
-  // Список последствий: сводка + форма правки по щелчку.
-  effectsBlock(title, obj, key, structural) {
+  // Список команд (последствия или условия): сводка + форма правки по щелчку.
+  cmdList(title, obj, key, schema, typeKey, structural) {
     const box = h("div", { class: "effects" });
+    const touchCurrent = () => { const r = this.events()[this.selected]; if (r) touch(r.file); };
+    const summary = (e) => typeKey === "cmd" ? effectSummary(e) : conditionSummary(e);
     const render = () => {
       box.innerHTML = "";
       const arr = obj[key] || [];
-      box.append(h("div", { class: "mini-h" }, title, h("button", { class: "btn small add", onclick: async () => {
-        const r = await ask("Новое последствие", [{ key: "cmd", label: "Команда", type: "select", value: "add_temp",
-          options: Object.fromEntries(Object.entries(EFFECTS).map(([k, v]) => [k, `${v.name} (${k})`])) }]);
+      box.append(h("div", { class: "mini-h" }, title, h("button", { class: "btn small add", title: "Добавить", onclick: async () => {
+        const r = await ask(typeKey === "cmd" ? "Новое последствие" : "Новое условие", [{ key: "t", label: typeKey === "cmd" ? "Команда" : "Условие", type: "select",
+          value: Object.keys(schema)[0], options: Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v.name])) }]);
         if (!r) return;
-        (obj[key] = obj[key] || []).push({ cmd: r.cmd });
+        (obj[key] = obj[key] || []).push({ [typeKey]: r.t });
         touchCurrent();
         render();
         box.querySelectorAll(".effect")[obj[key].length - 1].querySelector(".sum").click();
       } }, "+")));
       arr.forEach((e, i) => {
         const row = h("div", { class: "effect" });
-        const sum = h("span", { class: "sum", style: { cursor: "pointer" }, title: "Щелчок — изменить" }, effectSummary(e));
+        const sum = h("span", { class: "sum", title: "Щелчок — изменить" }, summary(e));
         const del = h("button", { class: "icon-btn del", title: "Удалить", onclick: () => { arr.splice(i, 1); if (!arr.length) delete obj[key]; structural(); } }, "×");
         sum.onclick = () => {
-          if (row.classList.toggle("open")) row.append(this.effectForm(e, () => { sum.textContent = effectSummary(e); touchCurrent(); }));
-          else { row.querySelector(".effect-form")?.remove(); structural(); }
+          if (row.classList.toggle("open")) {
+            const form = this.cmdForm(e, schema, typeKey, () => { sum.textContent = summary(e); touchCurrent(); });
+            row.append(form);
+            applyTips(form);
+          } else { row.querySelector(".effect-form")?.remove(); structural(); }
         };
         row.append(h("div", { class: "row" }, sum, del));
         box.append(row);
       });
-      if (!arr.length) box.append(h("div", { class: "muted", style: { fontSize: "12px" } }, "нет"));
+      if (!arr.length) box.append(h("div", { class: "muted small-note" }, "нет"));
+      applyTips(box);
     };
-    const touchCurrent = () => { const r = this.events()[this.selected]; if (r) touch(r.file); };
     render();
     return box;
   },
 
-  effectForm(e, changed) {
-    const def = EFFECTS[e.cmd] || { fields: {} };
+  cmdForm(e, schema, typeKey, changed) {
+    const def = schema[e[typeKey]] || { fields: {} };
     const form = h("div", { class: "effect-form" });
-    form.append(h("span", null, "Команда"), bindSelect(e, "cmd", Object.fromEntries(Object.entries(EFFECTS).map(([k, v]) => [k, v.name])), () => {
-      const r = form.parentElement; changed(); form.replaceWith(this.effectForm(e, changed)); void r;
-    }));
-    const fields = { ...def.fields, if_flag: "text", unless_flag: "text" };
+    form.append(h("span", null, typeKey === "cmd" ? "Команда" : "Условие"),
+      bindSelect(e, typeKey, Object.fromEntries(Object.entries(schema).map(([k, v]) => [k, v.name])), () => {
+        changed(); const f2 = this.cmdForm(e, schema, typeKey, changed); form.replaceWith(f2); applyTips(f2);
+      }));
+    const fields = typeKey === "cmd" ? { ...def.fields, if_flag: "text", unless_flag: "text" } : def.fields;
+    const labels = typeKey === "cmd" ? FIELD_LABELS : { ...FIELD_LABELS, ...COND_LABELS };
     for (const [k, t] of Object.entries(fields)) {
       let inp;
       if (t === "card") inp = idSelect(e, k, ["character", "enhancement", "initiator", "ability", "trauma", "enemy"], changed);
@@ -738,13 +858,16 @@ const EventsView = {
       else if (t === "stat") inp = bindSelect(e, k, STAT_NAMES, changed, { allowEmpty: true });
       else if (t === "number") inp = bindInput(e, k, changed, { type: "number" });
       else if (t === "list") inp = listInput(e, k, changed);
+      else if (t === "region") inp = bindSelect(e, k, Object.fromEntries(list(F.regions).map((r) => [r.id, r.name])), changed, { allowEmpty: true });
+      else if (t === "chapter") inp = bindSelect(e, k, Object.fromEntries(list(F.chapters).map((c) => [c.id, c.title])), changed, { allowEmpty: true });
+      else if (t === "field") inp = bindSelect(e, k, Object.fromEntries(list(F.fields).map((f) => [f.id, f.name])), changed, { allowEmpty: true });
       else if (t === "tags" || t === "ctxtags") {
         e[k] = e[k] || [];
         inp = tagRow(e[k], () => { if (!e[k].length) delete e[k]; changed(); }, { context: t === "ctxtags", small: true });
         if (!e[k].length) delete e[k];
-      } else if (Array.isArray(t)) inp = bindSelect(e, k, t, changed, { allowEmpty: true });
+      } else if (typeof t === "object") inp = bindSelect(e, k, t, changed, { allowEmpty: true });
       else inp = bindInput(e, k, changed);
-      form.append(h("span", null, k), inp);
+      form.append(h("span", null, labels[k] || k), inp);
     }
     return form;
   },
@@ -754,15 +877,12 @@ const EventsView = {
     const files = Object.fromEntries(eventFiles().map((f) => [f, f.replace("data/events/", "")]));
     const r = await ask("Новое событие", [
       { key: "file", label: "Файл (арка)", type: "select", value: eventFiles()[0], options: files },
-      { key: "id", label: "id", value: "", hint: "Пусто — следующий свободный E…" },
       { key: "type", label: "Тип", type: "select", value: "story", options: EVENT_TYPES },
       { key: "title", label: "Название", value: "" },
     ]);
     if (!r) return;
     const evs = this.events();
-    let id = r.id;
-    if (!id) { let n = 1; while (evs["E" + String(n).padStart(2, "0")]) n++; id = "E" + String(n).padStart(2, "0"); }
-    if (evs[id] || findCard(id)) { toast(`id ${id} уже занят`, "err"); return; }
+    const id = this.freeId(r.type === "story" || r.type === "reward" ? "E" : r.type === "random" ? "RE_" : "SE");
     const sample = list(r.file)[0] || {};
     const ev = { id, type: r.type, arc: sample.arc, region: sample.region, title: r.title || id, text: "", tags: [], trauma_pool: "all", options: [] };
     if (sample.chapter) { ev.chapter = sample.chapter; ev.node = sample.node; }
@@ -779,24 +899,33 @@ const EventsView = {
     this.draw();
     this.renderPanel();
     this.centerOn(id);
-    toast(`Событие ${id} создано. Свяжите его: тяните от ● варианта другого события.`, "ok", 5000);
+    toast(`Событие «${ev.title}» создано. Свяжите его: тяните от ● варианта другого события.`, "ok", 5000);
+  },
+
+  // Коды событий редактор подбирает сам: E.., SE.., RE_..
+  freeId(prefix) {
+    const taken = (id) => this.events()[id] || findCard(id) || lore(id);
+    let n = 1;
+    const make = () => (prefix === "RE_" ? "RE_" + n : prefix + String(n).padStart(2, "0"));
+    while (taken(make())) n++;
+    return make();
   },
 
   async duplicateEvent(ev, file) {
-    const r = await ask("Копия события", [{ key: "id", label: "Новый id", value: ev.id + "_copy" }]);
-    if (!r || !r.id) return;
-    if (this.events()[r.id]) { toast("Такой id уже есть", "err"); return; }
+    const id = this.freeId(ev.type === "random" ? "RE_" : ev.type === "side" ? "SE" : "E");
     const copy = clone(ev);
-    copy.id = r.id;
+    copy.id = id;
+    copy.title = (ev.title || "") + " (копия)";
     delete copy.next;
-    (copy.options || []).forEach((o, i) => (o.id = `${r.id}_${i + 1}`));
+    (copy.options || []).forEach((o, i) => (o.id = `${id}_${i + 1}`));
     const arr = list(file);
     arr.splice(arr.indexOf(ev) + 1, 0, copy);
     touch(file);
-    this.selected = r.id;
+    this.selected = id;
     this.draw();
     this.renderPanel();
-    this.centerOn(r.id);
+    this.centerOn(id);
+    toast(`Создана копия «${copy.title}»`, "ok");
   },
 
   async deleteEvent(ev, file) {

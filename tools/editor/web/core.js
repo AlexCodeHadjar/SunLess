@@ -394,34 +394,65 @@ const EFFECTS = {
   clear_traumas: { name: "Снять все травмы", fields: { target: "character", categories: "list", text: "text" } },
   set_flag: { name: "Поставить флаг", fields: { flag: "text", text: "text" } },
   clear_flag: { name: "Снять флаг", fields: { flag: "text" } },
-  adjust_resource: { name: "Ресурс ±", fields: { resource: ["shards", "mana"], value: "number" } },
+  adjust_resource: { name: "Осколки или мана ±", fields: { resource: { shards: "осколки душ", mana: "мана" }, value: "number" } },
   add_temp: { name: "Временный бонус", fields: { stat: "stat", value: "number", label: "text", tags: "ctxtags", remaining: "number" } },
   add_perm: { name: "Бонус навсегда", fields: { stat: "stat", value: "number", character: "character" } },
-  set_stage: { name: "Новая стадия", fields: { character: "character", stage: "text" } },
+  set_stage: { name: "Новая стадия персонажа", fields: { character: "character", stage: "text" } },
   reveal: { name: "Раскрыть последствия", fields: { event: "event", options: "list", text: "text" } },
   add_codex: { name: "Запись в кодекс", fields: { entry: "text", text: "text" } },
-  set_region: { name: "Сменить регион", fields: { region: "text", arc: "text" } },
-  remove_temporaries: { name: "Временные уходят", fields: {} },
-  combat_mod: { name: "Изменить будущий бой", fields: { event: "event", hero_tags: "tags", enemy_tags: "tags", add_enemies: "list", allies: "list", field: "text", text: "text" } },
-  spawn_event: { name: "Создать событие", fields: { event: "event" } },
-  start_chapter: { name: "Открыть главу", fields: { chapter: "text" } },
+  set_region: { name: "Сменить регион", fields: { region: "region", arc: "text" } },
+  remove_temporaries: { name: "Временные спутники уходят", fields: {} },
+  combat_mod: { name: "Изменить будущий бой", fields: { event: "event", hero_tags: "tags", enemy_tags: "tags", add_enemies: "list", allies: "list", field: "field", text: "text" } },
+  spawn_event: { name: "Открыть событие", fields: { event: "event" } },
+  start_chapter: { name: "Открыть главу", fields: { chapter: "chapter" } },
   reset_wear: { name: "Сбросить износ (кузнец)", fields: {} },
   end_demo: { name: "Конец демоверсии", fields: { text: "text" } },
-  text: { name: "Текст", fields: { text: "text" } },
+  text: { name: "Показать текст", fields: { text: "text" } },
 };
+
+// Условия доступности варианта (core/rules/condition_checker.gd).
+const CONDITIONS = {
+  in_collection: { name: "Карта есть в коллекции", fields: { card: "card" } },
+  not_owned: { name: "Карты ещё нет", fields: { card: "card" } },
+  executor_is: { name: "Исполнитель — определённый персонаж", fields: { ids: "list" } },
+  has_flag: { name: "Стоит флаг", fields: { flag: "text", text: "text" } },
+  not_flag: { name: "Флага нет", fields: { flag: "text", text: "text" } },
+  owned_count: { name: "Несколько карт из списка", fields: { cards: "list", min: "number", text: "text" } },
+  attached: { name: "Карта приложена к событию", fields: { card: "card" } },
+  executor_has_trauma: { name: "У исполнителя есть травма", fields: { severity: "list", categories: "list", text: "text" } },
+};
+
+const FIELD_LABELS = {
+  card: "Карта", text: "Текст игроку", ability: "Способность", character: "Персонаж", target: "Цель", trauma: "Травма",
+  categories: "Категории травм", severities: "Тяжесть травм", severity: "Тяжесть травм", flag: "Флаг", resource: "Ресурс",
+  value: "Значение", stat: "Характеристика", label: "Подпись", tags: "Теги", remaining: "Сколько проверок", stage: "Стадия",
+  event: "Событие", options: "Варианты (id)", entry: "Запись кодекса", region: "Регион", arc: "Арка", hero_tags: "Теги героя",
+  enemy_tags: "Теги врага", add_enemies: "Доп. противники", allies: "Союзники", field: "Поле боя", chapter: "Глава",
+  if_flag: "Только если флаг", unless_flag: "Только если нет флага",
+};
+const COND_LABELS = { text: "Подсказка игроку", ids: "Исполнитель — один из", cards: "Карты", min: "Минимум карт" };
+
+const REF_KEYS = ["card", "ability", "trauma", "character", "target", "event"];
+
+function describeValue(k, v) {
+  if (Array.isArray(v)) return v.map((x) => (typeof x === "string" && findCard(x) ? cardName(x) : x)).join(", ");
+  if (REF_KEYS.includes(k) && typeof v === "string") return cardName(v);
+  if (k === "stat") return STAT_NAMES[v] || v;
+  if (k === "resource") return { shards: "осколки", mana: "мана" }[v] || v;
+  if (k === "value" || k === "delta") return (v > 0 ? "+" : "") + v;
+  return String(v);
+}
 
 function effectSummary(e) {
   const d = EFFECTS[e.cmd];
-  const name = d ? d.name : e.cmd;
-  const parts = [];
-  for (const [k, v] of Object.entries(e)) {
-    if (k === "cmd") continue;
-    let s = Array.isArray(v) ? v.join(", ") : String(v);
-    if (["card", "ability", "trauma", "character", "target", "event"].includes(k) && typeof v === "string") s = `${cardName(v)} (${v})`;
-    if (k === "stat") s = STAT_NAMES[v] || v;
-    parts.push(s);
-  }
-  return name + (parts.length ? ": " + parts.join(" · ") : "");
+  const parts = Object.entries(e).filter(([k]) => k !== "cmd").map(([k, v]) => describeValue(k, v));
+  return (d ? d.name : e.cmd) + (parts.length ? ": " + parts.join(" · ") : "");
+}
+
+function conditionSummary(c) {
+  const d = CONDITIONS[c.type];
+  const parts = Object.entries(c).filter(([k]) => k !== "type" && k !== "text").map(([k, v]) => describeValue(k, v));
+  return (d ? d.name : c.type) + (parts.length ? ": " + parts.join(" · ") : "");
 }
 
 // --- проверка -----------------------------------------------------------------------------

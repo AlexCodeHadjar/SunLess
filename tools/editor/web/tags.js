@@ -148,9 +148,11 @@ const TagsView = {
             : h("p", { class: "muted" }, "Нет симбиозов и конфликтов с этим тегом.")),
         h("div", { class: "section" }, h("h4", null, `Где используется (${refs.length})`), this.refsList(refs))),
       h("div", { class: "detail-foot" }, h("span", { class: "grow" }), h("button", { class: "btn danger", onclick: () => this.remove(t, refs) }, "Удалить тег")));
+    applyTips(d);
   },
 
   renderCtxDetail(d, t) {
+    setTimeout(() => applyTips(d), 0);
     const changed = () => { touch(F.ctxTags); this.renderRows(); };
     const idInput = h("input", { type: "text", value: t.id });
     idInput.onchange = () => this.renameCtx(t, idInput.value.trim());

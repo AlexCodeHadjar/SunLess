@@ -6,6 +6,7 @@ const PREFIX_KIND = { P: "character", U: "enhancement", K: "enhancement", A: "ab
 
 const CardsView = {
   kind: "all", query: "", selected: null, tab: "desc", stage: null,
+  showPlanned: (() => { try { return localStorage.getItem("sunless-planned") === "1"; } catch (_) { return false; } })(),
 
   render(root, params = {}) {
     if (params.select) { this.selected = params.select; this.stage = null; }
@@ -48,13 +49,40 @@ const CardsView = {
         KINDS.map((k) => item(k.id, k.name, k.emblem)),
         item(LORE_ONLY.id, LORE_ONLY.name, LORE_ONLY.emblem)),
       h("button", { class: "btn add", onclick: () => this.createCard() }, "+ Новая карта"),
+      h("button", { class: "btn", title: "Скачать JSON-файл со списком карт (в игре и задуманных), у которых ещё нет картинки", onclick: () => this.exportMissingArt() }, "⭳ Карты без картинок (JSON)"),
     );
+  },
+
+  // Категория карты для людей (у задуманных — по букве id).
+  kindOf(c) {
+    return c.kind === "lore" ? PREFIX_KIND[c.id[0]] || "" : c.kind;
+  },
+
+  exportMissingArt() {
+    const rows = this.cards().filter((c) => !cardArt(c)).map((c) => ({
+      id: c.id,
+      "название": c.obj.name || c.obj.title || c.id,
+      "категория": (KIND[this.kindOf(c)] || { name: "Другое" }).name,
+      "в_игре": c.kind !== "lore",
+    }));
+    const order = KINDS.map((k) => k.name);
+    rows.sort((a, b) => (order.indexOf(a["категория"]) - order.indexOf(b["категория"])) || a.id.localeCompare(b.id, undefined, { numeric: true }));
+    const byCat = {};
+    for (const r of rows) byCat[r["категория"]] = (byCat[r["категория"]] || 0) + 1;
+    const out = { "создано": new Date().toISOString().slice(0, 10), "всего": rows.length, "по_категориям": byCat, "карты": rows };
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    const a = h("a", { href: URL.createObjectURL(blob), download: "карты_без_картинок.json" });
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast(`Выгружено карт без картинок: ${rows.length}`, "ok");
   },
 
   renderGrid() {
     const q = this.query.trim().toLowerCase();
+    const planned = (c) => c.kind === "lore" && this.showPlanned && (this.kind === "all" || this.kindOf(c) === this.kind);
     const cards = this.cards().filter((c) => {
-      if (this.kind === "all" ? c.kind === "lore" : c.kind !== this.kind) return false;
+      if (!planned(c) && (this.kind === "all" ? c.kind === "lore" : c.kind !== this.kind)) return false;
       if (!q) return true;
       const tags = [...(c.obj.tags || []), ...Object.values(c.obj.stages || {}).flatMap((s) => s.tags || [])];
       return c.id.toLowerCase().includes(q) || (c.obj.name || c.obj.title || "").toLowerCase().includes(q)
@@ -65,7 +93,19 @@ const CardsView = {
     search.oninput = () => { this.query = search.value; this.renderTiles(); };
     this.gridWrap.innerHTML = "";
     this.tilesEl = h("div", { class: "grid" });
-    this.gridWrap.append(h("div", { class: "grid-head" }, h("h2", null, title), h("span", { class: "count" }, cards.length), search), this.tilesEl);
+    let toggle = null;
+    if (this.kind !== "lore") {
+      const nPlanned = this.cards().filter((c) => c.kind === "lore" && (this.kind === "all" || this.kindOf(c) === this.kind)).length;
+      const cb = h("input", { type: "checkbox", checked: this.showPlanned });
+      cb.onchange = () => {
+        this.showPlanned = cb.checked;
+        try { localStorage.setItem("sunless-planned", cb.checked ? "1" : "0"); } catch (_) { /* нет хранилища */ }
+        this.renderGrid();
+      };
+      toggle = h("label", { class: "toggle", "data-tip": "Показать карты этой категории, которые описаны в документах («По книге»), но ещё не добавлены в игру. Они отмечены пунктиром; в планшете есть кнопка «Добавить в игру»." },
+        cb, `ещё не добавленные в сюжет (${nPlanned})`);
+    }
+    this.gridWrap.append(h("div", { class: "grid-head" }, h("h2", null, title), h("span", { class: "count" }, cards.length), toggle, search), this.tilesEl);
     this.renderTiles(cards);
   },
 
@@ -78,14 +118,15 @@ const CardsView = {
   tile(c) {
     const art = cardArt(c);
     const rar = RARITY[c.obj.rarity];
-    const kindName = c.kind === "lore" ? "замысел" : (KIND[c.kind] || {}).name;
+    const kindName = c.kind === "lore" ? ((KIND[this.kindOf(c)] || {}).name || "замысел") + " · замысел" : (KIND[c.kind] || {}).name;
     const sub = c.kind === "event" ? (EVENT_TYPES[c.obj.type] || c.obj.type) : kindName;
-    const el = h("button", { class: "tile" + (c.id === this.selected ? " on" : ""), "data-id": c.id, onclick: () => this.select(c.id) },
+    const el = h("button", { class: "tile" + (c.id === this.selected ? " on" : "") + (c.kind === "lore" ? " planned" : ""), "data-id": c.id, onclick: () => this.select(c.id) },
       h("div", { class: "tile-art", style: { "--r": rar ? rar[1] : "#6A6F85" } },
         art ? h("img", { class: "art", src: art, loading: "lazy", alt: "" })
           : h("div", { class: "blank" }, h("img", { src: projectUrl((KIND[c.kind] || LORE_ONLY).emblem), alt: "" }), c.obj.name || c.obj.title || c.id),
         h("span", { class: "badge" }, c.id),
-        DB.images.has(c.id) ? h("span", { class: "pending" }, "новая") : null),
+        DB.images.has(c.id) ? h("span", { class: "pending" }, "новая") : null,
+        c.kind === "lore" ? h("span", { class: "planned-badge" }, "не в игре") : null),
       h("div", { class: "tile-name" }, c.obj.name || c.obj.title || c.id),
       h("div", { class: "tile-sub" }, sub));
     return el;
@@ -179,6 +220,7 @@ const CardsView = {
       h("button", { class: "btn danger", onclick: () => this.remove(c) }, "Удалить карту"));
 
     d.append(h("div", { class: "detail-head" }, artBox, head), tabBar, body, foot);
+    applyTips(d);
   },
 
   // --- вкладка «Описание»: поля по типу карты ----------------------------------------
@@ -279,7 +321,8 @@ const CardsView = {
       o.tags = o.tags || [];
       body.append(sec("Теги проверки", tagRow(o.tags, changed, { context: true })));
       body.append(h("p", { class: "muted" }, "Варианты выбора, последствия и связи с другими событиями — во вкладке «Древо событий»."));
-      handled.add("options"); handled.add("next"); handled.add("on_appear"); handled.add("on_success_common");
+      use("options", "next", "next_immediate", "on_appear", "on_success_common", "numeral", "arc", "region", "chapter", "node",
+        "trauma_pool", "map_pos", "source_kind", "once", "enemy", "danger");
     }
 
     body.append(this.extraFields(o, handled, changed));
