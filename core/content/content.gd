@@ -22,6 +22,9 @@ var tactics: Dictionary = {}
 var enemy_abilities: Dictionary = {}
 var lore: Dictionary = {}          # сюжетные описания «По книге» (tools/gen_lore.py)
 var chapters: Dictionary = {}      # главы свободного режима (Хроника с якорями)
+# миссии и отряды (docs/15, ветка gameplay/missions)
+var locations: Dictionary = {}     # локации глав: data/locations.json
+var missions: Dictionary = {}      # миссии: data/missions/*.json
 var load_errors: Array[String] = []
 
 
@@ -45,6 +48,9 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.enemy_abilities = c._load_map(dir + "/combat/enemy_abilities.json")
 	c.lore = c._load_map(dir + "/lore.json")
 	c.chapters = c._load_map(dir + "/chapters.json")
+	if FileAccess.file_exists(dir + "/locations.json"):
+		c.locations = c._load_map(dir + "/locations.json")
+	c.missions = c._load_dir(dir + "/missions", "миссии")
 	var ev_dir := DirAccess.open(dir + "/events")
 	if ev_dir == null:
 		c.load_errors.append("Нет папки %s/events" % dir)
@@ -59,6 +65,24 @@ static func load_from(dir: String = "res://data") -> Content:
 						c.load_errors.append("Дубликат события %s (%s)" % [k, f])
 					c.events[k] = m[k]
 	return c
+
+
+## Все *.json папки в один словарь id -> объект (папки может и не быть).
+func _load_dir(path: String, what: String) -> Dictionary:
+	var out := {}
+	var d := DirAccess.open(path)
+	if d == null:
+		return out
+	var files := d.get_files()
+	files.sort()
+	for f in files:
+		if f.ends_with(".json"):
+			var m := _load_map(path + "/" + f)
+			for k: String in m:
+				if out.has(k):
+					load_errors.append("Дубликат: %s %s (%s)" % [what, k, f])
+				out[k] = m[k]
+	return out
 
 
 ## Файл — массив объектов с полем "id"; превращаем в словарь id -> объект.

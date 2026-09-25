@@ -1,7 +1,7 @@
 // Оболочка: вкладки, статус изменений, сохранение, проверка, задачи Godot.
 "use strict";
 
-const Views = { cards: CardsView, tags: TagsView, events: EventsView };
+const Views = { cards: CardsView, tags: TagsView, events: EventsView, missions: MissionsView };
 
 const App = {
   view: null,
@@ -91,6 +91,7 @@ function issuesList(errs, max) {
       document.getElementById("overlay").hidden = true;
       if (e.nav.event) App.go("events", { select: e.nav.event });
       if (e.nav.tag) App.go("tags", { tag: e.nav.tag });
+      if (e.nav.mission) App.go("missions", { select: e.nav.mission });
     } }, "открыть") : null)),
   errs.length > max ? h("li", { class: "muted" }, `…и ещё ${errs.length - max}`) : null);
 }

@@ -313,3 +313,52 @@ select.enemy-add { width: auto; padding: 2px 6px; font-size: 12px; }
 
 .banner { display: flex; align-items: center; gap: 12px; padding: 8px 18px; background: #2A2418; border-bottom: 1px solid #6B5A33; color: #E3C98E; font-size: 13px; flex: none; }
 .banner .btn { color: var(--text); }
+
+/* ===== Миссии ===== */
+.view-missions { display: flex; }
+.ms-side { width: 260px; }
+.ms-main { flex: 1; width: auto; min-width: 0; }
+.ms-preview { width: min(380px, 30vw); flex: none; border-left: 1px solid var(--line); background: var(--bg-deep); overflow: auto; padding: 16px; }
+.ms-loc { color: var(--text); font-weight: 700; margin-top: 6px; }
+.ms-item { padding-left: 26px; font-size: 13.5px; }
+.ms-item .type-dot { width: 8px; height: 8px; }
+.ms-item-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-orphan { font-size: 12px; padding: 8px 8px 2px; }
+.pin-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--gold); flex: none; }
+.rumor-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.rumor-row small { grid-column: 1 / -1; margin-top: -4px; }
+.lore-ref { background: var(--bg-deep); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 12px; font-family: "PT Serif", serif; color: var(--silver); }
+.lore-ref summary { cursor: pointer; color: var(--gold); font-family: "PT Sans"; }
+.lore-ref p { margin: 8px 0 4px; }
+.threat-pick { display: flex; align-items: center; gap: 2px; }
+.threat-pick .tp { background: none; border: 0; font-size: 20px; color: #3A3E4E; padding: 0 2px; }
+.threat-pick .tp.on { color: #C7793A; }
+.threat-pick span { margin-left: 8px; font-size: 13px; }
+.stage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.stage-card { background: var(--bg-deep); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.stage-card .row { flex-wrap: nowrap; }
+.stage-n { font-family: "Cormorant"; font-size: 22px; color: var(--gold); }
+input.stage-name { font-family: "Cormorant"; font-size: 18px; font-weight: 600; }
+.opt-block.part-block { border-top: 3px solid #8A6A33; }
+.pv-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.pv-empty { margin-top: 40px; text-align: center; }
+.pv-card { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.pv-art { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.pv-title { font: 600 24px/1.1 "Cormorant", serif; display: flex; gap: 8px; align-items: baseline; }
+.pv-star { color: var(--gold); font-size: 16px; }
+.pv-sub { color: var(--dim); font-size: 12.5px; margin-top: -4px; }
+.pv-h { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-top: 4px; }
+.pv-text { font-family: "PT Serif", serif; font-size: 13.5px; line-height: 1.55; margin: 0; }
+.pv-rumors { margin: 0; padding-left: 16px; font-family: "PT Serif", serif; font-style: italic; font-size: 13.5px; color: var(--silver); display: flex; flex-direction: column; gap: 3px; }
+.pv-hint { font-style: normal; color: var(--text); border-bottom: 1px dashed var(--c); }
+.pv-intel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pv-intel > div { background: var(--bg-deep); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; }
+.pv-intel span { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+.pv-intel b { font: 600 16px "Cormorant", serif; }
+.pv-threat { color: #C7793A; letter-spacing: 2px; }
+.pv-threat i { color: #3A3E4E; font-style: normal; }
+.chip.unknown { --c: #6A6F85; border-style: dashed; letter-spacing: .1em; padding-left: 10px; font-family: "PT Sans"; }
+.pv-actions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.pv-actions li { background: var(--bg-deep); border: 1px solid var(--line-soft); border-radius: 6px; padding: 5px 8px; }
+.pv-need { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #E3C98E; margin-right: 6px; }
+@media (max-width: 1250px) { .ms-preview { display: none; } }

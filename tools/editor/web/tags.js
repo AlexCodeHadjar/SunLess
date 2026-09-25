@@ -25,7 +25,7 @@ const TagsView = {
     // счётчики использования всех боевых тегов за один проход
     const n = {};
     for (const [fk, paths] of Object.entries(COMBAT_TAG_PATHS)) {
-      for (const f of fk === "@events" ? eventFiles() : [fk]) for (const o of list(f)) for (const p of paths)
+      for (const f of filesFor(fk)) for (const o of list(f)) for (const p of paths)
         walkPath(o, p.split("/"), (v) => { n[v] = (n[v] || 0) + 1; });
     }
     return n;

@@ -19,6 +19,7 @@ const F = {
   enemyAbilities: "data/combat/enemy_abilities.json",
   chapters: "data/chapters.json",
   regions: "data/regions.json",
+  locations: "data/locations.json",
 };
 
 const STATS = ["power", "will", "cunning"];
@@ -126,6 +127,9 @@ const confirmBox = (title, text, label = "Удалить") =>
 
 const list = (rel) => DB.files[rel] || (DB.files[rel] = []);
 const eventFiles = () => Object.keys(DB.files).filter((f) => f.startsWith("data/events/")).sort();
+const missionFiles = () => Object.keys(DB.files).filter((f) => f.startsWith("data/missions/")).sort();
+// ключ таблицы путей → файлы: "@events" и "@missions" — все файлы папки
+const filesFor = (fk) => (fk === "@events" ? eventFiles() : fk === "@missions" ? missionFiles() : [fk]);
 const byId = (rel, id) => list(rel).find((x) => x.id === id);
 
 function touch(rel) {
@@ -347,6 +351,7 @@ const COMBAT_TAG_PATHS = {
   [F.roundCards]: ["tags[]", "effects[]/tag"],
   [F.tactics]: ["add_tags[]", "blocked_by_env[]", "cancel_enemy_tags[]", "double_tags[]", "enemy_penalty_if/tags[]", "requires/hero_any[]", "self_tags[]"],
   [F.enemyAbilities]: ["when_tags[]", "negated_by[]", "cancel_hero_tags[]", "backfire_tags[]", "reduced_by/tags[]"],
+  "@missions": ["known_tags[]", "hidden_tags[]", "actions[]/requires_any[]"],
   "@events": ["options[]/on_success[]/hero_tags[]", "options[]/on_success[]/enemy_tags[]",
     "options[]/on_failure[]/hero_tags[]", "options[]/on_failure[]/enemy_tags[]",
     "on_appear[]/hero_tags[]", "on_appear[]/enemy_tags[]", "on_success_common[]/hero_tags[]", "on_success_common[]/enemy_tags[]"],
@@ -363,6 +368,7 @@ const CTX_TAG_PATHS = {
   [F.enhancements]: ["bonuses[]/tags[]"],
   [F.abilities]: ["bonuses[]/tags[]"],
   [F.traumas]: ["context_tag"],
+  "@missions": ["context[]", "actions[]/stages[]/tags[]"],
   "@events": ["tags[]", "options[]/tags[]", "options[]/on_success[]/tags[]", "options[]/on_failure[]/tags[]",
     "on_appear[]/tags[]", "on_success_common[]/tags[]"],
 };
@@ -395,7 +401,7 @@ function tagRefs(name, context = false) {
   const table = context ? CTX_TAG_PATHS : COMBAT_TAG_PATHS;
   const out = [];
   for (const [fk, paths] of Object.entries(table)) {
-    const files = fk === "@events" ? eventFiles() : [fk];
+    const files = filesFor(fk);
     for (const f of files) {
       for (const obj of list(f)) {
         for (const p of paths) {
@@ -412,7 +418,7 @@ function replaceTag(name, newName, context = false) {
   const table = context ? CTX_TAG_PATHS : COMBAT_TAG_PATHS;
   let n = 0;
   for (const [fk, paths] of Object.entries(table)) {
-    const files = fk === "@events" ? eventFiles() : [fk];
+    const files = filesFor(fk);
     for (const f of files) {
       let changed = false;
       for (const obj of list(f)) {
@@ -448,7 +454,7 @@ function refLabel(ref) {
     [F.characters]: "Персонаж", [F.enhancements]: "Усиление", [F.enemies]: "Противник", [F.abilities]: "Способность",
     [F.traumas]: "Травма", [F.synergies]: "Симбиоз", [F.conflicts]: "Конфликт", [F.fields]: "Поле боя",
     [F.roundCards]: "Карта раунда", [F.tactics]: "Приём", [F.enemyAbilities]: "Намерение врага",
-  }[f] || (f.startsWith("data/events/") ? "Событие" : f);
+  }[f] || (f.startsWith("data/events/") ? "Событие" : f.startsWith("data/missions/") ? "Миссия" : f);
   return { group, who, id: o.id, where: ref.path.replace(/\[\]/g, "").replace(/\//g, " › ") };
 }
 
@@ -550,13 +556,13 @@ function validate() {
   // теги
   const strict = (f, p) => STRICT_TAG_PATHS.has(f + ":" + p);
   for (const [fk, paths] of Object.entries(COMBAT_TAG_PATHS)) {
-    for (const f of fk === "@events" ? eventFiles() : [fk]) for (const o of list(f)) for (const p of paths)
+    for (const f of filesFor(fk)) for (const o of list(f)) for (const p of paths)
       walkPath(o, p.split("/"), (v) => {
         if (!tagSet.has(v) && !v.startsWith("*")) add(`${o.id}`, `нет боевого тега «${v}» (${p.replace(/\[\]/g, "")})`, { tag: v }, !strict(fk, p));
       });
   }
   for (const [fk, paths] of Object.entries(CTX_TAG_PATHS)) {
-    for (const f of fk === "@events" ? eventFiles() : [fk]) for (const o of list(f)) for (const p of paths)
+    for (const f of filesFor(fk)) for (const o of list(f)) for (const p of paths)
       walkPath(o, p.split("/"), (v) => { if (!ctxSet.has(v)) add(`${o.id}`, `нет тега проверки «${v}»`, null, !(fk === "@events" && (p === "tags[]" || p === "options[]/tags[]"))); });
   }
   // события
@@ -612,6 +618,7 @@ function validate() {
     }
     if (ch.final && !events[ch.final]) add(ch.id, `нет финального события ${ch.final}`);
   }
+  if (typeof validateMissions === "function") validateMissions(add);
   // сюжетная цепочка от E01
   const seen = new Set();
   let cur = "E01";

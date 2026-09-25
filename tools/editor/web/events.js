@@ -827,9 +827,10 @@ const EventsView = {
   },
 
   // Список команд (последствия или условия): сводка + форма правки по щелчку.
-  cmdList(title, obj, key, schema, typeKey, structural) {
+  // onTouch — чем отметить правку (по умолчанию — файл выбранного события).
+  cmdList(title, obj, key, schema, typeKey, structural, onTouch = null) {
     const box = h("div", { class: "effects" });
-    const touchCurrent = () => { const r = this.events()[this.selected]; if (r) touch(r.file); };
+    const touchCurrent = onTouch || (() => { const r = this.events()[this.selected]; if (r) touch(r.file); });
     const summary = (e) => typeKey === "cmd" ? effectSummary(e) : conditionSummary(e);
     const render = () => {
       box.innerHTML = "";

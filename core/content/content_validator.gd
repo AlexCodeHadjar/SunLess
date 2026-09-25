@@ -37,6 +37,7 @@ static func validate(c: Content) -> Array[String]:
 
 	_validate_combat(c, errors)
 	_validate_chapters(c, errors)
+	_validate_missions(c, errors)
 
 	# Сюжетная цепочка от E01 должна дойти до конца без обрывов и циклов.
 	var seen := {}
@@ -250,3 +251,125 @@ static func _validate_combat(c: Content, errors: Array[String]) -> void:
 		for t: String in Array(c.tactics[xid].get("add_tags", [])) + Array(c.tactics[xid].get("self_tags", [])):
 			if not T.has(t):
 				errors.append("Приём %s: нет тега «%s»" % [xid, t])
+
+
+## Миссии и локации (docs/15, ветка gameplay/missions).
+const MISSION_TYPES := ["story", "side", "random"]
+
+
+static func _validate_missions(c: Content, errors: Array[String]) -> void:
+	for lid: String in c.locations:
+		var loc: Dictionary = c.locations[lid]
+		if str(loc.get("name", "")) == "":
+			errors.append("Локация %s: нет названия" % lid)
+		var pos: Array = loc.get("pos", [])
+		if pos.size() != 2:
+			errors.append("Локация %s: pos должен быть [x, y]" % lid)
+		for mid: String in loc.get("random", {}).get("pool", []):
+			if not c.missions.has(mid):
+				errors.append("Локация %s: в пуле нет миссии %s" % [lid, mid])
+	for mid: String in c.missions:
+		_validate_mission(c, mid, errors)
+
+
+static func _validate_mission(c: Content, mid: String, errors: Array[String]) -> void:
+	var m: Dictionary = c.missions[mid]
+	var w := "Миссия %s" % mid
+	if not c.locations.has(str(m.get("location", ""))):
+		errors.append("%s: нет локации «%s»" % [w, m.get("location", "")])
+	if not MISSION_TYPES.has(str(m.get("type", ""))):
+		errors.append("%s: неизвестный тип «%s»" % [w, m.get("type", "")])
+	for key: String in ["title", "briefing", "arrival"]:
+		if str(m.get(key, "")) == "":
+			errors.append("%s: пустое поле %s" % [w, key])
+	var threat := int(m.get("threat", 0))
+	if threat < 1 or threat > 5:
+		errors.append("%s: угроза %d, нужно 1–5" % [w, threat])
+	var dur := float(m.get("duration", 0))
+	if dur < 5.0 or dur > 15.0:
+		errors.append("%s: время в пути %s с, нужно 5–15" % [w, dur])
+	var squad: Dictionary = m.get("squad", {})
+	var smin := int(squad.get("min", 1))
+	var smax := int(squad.get("max", 1))
+	if smin < 1 or smax > 5 or smin > smax:
+		errors.append("%s: мест в отряде %d–%d, нужно 1 ≤ min ≤ max ≤ 5" % [w, smin, smax])
+	if m.has("trauma_pool") and not POOLS.has(m["trauma_pool"]):
+		errors.append("%s: неизвестный пул травм" % w)
+	for en: String in m.get("enemies", []):
+		if not c.enemies.has(en):
+			errors.append("%s: нет противника %s" % [w, en])
+	if m.has("field") and not c.fields.has(str(m["field"])):
+		errors.append("%s: нет поля боя %s" % [w, m["field"]])
+	for t: String in Array(m.get("known_tags", [])) + Array(m.get("hidden_tags", [])):
+		if not c.combat_tags.has(t):
+			errors.append("%s: нет боевого тега «%s»" % [w, t])
+	for t: String in m.get("context", []):
+		if not c.tags.has(t):
+			errors.append("%s: нет тега проверки «%s»" % [w, t])
+	for r: Dictionary in m.get("rumors", []):
+		var text := str(r.get("text", ""))
+		if not (text.contains("[") and text.contains("]")):
+			errors.append("%s: в слухе нет намёка в [скобках]: %s" % [w, text])
+		var tag := str(r.get("tag", ""))
+		if tag != "" and not c.combat_tags.has(tag) and not c.tags.has(tag):
+			errors.append("%s: слух ссылается на неизвестный тег «%s»" % [w, tag])
+	for nid: String in m.get("next", []):
+		if not c.missions.has(nid):
+			errors.append("%s: next → нет миссии %s" % [w, nid])
+
+	var acts: Array = m.get("actions", [])
+	var ids := {}
+	var working := 0
+	var story := 0
+	for a: Dictionary in acts:
+		var aid := str(a.get("id", ""))
+		var aw := "%s / %s" % [w, aid]
+		if aid == "" or ids.has(aid):
+			errors.append("%s: пустой или повторный id действия" % aw)
+		ids[aid] = true
+		if str(a.get("label", "")) == "":
+			errors.append("%s: нет названия действия" % aw)
+		for t: String in a.get("requires_any", []):
+			if not c.combat_tags.has(t):
+				errors.append("%s: нет боевого тега «%s»" % [aw, t])
+		if bool(a.get("story", false)):
+			story += 1
+		if bool(a.get("retreat", false)):
+			continue
+		working += 1
+		var stages: Array = a.get("stages", [])
+		if stages.is_empty() or stages.size() > 3:
+			errors.append("%s: этапов %d, нужно 1–3" % [aw, stages.size()])
+		for st: Dictionary in stages:
+			_validate_stage(c, aw + " / " + str(st.get("name", "?")), st, errors)
+		for key: String in ["on_success", "on_partial", "on_failure"]:
+			_validate_effects(c, aw + " " + key, a.get(key, []), errors)
+	if working == 0:
+		errors.append("%s: нет ни одного действия, кроме отступления" % w)
+	if str(m.get("type", "")) == "story" and story == 0:
+		errors.append("%s: у сюжетной миссии нет сюжетного действия" % w)
+
+
+static func _validate_stage(c: Content, w: String, st: Dictionary, errors: Array[String]) -> void:
+	if str(st.get("name", "")) == "":
+		errors.append("%s: у этапа нет названия" % w)
+	if st.has("combat"):
+		var en: Array = st["combat"].get("enemies", [])
+		if en.is_empty():
+			errors.append("%s: бой без противников" % w)
+		for e: String in en:
+			if not c.enemies.has(e):
+				errors.append("%s: нет противника %s" % [w, e])
+		if st["combat"].has("field") and not c.fields.has(str(st["combat"]["field"])):
+			errors.append("%s: нет поля боя %s" % [w, st["combat"]["field"]])
+	elif not bool(st.get("auto", false)):
+		var sum := 0
+		for s: String in st.get("req", {}):
+			if not STATS.has(s):
+				errors.append("%s: неизвестная характеристика «%s»" % [w, s])
+			sum += int(st["req"][s])
+		if sum <= 0:
+			errors.append("%s: у этапа нет требований — нужен req, combat или auto" % w)
+	for t: String in st.get("tags", []):
+		if not c.tags.has(t):
+			errors.append("%s: нет тега проверки «%s»" % [w, t])
