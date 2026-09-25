@@ -57,9 +57,9 @@ func test_wear_progression() -> void:
 func test_wear_exemptions() -> void:
 	var c := content()
 	var s := RunState.new()
-	s.arc = "nightmare"
+	s.chapter = "nightmare"
 	check(not WearRules.wears(c, s, "U02"), "Колокольчик не изнашивается в Первом Кошмаре")
-	s.arc = "academy"
+	s.chapter = "academy"
 	check(WearRules.wears(c, s, "U02"), "после Кошмара Колокольчик изнашивается")
 	check(not WearRules.wears(c, s, "K01"), "знания не изнашиваются")
 	check(WearRules.wears(c, s, "U01"), "обычное оружие изнашивается")

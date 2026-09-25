@@ -1,16 +1,13 @@
 class_name Content
 extends RefCounted
-## Неизменяемые описания карт и событий, загруженные из data/*.json.
+## Неизменяемые описания карт, миссий и боя, загруженные из data/*.json.
 
 var characters: Dictionary = {}
 var enhancements: Dictionary = {}
 var abilities: Dictionary = {}
 var traumas: Dictionary = {}
-var initiators: Dictionary = {}
-var events: Dictionary = {}
 var regions: Dictionary = {}
 var tags: Dictionary = {}
-var thoughts: Dictionary = {}
 # бой
 var combat_tags: Dictionary = {}
 var synergies: Dictionary = {}
@@ -21,8 +18,7 @@ var enemies: Dictionary = {}
 var tactics: Dictionary = {}
 var enemy_abilities: Dictionary = {}
 var lore: Dictionary = {}          # сюжетные описания «По книге» (tools/gen_lore.py)
-var chapters: Dictionary = {}      # главы свободного режима (Хроника с якорями)
-# миссии и отряды (docs/15, ветка gameplay/missions)
+# миссии и отряды (docs/15)
 var locations: Dictionary = {}     # локации глав: data/locations.json
 var missions: Dictionary = {}      # миссии: data/missions/*.json
 var shops: Dictionary = {}         # магазины глав: data/shops.json
@@ -35,10 +31,8 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.enhancements = c._load_map(dir + "/enhancements.json")
 	c.abilities = c._load_map(dir + "/abilities.json")
 	c.traumas = c._load_map(dir + "/traumas.json")
-	c.initiators = c._load_map(dir + "/initiators.json")
 	c.regions = c._load_map(dir + "/regions.json")
 	c.tags = c._load_map(dir + "/tags.json")
-	c.thoughts = c._load_map(dir + "/thoughts.json")
 	c.combat_tags = c._load_map(dir + "/combat/tags.json")
 	c.synergies = c._load_map(dir + "/combat/synergies.json")
 	c.conflicts = c._load_map(dir + "/combat/conflicts.json")
@@ -48,25 +42,11 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.tactics = c._load_map(dir + "/combat/tactics.json")
 	c.enemy_abilities = c._load_map(dir + "/combat/enemy_abilities.json")
 	c.lore = c._load_map(dir + "/lore.json")
-	c.chapters = c._load_map(dir + "/chapters.json")
 	if FileAccess.file_exists(dir + "/locations.json"):
 		c.locations = c._load_map(dir + "/locations.json")
 	c.missions = c._load_dir(dir + "/missions", "миссии")
 	if FileAccess.file_exists(dir + "/shops.json"):
 		c.shops = c._load_map(dir + "/shops.json")
-	var ev_dir := DirAccess.open(dir + "/events")
-	if ev_dir == null:
-		c.load_errors.append("Нет папки %s/events" % dir)
-	else:
-		var files := ev_dir.get_files()
-		files.sort()
-		for f in files:
-			if f.ends_with(".json"):
-				var m := c._load_map(dir + "/events/" + f)
-				for k: String in m:
-					if c.events.has(k):
-						c.load_errors.append("Дубликат события %s (%s)" % [k, f])
-					c.events[k] = m[k]
 	return c
 
 
@@ -121,8 +101,6 @@ func card_kind(card_id: String) -> String:
 		return "character"
 	if enhancements.has(card_id):
 		return "enhancement"
-	if initiators.has(card_id):
-		return "initiator"
 	if abilities.has(card_id):
 		return "ability"
 	if traumas.has(card_id):
@@ -133,17 +111,10 @@ func card_kind(card_id: String) -> String:
 
 
 func card_name(card_id: String) -> String:
-	for m: Dictionary in [characters, enhancements, initiators, abilities, traumas, events, enemies]:
+	for m: Dictionary in [characters, enhancements, abilities, traumas, enemies, missions]:
 		if m.has(card_id):
 			return str(m[card_id].get("name", m[card_id].get("title", card_id)))
 	return card_id
-
-
-func option(event_id: String, option_id: String) -> Dictionary:
-	for o: Dictionary in events.get(event_id, {}).get("options", []):
-		if o.get("id", "") == option_id:
-			return o
-	return {}
 
 
 ## Базовые характеристики стадии персонажа.

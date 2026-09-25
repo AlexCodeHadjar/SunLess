@@ -1,7 +1,7 @@
 extends Node
 ## Автоснимки режима миссий (docs/15): Godot --path . -- --mshots=<папка>
 ## Меню → карта с картами миссий и магазином → покупка героя → брифинг → два отряда в пути →
-## прибытие → отчёт → вторая миссия с боем → просмотр боя.
+## прибытие → отчёт → вторая миссия с боем → просмотр боя → середина главы → конец главы → Академия.
 
 var out_dir := ""
 
@@ -135,6 +135,22 @@ func _run() -> void:
 	await _wait(1.0)
 	await _shot("m14_mid_chapter")
 	st.demo_complete = true
+	st.flags["next_chapter"] = "academy"
 	await _wait(1.0)
 	await _shot("m15_chapter_end")
+	# Академия: «Дальше» на экране конца главы
+	GameState.next_chapter()
+	get_tree().reload_current_scene()
+	await _wait(1.5)
+	await _shot("m16_academy_map")
+	for mid: String in ["MA12", "MA13"]:
+		GameState.state.missions[mid] = {"status": "done", "attempts": 0}
+	for mid: String in ["MA14", "MA15", "MA16", "SA01", "RA02", "RA03"]:
+		MissionFlow.open(ContentDB.data, GameState.state, mid)
+	GameState.missions_changed.emit()
+	await _wait(1.0)
+	await _shot("m17_academy_parallel")
+	get_tree().current_scene.call("_open_mission", "MA16")
+	await _wait(0.8)
+	await _shot("m18_brief_ma16")
 	get_tree().quit()

@@ -6,7 +6,6 @@ const F = {
   enhancements: "data/enhancements.json",
   abilities: "data/abilities.json",
   traumas: "data/traumas.json",
-  initiators: "data/initiators.json",
   enemies: "data/combat/enemies.json",
   ctxTags: "data/tags.json",
   tags: "data/combat/tags.json",
@@ -17,7 +16,6 @@ const F = {
   roundCards: "data/combat/round_cards.json",
   tactics: "data/combat/tactics.json",
   enemyAbilities: "data/combat/enemy_abilities.json",
-  chapters: "data/chapters.json",
   regions: "data/regions.json",
   locations: "data/locations.json",
   shops: "data/shops.json",
@@ -470,19 +468,13 @@ const EFFECTS = {
   clear_traumas: { name: "Снять все травмы", fields: { target: "character", categories: "list", text: "text" } },
   set_flag: { name: "Поставить флаг", fields: { flag: "text", text: "text" } },
   clear_flag: { name: "Снять флаг", fields: { flag: "text" } },
-  adjust_resource: { name: "Осколки или мана ±", fields: { resource: { shards: "осколки душ", mana: "мана" }, value: "number" } },
-  add_temp: { name: "Временный бонус", fields: { stat: "stat", value: "number", label: "text", tags: "ctxtags", remaining: "number" } },
+  adjust_resource: { name: "Осколки душ ±", fields: { resource: { shards: "осколки душ" }, value: "number" } },
+  add_temp: { name: "Временный бонус", fields: { stat: "stat", value: "number", label: "text", tags: "ctxtags" } },
   add_perm: { name: "Бонус навсегда", fields: { stat: "stat", value: "number", character: "character" } },
   set_stage: { name: "Новая стадия персонажа", fields: { character: "character", stage: "text" } },
-  reveal: { name: "Раскрыть последствия", fields: { event: "event", options: "list", text: "text" } },
   add_codex: { name: "Запись в кодекс", fields: { entry: "text", text: "text" } },
-  set_region: { name: "Сменить регион", fields: { region: "region", arc: "text" } },
   remove_temporaries: { name: "Временные спутники уходят", fields: {} },
-  combat_mod: { name: "Изменить будущий бой", fields: { event: "event", hero_tags: "tags", enemy_tags: "tags", add_enemies: "list", allies: "list", field: "field", text: "text" } },
-  spawn_event: { name: "Открыть событие", fields: { event: "event" } },
-  start_chapter: { name: "Открыть главу", fields: { chapter: "chapter" } },
   reset_wear: { name: "Сбросить износ (кузнец)", fields: {} },
-  end_demo: { name: "Конец демоверсии", fields: { text: "text" } },
   text: { name: "Показать текст", fields: { text: "text" } },
 };
 
@@ -494,7 +486,7 @@ const CONDITIONS = {
   has_flag: { name: "Стоит флаг", fields: { flag: "text", text: "text" } },
   not_flag: { name: "Флага нет", fields: { flag: "text", text: "text" } },
   owned_count: { name: "Несколько карт из списка", fields: { cards: "list", min: "number", text: "text" } },
-  attached: { name: "Карта приложена к событию", fields: { card: "card" } },
+  attached: { name: "Карта в кармашке отряда", fields: { card: "card" } },
   executor_has_trauma: { name: "У исполнителя есть травма", fields: { severity: "list", categories: "list", text: "text" } },
 };
 
@@ -514,7 +506,7 @@ function describeValue(k, v) {
   if (Array.isArray(v)) return v.map((x) => (typeof x === "string" && findCard(x) ? cardName(x) : x)).join(", ");
   if (REF_KEYS.includes(k) && typeof v === "string") return cardName(v);
   if (k === "stat") return STAT_NAMES[v] || v;
-  if (k === "resource") return { shards: "осколки", mana: "мана" }[v] || v;
+  if (k === "resource") return { shards: "осколки" }[v] || v;
   if (k === "value" || k === "delta") return (v > 0 ? "+" : "") + v;
   return String(v);
 }
@@ -537,9 +529,6 @@ function validate() {
   const errs = [];
   // warn — игра это не проверяет и запустится; без warn — ContentValidator покажет ошибку вместо меню
   const add = (where, text, nav, warn = false) => errs.push({ where, text, nav, warn });
-  const events = {};
-  for (const f of eventFiles()) for (const e of list(f)) events[e.id] = e;
-  const cards = new Set(allCards().filter((c) => c.kind !== "event").map((c) => c.id));
   const tagSet = new Set(list(F.tags).map((t) => t.id));
   const ctxSet = new Set(list(F.ctxTags).map((t) => t.id));
 
@@ -566,69 +555,7 @@ function validate() {
     for (const f of filesFor(fk)) for (const o of list(f)) for (const p of paths)
       walkPath(o, p.split("/"), (v) => { if (!ctxSet.has(v)) add(`${o.id}`, `нет тега проверки «${v}»`, null, !(fk === "@events" && (p === "tags[]" || p === "options[]/tags[]"))); });
   }
-  // события
-  const checkEffects = (where, effs) => {
-    for (const e of effs || []) {
-      if (!EFFECTS[e.cmd]) { add(where, `неизвестная команда «${e.cmd}»`); continue; }
-      if (e.card && !cards.has(e.card)) add(where, `${e.cmd}: нет карты ${e.card}`);
-      if (e.ability && !byId(F.abilities, e.ability)) add(where, `нет способности ${e.ability}`);
-      if (e.trauma && !byId(F.traumas, e.trauma)) add(where, `нет травмы ${e.trauma}`);
-      if (e.stat && !STATS.includes(e.stat)) add(where, `неизвестная характеристика ${e.stat}`);
-      if (["reveal", "spawn_event", "combat_mod"].includes(e.cmd) && e.event && !events[e.event]) add(where, `${e.cmd}: нет события ${e.event}`);
-      if (e.cmd === "start_chapter" && !byId(F.chapters, e.chapter)) add(where, `нет главы ${e.chapter}`);
-    }
-  };
-  for (const [eid, ev] of Object.entries(events)) {
-    const nav = { event: eid };
-    if (!EVENT_TYPES[ev.type]) add(eid, `неизвестный тип «${ev.type}»`, nav);
-    if (!ev.title) add(eid, "нет заголовка", nav);
-    if (ev.next && !events[ev.next]) add(eid, `next → несуществующее ${ev.next}`, nav);
-    const opts = ev.options || [];
-    if (opts.length !== 3) add(eid, `вариантов ${opts.length}, нужно ровно 3`, nav);
-    let story = 0;
-    const ids = new Set();
-    for (const o of opts) {
-      const ow = `${eid} / ${o.id}`;
-      if (!o.id || ids.has(o.id)) add(ow, "пустой или повторный id варианта", nav);
-      ids.add(o.id);
-      if (!o.label) add(ow, "нет названия", nav);
-      const check = o.check || "stat";
-      const sum = Object.values(o.req || {}).reduce((a, b) => a + Number(b), 0);
-      if ((check === "stat" || check === "gate_stat") && sum <= 0) add(ow, "проверка без требований — нужен check: auto", nav);
-      if (check === "combat") {
-        const en = (o.combat || {}).enemies || [];
-        if (!en.length) add(ow, "бой без противников", nav);
-        for (const m of en) if (!byId(F.enemies, m)) add(ow, `нет противника ${m}`, nav);
-      }
-      if (o.story) story++;
-      checkEffects(ow, o.on_success);
-      checkEffects(ow, o.on_failure);
-    }
-    if (ev.type === "story" && story !== 1) add(eid, `сюжетных вариантов ${story}, нужен ровно 1`, nav);
-    if (ev.type !== "story" && story > 0) add(eid, "сюжетный вариант у несюжетного события", nav);
-    if (ev.type === "reward" && opts.some((o) => (o.check || "stat") !== "auto")) add(eid, "у наградного события все варианты должны быть auto", nav);
-    checkEffects(eid, ev.on_appear);
-    checkEffects(eid, ev.on_success_common);
-  }
-  for (const i of list(F.initiators)) if (!events[i.event]) add(i.id, `инициатор ведёт в несуществующее событие ${i.event}`);
-  for (const r of list(F.regions)) for (const e of r.random_pool || []) if (!events[e]) add(r.id, `в пуле региона нет события ${e}`);
-  for (const ch of list(F.chapters)) {
-    for (const a of [...(ch.anchors || []), ...(ch.threads || [])]) {
-      if (!events[a.event]) add(ch.id, `нет события ${a.event}`);
-      for (const d of a.after || []) if (!events[d]) add(ch.id, `условие ссылается на несуществующее ${d}`);
-    }
-    if (ch.final && !events[ch.final]) add(ch.id, `нет финального события ${ch.final}`);
-  }
   if (typeof validateMissions === "function") validateMissions(add);
-  // сюжетная цепочка от E01
-  const seen = new Set();
-  let cur = "E01";
-  while (cur) {
-    if (seen.has(cur)) { add("Сюжет", `цепочка зациклена на ${cur}`); break; }
-    seen.add(cur);
-    if (!events[cur]) { add("Сюжет", `цепочка ведёт в несуществующее ${cur}`); break; }
-    cur = events[cur].next || "";
-  }
   return errs;
 }
 

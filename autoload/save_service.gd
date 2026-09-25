@@ -59,9 +59,6 @@ static func missing_ids(content: Content, state: RunState) -> Array:
 	for card: String in state.collection:
 		if content.card_kind(card) == "":
 			out.append(card)
-	for eid: String in state.events:
-		if not content.events.has(eid):
-			out.append(eid)
 	for mid: String in state.missions:
 		if not content.missions.has(mid):
 			out.append(mid)

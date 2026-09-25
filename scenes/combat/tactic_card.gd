@@ -51,9 +51,6 @@ func _draw() -> void:
 	draw_multiline_string(fb, inner.position + Vector2(6, 60), str(t.get("name", tactic_id)), HORIZONTAL_ALIGNMENT_CENTER, inner.size.x - 12, 26, 2, Palette.TEXT)
 	draw_line(inner.position + Vector2(20, 100), inner.position + Vector2(inner.size.x - 20, 100), Palette.LINE, 1.0)
 	draw_multiline_string(f, inner.position + Vector2(10, 126), str(t.get("text", "")), HORIZONTAL_ALIGNMENT_LEFT, inner.size.x - 20, 17, 5, Palette.TEXT_DIM)
-	var cost := int(t.get("mana", 0))
-	if cost > 0:
-		draw_string(UITheme.font("sans_bold"), inner.position + Vector2(10, inner.size.y - 12), "◈ %d" % cost, HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Palette.MANA)
 	var bonus := float(t.get("bonus", 0.0))
 	if bonus > 0:
 		draw_string(UITheme.font("title_bold"), inner.position + Vector2(0, inner.size.y - 10), "+%d%%" % int(bonus * 100), HORIZONTAL_ALIGNMENT_RIGHT, inner.size.x - 10, 27, Palette.STAT_UP)

@@ -10,12 +10,12 @@ extends Control
 signal closed
 
 const TYPE_TEXT := {
-	"character": "[b]Персонаж[/b]\nИсполнитель событий. Его Сила, Воля и Хитрость решают проверки, травмы ложатся на него, в бою он — герой или союзник в поддержке. Смерть Санни — конец прохождения.",
-	"enhancement": "[b]Усиление[/b]\nПредмет, Воспоминание или знание. Прикладывается к персонажу в событии (до трёх) и добавляет характеристики и теги. Предметы изнашиваются и могут сломаться.",
-	"initiator": "[b]Инициатор[/b]\nОдноразовая карта: перетащите на карту мира — появится конкретное событие, а карта исчезнет.",
+	"character": "[b]Персонаж[/b]\nГерой отряда. Его Сила, Воля и Хитрость решают этапы миссий, травмы ложатся на него, в автобое он — ведущий или союзник в поддержке. Смерть навсегда.",
+	"enhancement": "[b]Усиление[/b]\nПредмет, Воспоминание или знание. Лежит в кармашке героя (до трёх) и добавляет характеристики и теги. Предметы изнашиваются и могут сломаться.",
 	"trauma": "[b]Травма[/b]\nПоследствие провала. Снижает характеристики персонажа, пока её не вылечат. С третьей травмы каждая новая может убить.",
 	"enemy": "[b]Противник[/b]\nКошмарное существо или враг. Сила в бою зависит от ранга, класса и тегов; раны сохраняются между встречами.",
-	"event": "[b]Событие[/b]\nСитуация на карте мира: три варианта, у каждого свои требования и последствия.",
+	"mission": "[b]Миссия[/b]
+Задание на карте главы: прочтите описание и слухи, соберите отряд и отправьте его.",
 }
 const STAT_TEXT := {
 	"power": "[b]Сила[/b] — физическая мощь, скорость, бой, грубое действие.",
@@ -65,8 +65,8 @@ func _ready() -> void:
 	panel.add_child(_frame)
 	var c := ContentDB.data
 	var kind := c.card_kind(card_id)
-	if kind == "" and c.events.has(card_id):
-		kind = "event"
+	if kind == "" and c.missions.has(card_id):
+		kind = "mission"
 	# эмблема типа карты
 	var type_icon := TextureRect.new()
 	type_icon.texture = UITheme.emblem(_emblem_for(kind))
@@ -506,10 +506,9 @@ func _def() -> Dictionary:
 	match c.card_kind(card_id):
 		"character": return c.characters.get(card_id, {})
 		"enhancement": return c.enhancements.get(card_id, {})
-		"initiator": return c.initiators.get(card_id, {})
 		"trauma": return c.traumas.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
-	return c.events.get(card_id, {})
+	return c.missions.get(card_id, {})
 
 
 func _emblem_for(kind: String) -> String:
@@ -525,13 +524,11 @@ func _type_line(kind: String) -> String:
 			return "Персонаж" + (" · %s" % st if st != "" else "") + (" · погиб" if s and s.characters.has(card_id) and not s.is_alive(card_id) else "")
 		"enhancement":
 			return "Усиление · " + {"knowledge": "Знание", "memory": "Воспоминание", "improvised": "Подручное"}.get(d.get("origin", ""), "предмет")
-		"initiator":
-			return "Инициатор · одноразовый"
 		"trauma":
 			return "Травма"
 		"enemy":
 			return "Противник · %s · %s" % [CardView.RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CardView.CLASSES[clampi(int(d.get("class", 1)), 1, 7)]]
-	return "Событие"
+	return "Миссия"
 
 
 func _combat_tags() -> Array:
@@ -600,12 +597,7 @@ func _info_text() -> String:
 			if s:
 				var owner := _pocket_owner(card_id)
 				if owner != "":
-					out.append(_h("Кармашек") + "Лежит в кармашке персонажа «%s» — прикладывается к его событиям сама." % c.card_name(owner))
-		"initiator":
-			out.append(str(d.get("text", "")))
-			var ev: Dictionary = c.events.get(str(d.get("event", "")), {})
-			if not ev.is_empty():
-				out.append(_h("Создаёт событие") + "«%s»" % ev.get("title", ""))
+					out.append(_h("Кармашек") + "Лежит в кармашке персонажа «%s» — идёт с ним на миссии." % c.card_name(owner))
 		"trauma":
 			var lore: Dictionary = c.lore.get(card_id, {})
 			if str(lore.get("text", "")) != "":
@@ -642,37 +634,31 @@ func _story_text() -> String:
 	return "\n\n".join(out)
 
 
-## Журнал карты в текущем прохождении: участие в событиях и отметки (получение, травмы, поломка, гибель).
+## Журнал карты в текущем прохождении: миссии героя и отметки (получение, травмы, поломка, гибель).
 func _run_story() -> String:
 	var s := GameState.state
 	if s == null:
 		return _dim("Прохождение не начато.")
 	var c := ContentDB.data
 	var rows: Array = []
+	var words := {"success": "[color=#9FC29A]успех[/color]", "partial": "[color=#D08A48]с потерями[/color]",
+		"failure": "[color=#B65F63]провал[/color]", "retreat": "[color=#9A9CA6]отступление[/color]"}
 	for i in s.log.size():
 		var e: Dictionary = s.log[i]
-		if not e.has("event"):
+		if not e.has("mission") or not Array(e.get("heroes", [])).has(card_id):
 			continue
-		var role := ""
-		if str(e.get("executor", "")) == card_id:
-			role = "исполнитель"
-		elif Array(e.get("enh", [])).has(card_id):
-			role = "усиление"
-		if role == "":
-			continue
-		var ev: Dictionary = c.events.get(str(e["event"]), {})
-		var o := c.option(str(e["event"]), str(e.get("option", "")))
-		rows.append({"week": int(e["week"]), "seq": i, "kind": 0, "text": "«%s» — %s · %s · %s" % [ev.get("title", e["event"]), o.get("label", ""), role,
-			"[color=#9FC29A]успех[/color]" if e.get("success", false) else "[color=#B65F63]провал[/color]"]})
+		var a := MissionFlow.action(c, str(e["mission"]), str(e.get("action", "")))
+		rows.append({"t": float(e.get("clock", 0.0)), "seq": i, "kind": 0, "text": "«%s» — %s · %s" % [c.missions.get(str(e["mission"]), {}).get("title", e["mission"]), a.get("label", ""), words.get(str(e.get("outcome", "")), "")]})
 	for n: Dictionary in s.card_log:
 		if str(n.get("card", "")) == card_id:
-			rows.append({"week": int(n.get("week", 0)), "seq": int(n.get("seq", 0)), "kind": 1, "text": str(n.get("text", ""))})
+			rows.append({"t": float(n.get("t", 0.0)), "seq": int(n.get("seq", 0)), "kind": 1, "text": str(n.get("text", ""))})
 	if rows.is_empty():
-		return _dim("Вы ещё не встречали этого противника." if c.card_kind(card_id) == "enemy" else "Пока эта карта не участвовала в событиях.")
-	# по неделям; внутри недели — в порядке журнала, событие раньше своих последствий
-	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return [int(a["week"]), int(a["seq"]), int(a["kind"])] < [int(b["week"]), int(b["seq"]), int(b["kind"])])
+		return _dim("Вы ещё не встречали этого противника." if c.card_kind(card_id) == "enemy" else "Пока эта карта не участвовала в миссиях.")
+	rows.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return [int(x["seq"]), int(x["kind"])] < [int(y["seq"]), int(y["kind"])])
 	var lines: Array = []
 	for r: Dictionary in rows:
-		lines.append("[color=#B89A5E]Неделя %d[/color]  %s" % [r["week"], r["text"]])
-	return "\n".join(lines)
+		var t := int(r["t"])
+		lines.append("[color=#B89A5E]%d:%02d[/color]  %s" % [t / 60, t % 60, r["text"]])
+	return "
+".join(lines)

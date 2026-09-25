@@ -53,4 +53,4 @@ func test_missions_have_no_mana() -> void:
 	var m: Dictionary = c.missions["MS03"].duplicate(true)
 	m["actions"][0]["on_success"].append({"cmd": "adjust_resource", "resource": "mana", "value": 2})
 	c.missions["MS03"] = m
-	check("\n".join(ContentValidator.validate(c)).contains("маны в миссиях нет"), "мана в миссиях запрещена")
+	check("\n".join(ContentValidator.validate(c)).contains("маны нет"), "мана в миссиях запрещена")

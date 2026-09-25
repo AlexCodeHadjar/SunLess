@@ -2,7 +2,8 @@ class_name MissionMarker
 extends Control
 ## Миссия на карте главы — карта (docs/15 §15). Пока отряда нет — просто карта: щелчок открывает брифинг,
 ## героя можно бросить прямо на неё. Отряд отправлен — над картой кольцо таймера с секундами;
-## отряд прибыл — кольцо горит и пульсирует «!».
+## отряд прибыл — кольцо горит и пульсирует «!». Кольцо появляется с отскоком, последние секунды
+## отстукивают тихим тиком, прибытие — вспышка искр.
 
 signal pressed(mission_id: String)
 signal hero_dropped(mission_id: String, card_id: String)
@@ -47,13 +48,43 @@ func _ready() -> void:
 
 func set_state(p: float, rem: float, arr: bool) -> void:
 	var changed := arr != arrived or not is_equal_approx(p, progress) or int(ceil(rem)) != int(ceil(remaining))
+	var was_busy := busy()
+	var was_arrived := arrived
+	var sec_before := int(ceil(remaining))
 	progress = p
 	remaining = rem
 	arrived = arr
+	if not was_busy and busy() and not arrived:
+		_appear()
+	elif busy() and not arrived and int(ceil(rem)) != sec_before and int(ceil(rem)) in [1, 2, 3]:
+		AudioManager.play("tick", -14.0, 1.0 + 0.1 * (3 - int(ceil(rem))))
+	if arrived and not was_arrived:
+		_flash()
 	if changed:
 		card.dimmed = progress >= 0.0 and not arrived
 		card.queue_redraw()
 		_ring.queue_redraw()
+
+
+## Кольцо таймера появляется над картой с отскоком.
+func _appear() -> void:
+	_ring.pivot_offset = Vector2(size.x / 2.0, size.y * 0.36)
+	if Vfx.reduced():
+		return
+	_ring.scale = Vector2(0.2, 0.2)
+	create_tween().tween_property(_ring, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Отряд прибыл: вспышка искр над картой и толчок кольца.
+func _flash() -> void:
+	_ring.pivot_offset = Vector2(size.x / 2.0, size.y * 0.36)
+	if Vfx.reduced() or not is_inside_tree():
+		return
+	var fx := Vfx.burst(position + Vector2(size.x / 2.0, size.y * 0.36), true)
+	get_parent().add_child(fx)
+	Vfx.autofree(fx)
+	_ring.scale = Vector2(1.35, 1.35)
+	create_tween().tween_property(_ring, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 
 
 func busy() -> bool:

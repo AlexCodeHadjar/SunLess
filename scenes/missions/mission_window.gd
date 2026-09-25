@@ -396,7 +396,7 @@ func show_report(rep: Dictionary) -> void:
 		var parts: Array = []
 		for cid: String in rest:
 			parts.append("%s — %d с" % [c.card_name(cid), int(rest[cid])])
-		res.add_child(UITheme.label("Отдых: " + ", ".join(parts), "sans", 18, Palette.MANA))
+		res.add_child(UITheme.label("Отдых: " + ", ".join(parts), "sans", 18, Palette.REST))
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_footer.add_child(gap)

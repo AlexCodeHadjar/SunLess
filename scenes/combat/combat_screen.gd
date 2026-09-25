@@ -1,6 +1,6 @@
 class_name CombatScreen
 extends Control
-## Бой «Столкновение» (docs/12 §5): отдельная карта-поле битвы. Сверху — карты врага и его намерение,
+## Бой «Столкновение» (docs/12 §5): просмотр автобоя миссии (docs/15) — отдельная карта-поле битвы. Сверху — карты врага и его намерение,
 ## снизу — мои карты. Симбиозы и конфликты — световые нити от тега к тегу, отражающиеся от «стёкол»;
 ## числа сил и полоса шанса меняются прямо на глазах. Теги — чипы с карточкой; Shift — сетка связей.
 
@@ -25,10 +25,7 @@ const TAG_COL := 200.0      # ширина столбца тегов справ�
 const SIDE_COL := 158.0     # то же для союзников и усилений
 const STAGES := ["base", "tags", "synergy", "conflict", "field", "round_no", "state", "tactic", "intent", "stat"]
 
-var event_id := ""
-var option_id := ""
 var phase := Phase.PREP
-var _support: Array = []
 var _selected := ""
 var _hover_tag := ""
 var _graph_forced := false
@@ -59,7 +56,6 @@ var _graph: LinkGraph
 var _glass: Array = []
 var _last_led: Dictionary = {}
 # просмотр автобоя миссии (docs/15): отряд выбирает приёмы сам, исход уже в отчёте
-var replay := false
 var _retreat_btn: Button
 
 
@@ -346,7 +342,6 @@ func _build_board() -> void:
 	bd.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bd.modulate = Color(0.55, 0.55, 0.62)
 	if GameState.state:
-		bd.tod = MapBackdrop.tod_for_week(GameState.state.week)
 		bd.region = GameState.state.region
 		bd.snow = GameState.state.region == "mountain_pass"
 	_board.add_child(bd)
@@ -462,7 +457,7 @@ func _layout(cs: CombatSession) -> void:
 	var cdef: Dictionary = ContentDB.data.characters.get(cs.hero, {})
 	var stage: String = cs.state.character(cs.hero).get("stage", "")
 	var htags: Array = Array(cdef.get("stages", {}).get(stage, {}).get("tags", cdef.get("tags", []))).duplicate()
-	for t: String in cs.hero_extra_tags + Array(cs.mods.get("hero_tags", [])):
+	for t: String in cs.hero_extra_tags:
 		if not htags.has(t):
 			htags.append(t)
 	_place_tags(_hero_card, htags, "hero", true, TAG_COL, 19, BOARD.size.y - 10.0)
@@ -661,17 +656,10 @@ static func _anchor_of(node: Control) -> Vector2:
 
 # --- поток боя ---------------------------------------------------------------------
 
-func open(p_event: String, p_option: String) -> void:
-	event_id = p_event
-	option_id = p_option
-	phase = Phase.PREP
-	_build_prep()
-	AudioManager.play("open", -2.0, 0.8)
 
 
 ## Просмотр автобоя миссии: тот же бой, что посчитал MissionResolver (тот же RNG — тот же исход).
 func open_replay(setup: Dictionary) -> void:
-	replay = true
 	GameState.combat = MissionResolver.replay_session(ContentDB.data, setup)
 	phase = Phase.PREP
 	_clear_hand()
@@ -704,74 +692,11 @@ func _replay_later(delay: float) -> void:
 				_next_round()
 
 
-func _preview_session() -> CombatSession:
-	var cs := CombatSession.create(ContentDB.data, GameState.state, event_id, option_id, GameState.draft(event_id), _support)
-	cs.round_no = 1
-	return cs
-
-
-func _build_prep() -> void:
-	_clear_hand()
-	var s := GameState.state
-	var hero: String = GameState.draft(event_id).get("character", "")
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 8)
-	_hand_box.add_child(col)
-	col.add_child(UITheme.label("Союзники в поддержке (до 2) — встанут рядом и добавят свои теги:", "sans", 18, Palette.TEXT))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	col.add_child(row)
-	var any := false
-	for card: String in s.collection:
-		if ContentDB.data.card_kind(card) != "character" or card == hero or not s.is_alive(card):
-			continue
-		any = true
-		var cv := CardView.make(card, Vector2(98, 168), false)
-		cv.highlight = _support.has(card)
-		cv.clicked.connect(_toggle_support)
-		row.add_child(cv)
-	if not any:
-		col.add_child(UITheme.label("Спутников нет — Санни сражается один.", "serif_italic", 18, Palette.TEXT_DIM))
-	_no_tactic_btn.visible = false
-	_action_btn.text = "НАЧАТЬ БОЙ ›"
-	var preview := _preview_session()
-	_pips.text = "Подготовка · %s" % preview.rounds_total_label()
-	_layout(preview)
-	_intent_card.ability = {}
-	_intent_card.queue_redraw()
-	_play_links(preview, preview.ledger({}), true)
-
-
-func _toggle_support(card: String) -> void:
-	if _support.has(card):
-		_support.erase(card)
-	elif _support.size() < 2:
-		_support.append(card)
-	AudioManager.play("place")
-	_build_prep()
-
-
+## Кнопка лишь ускоряет следующий шаг просмотра.
 func _on_action() -> void:
-	if replay:
-		# в просмотре кнопка лишь ускоряет следующий шаг
-		_anim_token += 1
-		match phase:
-			Phase.PREP:
-				_next_round()
-			Phase.SELECT:
-				_play()
-			Phase.RESULT:
-				if GameState.combat.finished:
-					_finish()
-				else:
-					_next_round()
-		return
+	_anim_token += 1
 	match phase:
 		Phase.PREP:
-			var err := GameState.start_combat(event_id, option_id, _support)
-			if err != "":
-				EventBus.toast.emit(err)
-				return
 			_next_round()
 		Phase.SELECT:
 			_play()
@@ -793,16 +718,14 @@ func _next_round() -> void:
 		EventBus.toast.emit(note)
 	_build_hand()
 	_update_pips()
-	_action_btn.text = "В БОЙ ›"
-	if replay:
-		_no_tactic_btn.visible = false
-		for c in _hand_box.get_children():
-			if c is TacticCard:
-				c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_pick_tactic(cs.auto_choice())
-		_action_btn.text = "ДАЛЬШЕ ›"
-		_replay_later(1.6)
-	_no_tactic_btn.visible = true
+	# отряд выбирает приём сам — как в расчёте миссии
+	_no_tactic_btn.visible = false
+	for c in _hand_box.get_children():
+		if c is TacticCard:
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pick_tactic(cs.auto_choice())
+	_action_btn.text = "ДАЛЬШЕ ›"
+	_replay_later(1.6)
 	_play_links(cs, cs.ledger({}), true)
 
 
@@ -1088,13 +1011,12 @@ func _play() -> void:
 		await _reveal_links(fresh, led)
 	_action_btn.disabled = false
 	if cs.finished:
-		_action_btn.text = "ЗАКРЫТЬ ›" if replay else "ИТОГ БОЯ ›"
+		_action_btn.text = "ЗАКРЫТЬ ›"
 		var o := {"win": "ПОБЕДА", "loss": "ПОРАЖЕНИЕ", "death": "ГИБЕЛЬ"}
 		_pips.text = "%s  %d : %d" % [o.get(cs.outcome, ""), cs.hero_wins, cs.enemy_wins]
 	else:
 		_action_btn.text = "СЛЕДУЮЩИЙ РАУНД ›"
-		if replay:
-			_replay_later(2.2)
+		_replay_later(2.2)
 
 
 func _clash(won: bool) -> void:
@@ -1148,28 +1070,13 @@ func _reveal_links(fresh: Array, led: Dictionary) -> void:
 
 
 func _on_retreat() -> void:
-	if replay:
-		_finish()
-		return
-	if phase == Phase.PREP:
-		closed.emit()
-		queue_free()
-		return
-	if GameState.combat == null or GameState.combat.finished:
-		return
-	GameState.combat.retreat()
 	_finish()
 
 
 func _finish() -> void:
 	phase = Phase.DONE
 	_anim_token += 1
-	if replay:
-		GameState.combat = null
-		closed.emit()
-		queue_free()
-		return
-	GameState.finish_combat()
+	GameState.combat = null
 	closed.emit()
 	queue_free()
 

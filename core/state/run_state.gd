@@ -3,47 +3,30 @@ extends RefCounted
 ## Состояние одного прохождения. Хранит только ID и изменяемые значения —
 ## тексты и числа карт живут в Content (data/*.json).
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2   # 2 — режим миссий (docs/15); сохранения прежнего режима по неделям не читаются
 
-var week: int = 1
-var arc: String = ""
 var region: String = ""
-var resources: Dictionary = {"shards": 10, "mana": 10}
-## ID карт в нижней панели: персонажи, усиления, знания, инициаторы.
+var resources: Dictionary = {"shards": 10}
+## ID карт в руке игрока: персонажи, усиления, травмы.
 var collection: Array = []
-## character_id -> {stage, traumas:[], perm:{power,will,cunning}, abilities:[], alive}
+## character_id -> {stage, traumas:[], perm:{power,will,cunning}, abilities:[], alive, pocket:[]}
 var characters: Dictionary = {}
 ## enhancement_id -> текущий шанс поломки, %
 var wear: Dictionary = {}
 var flags: Dictionary = {}
-## event_id -> {status: "active"|"closed", done_options:[], spawned_week}
-var events: Dictionary = {}
-## option_id, последствия которых раскрыты
-var revealed: Array = []
-## [{stat, value, tags, event_id, option_id, remaining, label}]
+## [{stat, value, tags, label}] — временные бонусы до первого использования
 var temp_effects: Array = []
-## {event_id, weeks_left} — сюжетное событие «в пути»; пусто, если ничего не ждём
-var pending_story: Dictionary = {}
-## region -> [event_id] — уже выпавшие случайные события текущего круга пула
-var random_used: Dictionary = {}
-## event_id -> {character: String, enhancements: []}
-var drafts: Dictionary = {}
 var codex: Array = []
-## Бой: раны врагов по событию, настороженность, изменения боя от других вариантов
+## раны врага: сохраняются до следующей попытки миссии (ключ — id миссии)
 var enemy_wounds: Dictionary = {}
-var enemy_alert: Dictionary = {}
-var combat_mods: Dictionary = {}
 var log: Array = []
-var chapter: String = ""      # глава свободного режима ("" — линейная часть)
-var node: String = ""         # место героя на карте главы
-var chapter_start: int = 0    # первая неделя главы (для отсчёта)
-var card_log: Array = []   # [{week, card, text}] — отметки карт для «В вашем прохождении»
+var card_log: Array = []   # [{t, card, text, seq}] — отметки карт для «В вашем прохождении»
 var game_over: bool = false
-var demo_complete: bool = false
+var demo_complete: bool = false   # глава с end_chapter пройдена; next_chapter — во flags
 var rng_seed: int = 0
 var rng_state: int = 0
-# --- миссии и отряды (docs/15, ветка gameplay/missions) ---
-var mode: String = ""               # "missions" — новая механика; "" — события по неделям
+var chapter: String = ""            # текущая глава: nightmare, academy…
+var mode: String = "missions"
 var clock: float = 0.0              # игровые секунды (идут только в игре)
 ## mission_id -> {status: "open"|"active"|"done", attempts, opened_at}
 var missions: Dictionary = {}
@@ -62,34 +45,23 @@ var shops: Dictionary = {}
 func to_dict() -> Dictionary:
 	return {
 		"save_version": SAVE_VERSION,
-		"week": week,
-		"arc": arc,
 		"region": region,
 		"resources": resources.duplicate(true),
 		"collection": collection.duplicate(true),
 		"characters": characters.duplicate(true),
 		"wear": wear.duplicate(true),
 		"flags": flags.duplicate(true),
-		"events": events.duplicate(true),
-		"revealed": revealed.duplicate(true),
 		"temp_effects": temp_effects.duplicate(true),
-		"pending_story": pending_story.duplicate(true),
-		"random_used": random_used.duplicate(true),
-		"drafts": drafts.duplicate(true),
 		"codex": codex.duplicate(true),
 		"enemy_wounds": enemy_wounds.duplicate(true),
-		"enemy_alert": enemy_alert.duplicate(true),
-		"combat_mods": combat_mods.duplicate(true),
 		"log": log.duplicate(true),
 		"card_log": card_log.duplicate(true),
-		"chapter": chapter,
-		"node": node,
-		"chapter_start": chapter_start,
 		"game_over": game_over,
 		"demo_complete": demo_complete,
 		# RNG хранится строкой: JSON теряет точность больших целых.
 		"rng_seed": str(rng_seed),
 		"rng_state": str(rng_state),
+		"chapter": chapter,
 		"mode": mode,
 		"clock": clock,
 		"missions": missions.duplicate(true),
@@ -104,13 +76,9 @@ func to_dict() -> Dictionary:
 
 static func from_dict(d: Dictionary) -> RunState:
 	var s := RunState.new()
-	s.week = int(d.get("week", 1))
-	s.arc = str(d.get("arc", ""))
 	s.region = str(d.get("region", ""))
 	s.resources = _ints(d.get("resources", {}))
-	if s.resources.has("coins") and not s.resources.has("shards"):  # старые сохранения
-		s.resources["shards"] = s.resources["coins"]
-	s.resources.erase("coins")
+	s.resources.erase("mana")
 	s.collection = Array(d.get("collection", [])).duplicate(true)
 	s.characters = Dictionary(d.get("characters", {})).duplicate(true)
 	for cid: String in s.characters:
@@ -118,40 +86,22 @@ static func from_dict(d: Dictionary) -> RunState:
 		c["perm"] = _ints(c.get("perm", {}))
 	s.wear = _ints(d.get("wear", {}))
 	s.flags = Dictionary(d.get("flags", {})).duplicate(true)
-	s.events = Dictionary(d.get("events", {})).duplicate(true)
-	for eid: String in s.events:
-		s.events[eid]["spawned_week"] = int(s.events[eid].get("spawned_week", 0))
-	s.revealed = Array(d.get("revealed", [])).duplicate(true)
 	s.temp_effects = Array(d.get("temp_effects", [])).duplicate(true)
 	for e: Dictionary in s.temp_effects:
 		e["value"] = int(e.get("value", 0))
-		e["remaining"] = int(e.get("remaining", 1))
-	s.pending_story = Dictionary(d.get("pending_story", {})).duplicate(true)
-	if s.pending_story.has("weeks_left"):
-		s.pending_story["weeks_left"] = int(s.pending_story["weeks_left"])
-	s.random_used = Dictionary(d.get("random_used", {})).duplicate(true)
-	s.drafts = Dictionary(d.get("drafts", {})).duplicate(true)
 	s.codex = Array(d.get("codex", [])).duplicate(true)
 	s.enemy_wounds = _ints(d.get("enemy_wounds", {}))
-	s.enemy_alert = Dictionary(d.get("enemy_alert", {})).duplicate(true)
-	s.combat_mods = Dictionary(d.get("combat_mods", {})).duplicate(true)
 	s.log = Array(d.get("log", [])).duplicate(true)
 	s.card_log = Array(d.get("card_log", [])).duplicate(true)
-	s.chapter = str(d.get("chapter", ""))
-	s.node = str(d.get("node", ""))
-	s.chapter_start = int(d.get("chapter_start", 0))
 	for n: Dictionary in s.card_log:
-		n["week"] = int(n.get("week", 0))
 		n["seq"] = int(n.get("seq", 0))
-	for entry: Dictionary in s.log:
-		for k: String in ["week", "chance", "roll"]:
-			if entry.has(k):
-				entry[k] = int(entry[k])
+		n["t"] = float(n.get("t", 0.0))
 	s.game_over = bool(d.get("game_over", false))
 	s.demo_complete = bool(d.get("demo_complete", false))
 	s.rng_seed = int(str(d.get("rng_seed", "0")))
 	s.rng_state = int(str(d.get("rng_state", "0")))
-	s.mode = str(d.get("mode", ""))
+	s.chapter = str(d.get("chapter", ""))
+	s.mode = str(d.get("mode", "missions"))
 	s.clock = float(d.get("clock", 0.0))
 	s.missions = Dictionary(d.get("missions", {})).duplicate(true)
 	for mid: String in s.missions:
@@ -190,7 +140,7 @@ static func _ints(src: Variant) -> Dictionary:
 
 ## Отметка в журнале карты (получение, травма, поломка, гибель).
 func note(card_id: String, text: String) -> void:
-	card_log.append({"week": week, "card": card_id, "text": text, "seq": log.size()})
+	card_log.append({"t": clock, "card": card_id, "text": text, "seq": log.size()})
 
 
 func owns(card_id: String) -> bool:
@@ -205,34 +155,6 @@ func is_alive(cid: String) -> bool:
 	return bool(characters.get(cid, {}).get("alive", false))
 
 
-func active_event_ids() -> Array:
-	var out: Array = []
-	for eid: String in events:
-		if events[eid].get("status", "") == "active":
-			out.append(eid)
-	return out
-
-
-func is_event_active(eid: String) -> bool:
-	return events.has(eid) and events[eid].get("status", "") == "active"
-
-
-func is_option_done(eid: String, oid: String) -> bool:
-	return events.has(eid) and Array(events[eid].get("done_options", [])).has(oid)
-
-
 func has_flag(flag: String) -> bool:
 	return bool(flags.get(flag, false))
 
-
-func draft_for(eid: String) -> Dictionary:
-	return drafts.get(eid, {"character": "", "enhancements": []})
-
-
-## Где сейчас стоит карта в черновике (для метки «Черновик: E03»).
-func draft_event_of(card_id: String) -> String:
-	for eid: String in drafts:
-		var d: Dictionary = drafts[eid]
-		if d.get("character", "") == card_id or Array(d.get("enhancements", [])).has(card_id):
-			return eid
-	return ""

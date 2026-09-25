@@ -1,5 +1,5 @@
 extends TestCase
-## Данные проходят проверку; проверка ловит испорченные данные.
+## Данные проходят проверку; характеристики героя считаются верно.
 
 
 func test_data_is_valid() -> void:
@@ -8,32 +8,18 @@ func test_data_is_valid() -> void:
 		check(false, e)
 
 
-func test_validator_catches_broken_event() -> void:
-	var c := content()
-	var ev: Dictionary = c.events["E03"].duplicate(true)
-	ev["options"].pop_back()
-	ev["options"][0]["story"] = true
-	ev["next"] = "E999"
-	c.events["E03"] = ev
-	var errors := ContentValidator.validate(c)
-	var joined := "\n".join(errors)
-	check(joined.contains("ровно 3"), "должна быть ошибка про 3 варианта")
-	check(joined.contains("сюжетных вариантов 2"), "должна быть ошибка про два сюжетных варианта")
-	check(joined.contains("E999"), "должна быть ошибка про несуществующее событие")
-
-
-func test_validator_catches_wearing_story_requirement() -> void:
-	var c := content()
-	c.enhancements["U02"].erase("wear_exempt_arcs")
-	var joined := "\n".join(ContentValidator.validate(c))
-	check(joined.contains("изнашиваемую карту U02"), "сюжетный E09 не может требовать изнашиваемый Колокольчик")
+func test_no_old_mode_leftovers() -> void:
+	check(not DirAccess.dir_exists_absolute("res://data/events"), "старых событий по неделям больше нет")
+	check(not FileAccess.file_exists("res://data/chapters.json"), "Хроники глав больше нет — места живут в locations.json")
+	var s := MissionFlow.new_run(content(), 1)
+	check(not s.resources.has("mana"), "маны нет")
 
 
 func test_stat_resolver_basics() -> void:
 	var c := content()
-	var s := EventFlow.new_run(c, 1)
-	var ev: Dictionary = c.events["E03"]
-	var o := c.option("E03", "E03_1")
+	var s := MissionFlow.new_run(c, 1)
+	var ev := {"id": "MS03", "tags": ["combat", "survival"]}
+	var o := {"id": "MS03_fight", "tags": ["survival"]}
 	var r := StatResolver.resolve(c, s, "P01", [], ev, o)
 	eq(r["totals"], {"power": 3, "will": 5, "cunning": 6}, "Санни-раб:")
 	EffectApplier.add_card(c, s, "U01")
@@ -47,6 +33,37 @@ func test_stat_resolver_basics() -> void:
 
 func test_trait_by_tag() -> void:
 	var c := content()
-	var s := EventFlow.new_run(c, 1)
-	var r := StatResolver.resolve(c, s, "P01", [], c.events["E09"], c.option("E09", "E09_2"))
+	var s := MissionFlow.new_run(c, 1)
+	var r := StatResolver.resolve(c, s, "P01", [], {"id": "MS09", "tags": ["duel", "lure"]}, {"id": "MS09_bell", "tags": ["lure"]})
 	eq(r["totals"]["cunning"], 7, "«Дитя Теней» +1 в приманке:")
+
+
+func test_bell_does_not_wear_in_nightmare() -> void:
+	var c := content()
+	var s := MissionFlow.new_run(c, 1)
+	EffectApplier.add_card(c, s, "U02")
+	check(not WearRules.wears(c, s, "U02"), "Колокольчик не изнашивается в Первом Кошмаре")
+	s.chapter = "academy"
+	check(WearRules.wears(c, s, "U02"), "в Академии — изнашивается")
+
+
+## Все скрипты игры компилируются (ловит ссылки на удалённое — например, старый режим).
+func test_all_scripts_compile() -> void:
+	var bad: Array = []
+	for dir: String in ["res://autoload", "res://core", "res://scenes", "res://ui", "res://tools"]:
+		_collect_bad(dir, bad)
+	eq(bad, [], "скрипты с ошибками:")
+
+
+func _collect_bad(dir: String, bad: Array) -> void:
+	var d := DirAccess.open(dir)
+	if d == null:
+		return
+	for sub: String in d.get_directories():
+		if sub != "editor":
+			_collect_bad(dir + "/" + sub, bad)
+	for f: String in d.get_files():
+		if f.ends_with(".gd"):
+			var scr: GDScript = ResourceLoader.load(dir + "/" + f, "", ResourceLoader.CACHE_MODE_IGNORE)
+			if scr == null or not scr.can_instantiate():
+				bad.append(dir + "/" + f)

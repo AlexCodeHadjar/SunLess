@@ -12,7 +12,6 @@ static func new_run(content: Content, seed_value: int, chapter: String = "nightm
 	var s := RunState.new()
 	s.mode = "missions"
 	s.chapter = chapter
-	s.arc = chapter
 	s.region = "mountain_pass"
 	s.resources = {"shards": 10}
 	s.rng_seed = seed_value
@@ -39,6 +38,25 @@ static func open_chapter(content: Content, state: RunState, chapter: String) -> 
 		if str(loc.get("chapter", "")) == chapter and every > 0:
 			state.loc_timers[lid] = state.clock + every
 	return out
+
+
+## Переход к следующей главе после миссии с end_chapter и next_chapter: новая карта, её стартовые миссии.
+static func start_chapter(content: Content, state: RunState, chapter: String) -> Array:
+	state.demo_complete = false
+	state.flags.erase("next_chapter")
+	# незавершённое прошлой главы остаётся в прошлом
+	for mid: String in state.missions.keys():
+		if str(state.missions[mid].get("status", "")) != "done" and chapter_of(content, mid) != chapter:
+			state.missions.erase(mid)
+	state.squads.clear()
+	state.rest_until.clear()
+	state.loc_timers.clear()
+	for lid: String in _sorted(content.locations):
+		if str(content.locations[lid].get("chapter", "")) == chapter:
+			state.region = str(content.locations[lid].get("region", state.region))
+			break
+	state.log.append({"clock": state.clock, "text": "Новая глава: %s" % chapter})
+	return open_chapter(content, state, chapter)
 
 
 static func chapter_of(content: Content, mission_id: String) -> String:
@@ -276,6 +294,11 @@ static func after_completion(content: Content, state: RunState) -> Array:
 		var need := int(m.get("unlock", {}).get("after_missions", 0))
 		if need > 0 and n >= need and not state.missions.has(mid) and chapter_of(content, mid) == state.chapter:
 			out.append_array(open(content, state, mid))
+		# «после всех»: миссия открывается, когда выполнены все перечисленные
+		var all: Array = m.get("unlock", {}).get("after_all", [])
+		if not all.is_empty() and not state.missions.has(mid) \
+				and all.all(func(x: String) -> bool: return str(state.missions.get(x, {}).get("status", "")) == "done"):
+			out.append_array(open(content, state, mid))
 	for lid: String in _sorted(content.locations):
 		var loc: Dictionary = content.locations[lid]
 		var every_n := int(loc.get("random", {}).get("after_missions", 0))
@@ -323,6 +346,15 @@ static func actions_for(content: Content, state: RunState, mission_id: String, h
 			ok = who.any(func(cid: String) -> bool: return heroes_ids.has(cid))
 			if not ok:
 				reason = "Нужен в отряде: %s" % " или ".join(who.map(func(cid: String) -> String: return content.card_name(cid)))
+		# условия и цена — как у вариантов событий (ConditionChecker); исполнитель — первый в отряде
+		if ok and (a.has("conditions") or a.has("cost")):
+			var pockets: Array = []
+			for cid: String in heroes_ids:
+				pockets.append_array(pocket(state, cid))
+			var block := ConditionChecker.blockers(content, state, a, str(heroes_ids[0]) if not heroes_ids.is_empty() else "", pockets)
+			if not block.is_empty():
+				ok = false
+				reason = "; ".join(block)
 		out.append({"action": a, "available": ok, "reason": reason})
 	return out
 

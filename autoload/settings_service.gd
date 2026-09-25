@@ -10,7 +10,6 @@ var values := {
 	"chance_monochrome": false,
 	"tutorial": true,
 	"canon_notes": true,
-	"thoughts": true,
 	"vol_master": 0.9,
 	"vol_music": 0.55,
 	"vol_ambient": 0.7,

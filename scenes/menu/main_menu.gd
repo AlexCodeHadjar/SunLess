@@ -1,8 +1,7 @@
 extends Control
 ## Главное меню: логотип, «Продолжить», «Новая игра», «Выход».
 
-const GAME := "res://scenes/game/game.tscn"
-const MISSIONS := "res://scenes/missions/mission_game.tscn"   # новая механика (docs/15)
+const MISSIONS := "res://scenes/missions/mission_game.tscn"
 
 
 func _ready() -> void:
@@ -37,13 +36,9 @@ func _ready() -> void:
 	var ng := _button(v, "Новая игра", _on_new)
 	if not SaveService.has_save():
 		ng.grab_focus.call_deferred()
-	var old := _button(v, "Старый режим: события", _on_old)
-	old.add_theme_font_size_override("font_size", 20)
-	old.custom_minimum_size.y = 44
-	old.tooltip_text = "Прежняя механика (недели и планшет событий) — пока главы переносятся в миссии"
 	_button(v, "Выход", func() -> void: get_tree().quit())
 
-	var ver := UITheme.label("Версия %s · демоверсия: Первый Кошмар · фанатский некоммерческий проект" % ProjectSettings.get_setting("application/config/version"), "sans", 14, Palette.TEXT_DIM)
+	var ver := UITheme.label("Версия %s · демоверсия: Первый Кошмар и Академия · фанатский некоммерческий проект" % ProjectSettings.get_setting("application/config/version"), "sans", 14, Palette.TEXT_DIM)
 	ver.anchor_top = 1.0
 	ver.anchor_bottom = 1.0
 	ver.offset_left = 24
@@ -70,7 +65,7 @@ func _on_continue() -> void:
 		l.position = Vector2(160, 760)
 		add_child(l)
 		return
-	get_tree().change_scene_to_file(MISSIONS if GameState.is_missions() else GAME)
+	get_tree().change_scene_to_file(MISSIONS)
 
 
 func _on_new() -> void:
@@ -78,8 +73,3 @@ func _on_new() -> void:
 	GameState.new_mission_run()
 	get_tree().change_scene_to_file(MISSIONS)
 
-
-func _on_old() -> void:
-	AudioManager.play("shuffle")
-	GameState.new_run()
-	get_tree().change_scene_to_file(GAME)

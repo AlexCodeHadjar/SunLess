@@ -436,7 +436,9 @@
     "on_success": [
      {
       "cmd": "remove_trauma",
-      "which": "light"
+      "severities": [
+       "light"
+      ]
      }
     ]
    },
@@ -502,14 +504,15 @@
     ],
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "which": "any"
+      "cmd": "remove_trauma"
      }
     ],
     "on_partial": [
      {
       "cmd": "remove_trauma",
-      "which": "light"
+      "severities": [
+       "light"
+      ]
      }
     ]
    },

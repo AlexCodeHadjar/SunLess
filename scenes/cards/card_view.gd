@@ -17,7 +17,7 @@ const RANKS := ["Спящий", "Пробуждённый", "Падший", "П�
 const CLASSES := ["", "Зверь", "Монстр", "Демон", "Дьявол", "Тиран", "Ужас", "Титан"]
 
 var card_id := ""
-var kind := ""          # character | enhancement | initiator | trauma | event | mission
+var kind := ""          # character | enhancement | trauma | enemy | mission
 var draggable := true
 var hover_lift := true
 var dimmed := false
@@ -52,8 +52,6 @@ func _init_card() -> void:
 	kind = content.card_kind(card_id)
 	if kind == "" and content.missions.has(card_id):
 		kind = "mission"
-	if kind == "" and content.events.has(card_id):
-		kind = "event"
 	var def := _def()
 	var art: String = def.get("art", "")
 	var auto := false
@@ -82,9 +80,7 @@ func _def() -> Dictionary:
 	match kind:
 		"character": return c.characters.get(card_id, {})
 		"enhancement": return c.enhancements.get(card_id, {})
-		"initiator": return c.initiators.get(card_id, {})
 		"trauma": return c.traumas.get(card_id, {})
-		"event": return c.events.get(card_id, {})
 		"mission": return c.missions.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
 	return {}
@@ -292,16 +288,11 @@ func describe() -> String:
 			else:
 				lines.append("Не изнашивается")
 			lines.append("[color=#9A9CA6]%s · %s[/color]" % [d.get("canon", ""), d.get("source", "")])
-		"initiator":
-			lines.append(str(d.get("text", "")))
-			lines.append("[color=#9A9CA6]Одноразовый. Перетащите на карту мира.[/color]")
 		"trauma":
 			var mods: Array = []
 			for st: String in d.get("mods", {}):
 				mods.append("%+d %s" % [int(d["mods"][st]), Palette.STAT_NAMES.get(st, st)])
 			lines.append(", ".join(mods))
-		"event":
-			lines.append(str(d.get("text", "")))
 		"mission":
 			lines.append(str(d.get("briefing", "")))
 		"enemy":
@@ -359,13 +350,10 @@ func _border_color(d: Dictionary) -> Color:
 	match kind:
 		"character": return Palette.SILVER
 		"enhancement": return Color("#8C6B45") if d.get("origin", "") != "knowledge" else Palette.REQ_MET.darkened(0.2)
-		"initiator": return Palette.INITIATOR.lightened(0.2)
 		"trauma": return Palette.TRAUMA_BRIGHT
 		"enemy": return Palette.STAT_DOWN
 		"mission":
 			return Palette.GOLD if d.get("type", "") == "story" else Palette.SILVER.darkened(0.2)
-		"event":
-			return Palette.GOLD if d.get("type", "") in ["story", "reward"] else (Palette.INITIATOR.lightened(0.2) if d.get("source_kind", "") == "initiator" else Palette.SILVER.darkened(0.2))
 	return Palette.LINE
 
 
@@ -380,7 +368,6 @@ func _draw_procedural(r: Rect2, d: Dictionary, k: float) -> void:
 	var tint := Color.WHITE
 	match kind:
 		"trauma": tint = Color(1.0, 0.55, 0.55)
-		"initiator": tint = Color(0.86, 0.8, 1.0)
 	if _blank:
 		draw_texture_rect(_blank, r, false, tint)
 	else:
@@ -392,15 +379,11 @@ func _draw_procedural(r: Rect2, d: Dictionary, k: float) -> void:
 		_draw_cover(_tex, art, 0.0, 0.72)
 	else:
 		_draw_art_placeholder(art, d, k)
-	# верхний маркер: римская цифра события или самоцвет редкости
+	# верхний маркер: самоцвет редкости
 	var top := art.position.y + 6 * k
-	if kind == "event" and d.has("numeral"):
-		draw_rect(Rect2(Vector2(r.get_center().x - 16 * k, top - 2 * k), Vector2(32 * k, 24 * k)), Color(0.04, 0.04, 0.06, 0.75))
-		_text(UITheme.font("title_bold"), Vector2(r.position.x, top + 17 * k), str(d["numeral"]), 20 * k, Palette.GOLD, r.size.x)
-	else:
-		var gem: Color = Palette.RARITY.get(d.get("rarity", "common"), Palette.RARITY["common"])
-		var c := Vector2(r.get_center().x, top + 8 * k)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6 * k), c + Vector2(6 * k, 0), c + Vector2(0, 6 * k), c + Vector2(-6 * k, 0)]), gem)
+	var gem: Color = Palette.RARITY.get(d.get("rarity", "common"), Palette.RARITY["common"])
+	var c := Vector2(r.get_center().x, top + 8 * k)
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6 * k), c + Vector2(6 * k, 0), c + Vector2(0, 6 * k), c + Vector2(-6 * k, 0)]), gem)
 	var name := str(d.get("name", d.get("title", card_id)))
 	var title_size := (14.0 if name.length() > 16 else 16.0) * k
 	_text_multi(UITheme.font("title"), Vector2(plate.position.x + 2, plate.position.y + title_size + 6 * k), name, title_size, Palette.TEXT, plate.size.x - 4, 2)
@@ -413,8 +396,6 @@ func _subtitle(d: Dictionary) -> String:
 	match kind:
 		"enhancement":
 			return {"knowledge": "Знание", "memory": "Воспоминание", "improvised": "Подручное"}.get(d.get("origin", ""), "Усиление")
-		"initiator":
-			return "Инициатор · одноразовый"
 		"trauma":
 			var mods: Array = []
 			for st: String in d.get("mods", {}):
@@ -442,8 +423,6 @@ func _draw_art_placeholder(art: Rect2, d: Dictionary, k: float) -> void:
 	var bottom := Color("#101117")
 	if kind == "trauma":
 		top = Color("#3A1418")
-	elif kind == "initiator":
-		top = Color("#2E2640")
 	var steps := 12
 	for i in steps:
 		var y0 := art.position.y + art.size.y * i / steps
@@ -466,7 +445,7 @@ func _draw_art_placeholder(art: Rect2, d: Dictionary, k: float) -> void:
 		var es := minf(art.size.x, art.size.y) * 0.62
 		draw_texture_rect(tex, Rect2(art.get_center() - Vector2(es, es) / 2, Vector2(es, es)), false, Color(1, 1, 1, 0.8))
 		return
-	var glyph := "🕯" if kind == "initiator" else "✦"
+	var glyph := "✦"
 	_text(UITheme.font("title"), Vector2(art.position.x, art.get_center().y + 20 * k), glyph, 54 * k, Palette.SILVER.darkened(0.35), art.size.x)
 
 

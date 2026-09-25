@@ -101,7 +101,7 @@ func _region() -> String:
 func _map_point(p: Array) -> Vector2:
 	var w := 1920.0
 	var x := LEFT_W + 60 + (w - LEFT_W - 200) * float(p[0])
-	var top := MAP_TOP + 200.0
+	var top := MAP_TOP + 280.0   # карты миссий стоят над точкой места — не залезать под верхнюю панель
 	var y := top + (MAP_BOTTOM - 80.0 - top) * float(p[1])
 	return Vector2(x, y)
 
@@ -298,7 +298,8 @@ func _update_badges() -> void:
 ## Миссии, которые лежат на карте: открытые и те, к которым идёт или уже пришёл отряд.
 func _map_missions() -> Array:
 	var s := GameState.state
-	var out: Array = MissionFlow.open_missions(s)
+	var c := ContentDB.data
+	var out: Array = MissionFlow.open_missions(s).filter(func(mid: String) -> bool: return MissionFlow.chapter_of(c, mid) == s.chapter)
 	for sq: Dictionary in s.squads:
 		if not out.has(sq["mission"]):
 			out.append(sq["mission"])
@@ -495,10 +496,17 @@ func _show_toast(text: String) -> void:
 	_toast_tw.tween_property(_toast, "modulate:a", 0.0, 0.8)
 
 
-## Глава пройдена (миссия с end_chapter). Следующая глава на миссиях — Академия (Ф6).
+const CHAPTER_END := {
+	"nightmare": "[Ты пробудился.] Всё, что было в горах, осталось в горах. Санни уносит с собой только себя — и тени, которые теперь идут за ним.",
+	"academy": "Крышка капсулы закрывается. Сотни Спящих засыпают разом, и Царство Снов разбрасывает их кого куда. Где проснётся Санни — не знает никто.",
+}
+
+
+## Глава пройдена (миссия с end_chapter): дальше — следующая глава (next_chapter) или конец демо.
 func _show_chapter_end() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
+	var next := str(s.flags.get("next_chapter", ""))
 	_end = Control.new()
 	_end.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_end)
@@ -511,23 +519,36 @@ func _show_chapter_end() -> void:
 	v.custom_minimum_size.x = 800
 	v.add_theme_constant_override("separation", 18)
 	_end.add_child(v)
-	v.add_child(UITheme.label("%s пройден" % str(c.regions.get(_region(), {}).get("arc_name", "Кошмар")), "title_bold", 64, Palette.GOLD))
-	var t := UITheme.label("[Ты пробудился.] Всё, что было в горах, осталось в горах. Санни уносит с собой только себя — и тени, которые теперь идут за ним.", "serif_italic", 24, Palette.SILVER)
+	var arc := str(c.regions.get(_region(), {}).get("arc_name", "Глава"))
+	v.add_child(UITheme.label(("%s пройден" if s.chapter == "nightmare" else "%s: глава пройдена") % arc, "title_bold", 60, Palette.GOLD))
+	var t := UITheme.label(str(CHAPTER_END.get(s.chapter, "Глава окончена.")), "serif_italic", 24, Palette.SILVER)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.custom_minimum_size.x = 800
 	v.add_child(t)
 	var names: Array = MissionFlow.heroes(c, s).map(func(cid: String) -> String: return c.card_name(cid))
 	var shards := int(s.resources.get("shards", 0))
 	v.add_child(UITheme.label("Миссий выполнено: %d  ·  героев с вами: %s  ·  ✧ %d %s душ" % [s.completed_missions, ", ".join(names), shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])], "sans", 20, Palette.TEXT_DIM))
-	v.add_child(UITheme.label("Академия Пробуждённых на миссиях — следующий этап работы.", "sans", 18, Palette.TEXT_DIM))
+	if next == "":
+		v.add_child(UITheme.label("Конец демоверсии. Царство Снов — впереди.", "sans_bold", 20, Palette.TEXT))
 	var b := Button.new()
-	b.text = "НОВАЯ ИГРА"
 	b.custom_minimum_size = Vector2(360, 64)
 	b.add_theme_font_override("font", UITheme.font("caps"))
 	b.add_theme_font_size_override("font_size", 28)
-	b.pressed.connect(func() -> void:
-		GameState.new_mission_run()
-		get_tree().reload_current_scene())
+	if next != "":
+		var next_name := next
+		for lid: String in c.locations:
+			if str(c.locations[lid].get("chapter", "")) == next:
+				next_name = str(c.regions.get(str(c.locations[lid].get("region", "")), {}).get("arc_name", next))
+				break
+		b.text = "ДАЛЬШЕ: %s ›" % next_name.to_upper()
+		b.pressed.connect(func() -> void:
+			GameState.next_chapter()
+			get_tree().reload_current_scene())
+	else:
+		b.text = "НОВАЯ ИГРА"
+		b.pressed.connect(func() -> void:
+			GameState.new_mission_run()
+			get_tree().reload_current_scene())
 	v.add_child(b)
 	var menu := Button.new()
 	menu.text = "В МЕНЮ"

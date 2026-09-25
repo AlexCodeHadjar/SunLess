@@ -4,7 +4,7 @@ extends RefCounted
 ## Каждая команда возвращает записи для экрана результата: {"kind", "text", "card"?}.
 
 const STAT_NAMES := {"power": "Сила", "will": "Воля", "cunning": "Хитрость"}
-const RES_NAMES := {"shards": "✧ осколки душ", "mana": "◈ мана"}
+const RES_NAMES := {"shards": "✧ осколки душ"}
 
 
 static func apply_all(content: Content, state: RunState, effects: Array, executor: String,
@@ -65,15 +65,12 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 		"adjust_resource":
 			var r: String = e["resource"]
 			var v := int(e["value"])
-			var cap := 30 if r == "mana" else 999
-			state.resources[r] = clampi(int(state.resources.get(r, 0)) + v, 0, cap)
+			state.resources[r] = clampi(int(state.resources.get(r, 0)) + v, 0, 999)
 			return [{"kind": "resource", "text": "%s %+d" % [RES_NAMES.get(r, r), v]}]
 		"add_temp":
 			var te := {
 				"stat": str(e["stat"]), "value": int(e["value"]),
-				"tags": e.get("tags", []), "event_id": str(e.get("event_id", "")),
-				"option_id": str(e.get("option_id", "")), "remaining": int(e.get("remaining", 1)),
-				"label": str(e.get("label", "Временный эффект")),
+				"tags": e.get("tags", []), "label": str(e.get("label", "Временный эффект")),
 			}
 			state.temp_effects.append(te)
 			return [{"kind": "temp", "text": "%s: %+d %s" % [te["label"], te["value"], STAT_NAMES.get(te["stat"], te["stat"])]}]
@@ -89,23 +86,11 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			if not ch5.is_empty():
 				ch5["stage"] = str(e["stage"])
 				return [{"kind": "stage", "text": "%s — новая стадия: %s" % [content.card_name(cid2), content.stage_name(cid2, str(e["stage"]))], "card": cid2}]
-		"reveal":
-			var ids: Array = e.get("options", [])
-			if e.has("event"):
-				for o: Dictionary in content.events.get(str(e["event"]), {}).get("options", []):
-					ids.append(o["id"])
-			for oid: String in ids:
-				if not state.revealed.has(oid):
-					state.revealed.append(oid)
-			return [{"kind": "reveal", "text": str(e.get("text", "Раскрыты последствия"))}]
 		"add_codex":
 			var entry: String = e["entry"]
 			if not state.codex.has(entry):
 				state.codex.append(entry)
 				return [{"kind": "codex", "text": "Кодекс: %s" % str(e.get("text", entry))}]
-		"set_region":
-			state.region = str(e["region"])
-			state.arc = str(e.get("arc", state.arc))
 		"remove_temporaries":
 			var gone: Array = []
 			for card2: String in state.collection.duplicate():
@@ -114,26 +99,6 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 					gone.append(content.card_name(card2))
 			if not gone.is_empty():
 				return [{"kind": "lost", "text": "Уходят: %s" % ", ".join(gone)}]
-		"combat_mod":
-			var eid: String = e["event"]
-			var m: Dictionary = state.combat_mods.get(eid, {})
-			for key: String in ["hero_tags", "enemy_tags", "add_enemies", "allies"]:
-				if e.has(key):
-					var arr: Array = m.get(key, [])
-					for v: Variant in e[key]:
-						if not arr.has(v):
-							arr.append(v)
-					m[key] = arr
-			if e.has("field"):
-				m["field"] = str(e["field"])
-			state.combat_mods[eid] = m
-			return [{"kind": "flag", "text": str(e.get("text", "Будущий бой изменён"))}]
-		"spawn_event":
-			var sid: String = e["event"]
-			if not state.events.has(sid):
-				return EventFlow.spawn(content, state, sid, rng)
-		"start_chapter":
-			return Chronicle.start_chapter(content, state, str(e["chapter"]), rng)
 		"reset_wear":
 			# кузнец: самое изношенное усиление — снова как новое
 			var worst := ""
@@ -145,9 +110,6 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			state.wear[worst] = WearRules.START
 			state.note(worst, "Кузнец снял износ")
 			return [{"kind": "info", "text": "%s: износ сброшен до %d%%" % [content.card_name(worst), WearRules.START]}]
-		"end_demo":
-			state.demo_complete = true
-			return [{"kind": "story", "text": str(e.get("text", "Конец демоверсии"))}]
 		"text":
 			return [{"kind": "story", "text": str(e["text"])}]
 		_:
@@ -194,14 +156,10 @@ static func _remove_card(state: RunState, card: String) -> void:
 					var st: Dictionary = state.missions.get(str(sq.get("mission", "")), {})
 					if not st.is_empty():
 						st["status"] = "open"
-	for eid: String in state.drafts:
-		var d: Dictionary = state.drafts[eid]
-		if d.get("character", "") == card:
-			d["character"] = ""
-		Array(d.get("enhancements", [])).erase(card)
 
 
-## which: "light" | "any" | "mental" — или явный "trauma".
+
+## Какую травму снять: явная "trauma" или самая тяжёлая из подходящих по "severities" и "categories".
 static func _remove_trauma(content: Content, state: RunState, target: String, e: Dictionary) -> Array:
 	var ch: Dictionary = state.character(target)
 	if ch.is_empty():

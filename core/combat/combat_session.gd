@@ -32,8 +32,6 @@ var allies: Array = []
 var enemies: Array = []           # копии описаний противников
 var field: Dictionary = {}
 var kind := "normal"
-var mods: Dictionary = {}
-var ward := false
 
 var round_no := 0
 var hero_wins := 0
@@ -62,37 +60,6 @@ var ctx_option: Dictionary = {}
 var hidden_enemy_tags: Array = []   # для прогноза: теги врага, которых игрок ещё не знает
 
 
-static func create(p_content: Content, state_in: RunState, p_event_id: String, p_option_id: String,
-		draft: Dictionary, support: Array = [], p_ward: bool = false) -> CombatSession:
-	var s := CombatSession.new()
-	s.content = p_content
-	s.state = state_in.copy()
-	s.rng = RandomNumberGenerator.new()
-	s.rng.seed = s.state.rng_seed
-	s.rng.state = s.state.rng_state
-	s.event_id = p_event_id
-	s.option_id = p_option_id
-	s.hero = str(draft.get("character", ""))
-	s.enh = Array(draft.get("enhancements", [])).duplicate()
-	s.ward = p_ward
-	var o := p_content.option(p_event_id, p_option_id)
-	var spec: Dictionary = o.get("combat", {})
-	s.mods = s.state.combat_mods.get(p_event_id, {})
-	for eid: String in Array(spec.get("enemies", [])) + Array(s.mods.get("add_enemies", [])):
-		if p_content.enemies.has(eid):
-			s.enemies.append(p_content.enemies[eid].duplicate(true))
-	var fid: String = s.mods.get("field", spec.get("field", ""))
-	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
-	s.kind = str(spec.get("kind", "normal"))
-	for e: Dictionary in s.enemies:
-		if e.get("kind", "normal") == "boss" or (e.get("kind", "") == "elite" and s.kind == "normal"):
-			s.kind = str(e["kind"])
-	for a: String in Array(s.mods.get("allies", [])) + support:
-		if a != s.hero and s.state.owns(a) and s.state.is_alive(a) and not s.allies.has(a) and s.allies.size() < 2:
-			s.allies.append(a)
-	return s
-
-
 ## Бой этапа миссии. key — ключ ран и настороженности врага (id миссии), spec — {enemies, field, kind},
 ## hero — ведущий героя, support — остальные герои отряда (до двух в поддержке).
 static func create_for_mission(p_content: Content, state_in: RunState, key: String, spec: Dictionary,
@@ -109,11 +76,10 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 	s.enh = p_enh.duplicate()
 	s.ctx_event = p_ctx_event
 	s.ctx_option = p_ctx_option
-	s.mods = s.state.combat_mods.get(key, {})
-	for eid: String in Array(spec.get("enemies", [])) + Array(s.mods.get("add_enemies", [])):
+	for eid: String in spec.get("enemies", []):
 		if p_content.enemies.has(eid):
 			s.enemies.append(p_content.enemies[eid].duplicate(true))
-	var fid: String = s.mods.get("field", spec.get("field", ""))
+	var fid := str(spec.get("field", ""))
 	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
 	s.kind = str(spec.get("kind", "normal"))
 	for e: Dictionary in s.enemies:
@@ -146,8 +112,6 @@ func auto_choice() -> String:
 	var guard := ""
 	for tid: String in hand:
 		var t: Dictionary = content.tactics.get(tid, {})
-		if int(t.get("mana", 0)) > 0:
-			continue
 		var ch := int(ledger(t)["chance"])
 		if bool(t.get("guard", false)) and guard == "":
 			guard = tid
@@ -291,8 +255,6 @@ func available_tactics() -> Array:
 			continue
 		if req.has("traumas_at_least") and TraumaRules.counted(state.character(hero).get("traumas", [])) < int(req["traumas_at_least"]):
 			continue
-		if int(t.get("mana", 0)) > int(state.resources.get("mana", 0)):
-			continue
 		out.append(id)
 	return out
 
@@ -314,10 +276,6 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	var tactic: Dictionary = {}
 	if tactic_id != "" and hand.has(tactic_id):
 		tactic = content.tactics[tactic_id]
-		var cost := int(tactic.get("mana", 0))
-		if cost > 0:
-			state.resources["mana"] = int(state.resources["mana"]) - cost
-			entries.append({"kind": "resource", "text": "◈ мана −%d («%s»)" % [cost, tactic["name"]]})
 	var led := ledger(tactic)
 	var intent_active := _intent_negator(led["hero_tags"], led["env_tags"], tactic) == ""
 	if intent_active and float(intent.get("next_bonus", 0.0)) > 0.0:
@@ -374,14 +332,14 @@ func _lose_round(tactic: Dictionary, rec: Dictionary, extra: int = 0) -> void:
 	if bool(tactic.get("ally_guard", false)) and not allies.is_empty():
 		var ally: String = allies[0]
 		var before: Array = Array(state.character(ally).get("traumas", [])).duplicate()
-		TurnResolver.give_traumas(content, state, ally, [], 1, _trauma_pool(), false, rng, result, entries)
+		InjuryRules.give_traumas(content, state, ally, [], 1, _trauma_pool(), rng, result, entries)
 		rec["ally_took"] = ally
 		if not state.is_alive(ally):
 			allies.erase(ally)
 		var _unused := before
 		return
 	var n_before: int = Array(result["traumas"]).size()
-	TurnResolver.give_traumas(content, state, hero, enh, count, _trauma_pool(), ward, rng, result, entries)
+	InjuryRules.give_traumas(content, state, hero, enh, count, _trauma_pool(), rng, result, entries)
 	rec["traumas"] = Array(result["traumas"]).slice(n_before)
 
 
@@ -391,11 +349,6 @@ func _trauma_pool() -> String:
 		if best.is_empty() or _enemy_base(e) > _enemy_base(best):
 			best = e
 	return str(best.get("trauma_pool", "physical"))
-
-
-func retreat() -> void:
-	finished = true
-	outcome = "retreat"
 
 
 # --- летопись силы -------------------------------------------------------------------
@@ -424,8 +377,6 @@ func _hero_tags(tactic: Dictionary) -> Array:
 	for a: String in allies:
 		for t: String in content.characters.get(a, {}).get("support_tags", []):
 			_add_unique(out, t)
-	for t: String in mods.get("hero_tags", []):
-		_add_unique(out, t)
 	for t: String in hero_extra_tags:
 		_add_unique(out, t)
 	for t: String in tactic.get("add_tags", []):
@@ -440,10 +391,6 @@ func _enemy_tags(tactic: Dictionary) -> Array:
 	for e: Dictionary in enemies:
 		for t: String in e.get("tags", []):
 			_add_unique(out, t)
-	for t: String in mods.get("enemy_tags", []):
-		_add_unique(out, t)
-	if bool(state.enemy_alert.get(event_id, false)):
-		_add_unique(out, "Настороженность")
 	for t: String in tactic.get("cancel_enemy_tags", []):
 		out.erase(t)
 	for t: String in hidden_enemy_tags:
@@ -693,11 +640,7 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 
 
 func _hero_totals() -> Dictionary:
-	if not ctx_event.is_empty():
-		return StatResolver.resolve(content, state, hero, enh, ctx_event, ctx_option)["totals"]
-	var ev: Dictionary = content.events.get(event_id, {})
-	var o := content.option(event_id, option_id)
-	return StatResolver.resolve(content, state, hero, enh, ev, o)["totals"]
+	return StatResolver.resolve(content, state, hero, enh, ctx_event, ctx_option)["totals"]
 
 
 func _rank_detail() -> String:
@@ -721,63 +664,4 @@ func _link_rec(d: Dictionary, side: String, value: float, type: String = "confli
 	return {"id": str(d.get("id", "")), "type": type, "name": str(d.get("name", "")), "tags": tags, "side": side, "value": value}
 
 
-## Оценка шанса первого раунда без карты раунда — для строки варианта в планшете.
-static func estimate(p_content: Content, state_in: RunState, p_event_id: String, p_option_id: String, draft: Dictionary) -> int:
-	if str(draft.get("character", "")) == "":
-		return 0
-	var s := create(p_content, state_in, p_event_id, p_option_id, draft)
-	s.round_no = 1
-	s.round_card = {}
-	return int(s.ledger({})["chance"])
 
-
-# --- итог --------------------------------------------------------------------------
-
-func finish() -> Dictionary:
-	var success := outcome == "win"
-	var story_scheduled := false
-	var last: Dictionary = rounds_log[-1] if not rounds_log.is_empty() else {"chance": 0, "roll": 0}
-	result["event_id"] = event_id
-	result["option_id"] = option_id
-	result["executor"] = hero
-	result["success"] = success
-	result["chance"] = int(last["chance"])
-	result["roll"] = int(last["roll"])
-	result["rolled"] = not rounds_log.is_empty()
-	result["combat"] = {"outcome": outcome, "hero_wins": hero_wins, "enemy_wins": enemy_wins, "rounds": rounds_log.size()}
-	var header := {"win": "Победа в бою", "loss": "Поражение в бою", "retreat": "Отступление", "death": "Гибель в бою"}
-	entries.push_front({"kind": "story" if success else "info", "text": "%s: %d : %d по раундам" % [header.get(outcome, ""), hero_wins, enemy_wins]})
-	if state.game_over:
-		pass
-	elif success:
-		story_scheduled = TurnResolver.apply_success(content, state, event_id, option_id, hero, rng, entries, result, false)
-		var shards := 0
-		for e: Dictionary in enemies:
-			shards += int(e.get("shards", 0))
-			var echo: Dictionary = e.get("echo", {})
-			if not echo.is_empty() and rng.randf() < float(echo.get("chance", 0.0)):
-				entries.append_array(EffectApplier.add_card(content, state, str(echo["card"])))
-				entries.append({"kind": "card", "text": "Эхо: %s покоряется тени" % e["name"], "card": echo["card"]})
-		if shards > 0:
-			entries.append_array(EffectApplier.apply(content, state, {"cmd": "adjust_resource", "resource": "shards", "value": shards}, hero, rng))
-			result["loot"] = {"resource": "shards", "value": shards}
-		state.enemy_wounds.erase(event_id)
-		state.enemy_alert.erase(event_id)
-	else:
-		var o := content.option(event_id, option_id)
-		if outcome == "loss" and o.has("on_failure"):
-			entries.append_array(EffectApplier.apply_all(content, state, o["on_failure"], hero, rng))
-		if session_wounds > 0:
-			state.enemy_wounds[event_id] = int(state.enemy_wounds.get(event_id, 0)) + session_wounds
-			entries.append({"kind": "info", "text": "Враг ранен и не оправится до следующей встречи (−%d%%)" % (int(state.enemy_wounds[event_id]) * 10)})
-		if outcome == "retreat":
-			state.enemy_alert[event_id] = true
-			entries.append({"kind": "info", "text": "Враг насторожен: при следующей встрече +10%"})
-	# журнал противника: встреча в бою
-	var verdict: String = {"win": "победа", "loss": "поражение", "death": "гибель героя", "retreat": "отступление"}.get(outcome, outcome)
-	var ev_title := str(content.events.get(event_id, {}).get("title", event_id))
-	for e: Dictionary in enemies:
-		state.note(str(e.get("id", "")), "Бой «%s» против %s · %s %d:%d" % [ev_title, content.card_name(hero), verdict, hero_wins, enemy_wins])
-	TurnResolver.apply_wear(content, state, enh, rng, entries, result)
-	return TurnResolver.finish_turn(content, state, event_id, option_id, hero, int(last["chance"]), int(last["roll"]),
-		success, story_scheduled, rng, entries, result)

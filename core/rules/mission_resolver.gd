@@ -38,6 +38,11 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		report["outcome"] = "retreat"
 		entries.append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
 	else:
+		# цена действия (например, осколки за лечение) платится при выборе
+		var cost: Dictionary = a.get("cost", {})
+		for r: String in cost:
+			state.resources[r] = int(state.resources.get(r, 0)) - int(cost[r])
+			entries.append({"kind": "resource", "text": "Потрачено: %d %s" % [int(cost[r]), ConditionChecker.RESOURCE_NAMES.get(r, r)]})
 		var outcomes: Array = []
 		for st: Dictionary in a.get("stages", []):
 			var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))
@@ -71,7 +76,7 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		var pockets: Array = []
 		for cid: String in heroes:
 			pockets.append_array(MissionFlow.pocket(state, cid))
-		TurnResolver.apply_wear(content, state, pockets, rng, entries, {"wear": []})
+		InjuryRules.apply_wear(content, state, pockets, rng, entries, {"wear": []})
 
 	# статус миссии и что открывается дальше
 	var status: Dictionary = state.missions.get(mid, {"attempts": 0})
@@ -94,6 +99,8 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		if bool(m.get("end_chapter", false)) and not state.game_over:
 			state.demo_complete = true
 			report["chapter_done"] = MissionFlow.chapter_of(content, mid)
+			if str(m.get("next_chapter", "")) != "":
+				state.flags["next_chapter"] = str(m["next_chapter"])
 			entries.append({"kind": "story", "text": "Глава пройдена"})
 	else:
 		status["status"] = "open"
@@ -143,8 +150,8 @@ static func _check_stage(content: Content, state: RunState, m: Dictionary, a: Di
 
 static func _hurt(content: Content, state: RunState, m: Dictionary, cid: String, report: Dictionary, rng: RandomNumberGenerator) -> void:
 	var res := {"traumas": [], "death": {}}
-	TurnResolver.give_traumas(content, state, cid, MissionFlow.pocket(state, cid), 1, str(m.get("trauma_pool", "all")),
-		false, rng, res, report["entries"])
+	InjuryRules.give_traumas(content, state, cid, MissionFlow.pocket(state, cid), 1, str(m.get("trauma_pool", "all")),
+		rng, res, report["entries"])
 	if not res["traumas"].is_empty():
 		var got: Array = report["traumas"].get(cid, [])
 		got.append_array(res["traumas"])
@@ -189,7 +196,6 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 		if shards > 0:
 			report["entries"].append_array(EffectApplier.apply(content, after, {"cmd": "adjust_resource", "resource": "shards", "value": shards}, hero, rng))
 		after.enemy_wounds.erase(key)
-		after.enemy_alert.erase(key)
 	elif s.session_wounds > 0:
 		# враги помнят: раны сохраняются до следующей попытки
 		after.enemy_wounds[key] = int(after.enemy_wounds.get(key, 0)) + s.session_wounds

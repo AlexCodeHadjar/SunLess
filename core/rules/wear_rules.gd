@@ -12,7 +12,7 @@ static func wears(content: Content, state: RunState, card_id: String) -> bool:
 	if e.is_empty() or not bool(e.get("wears", true)):
 		return false
 	var exempt: Array = e.get("wear_exempt_arcs", [])
-	return not exempt.has(state.arc)
+	return not exempt.has(state.chapter)
 
 
 static func current(state: RunState, card_id: String) -> int:

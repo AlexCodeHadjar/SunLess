@@ -783,7 +783,7 @@
      {
       "name": "Захлестнуть",
       "req": {
-       "cunning": 10
+       "cunning": 11
       },
       "tags": [
        "tyrant"
@@ -795,8 +795,8 @@
      {
       "name": "Толкнуть",
       "req": {
-       "power": 7,
-       "will": 6
+       "power": 8,
+       "will": 7
       },
       "tags": [
        "climb"
@@ -808,7 +808,7 @@
      {
       "name": "Прочь от края",
       "req": {
-       "will": 8
+       "will": 9
       },
       "tags": [
        "chase"
@@ -880,7 +880,7 @@
      {
       "name": "Ауро отвлекает",
       "req": {
-       "power": 10
+       "power": 11
       },
       "tags": [
        "duel"
@@ -892,7 +892,7 @@
      {
       "name": "Проскользнуть",
       "req": {
-       "cunning": 8
+       "cunning": 9
       },
       "tags": [
        "stealth"
@@ -1147,8 +1147,8 @@
      {
       "name": "Рука над пропастью",
       "req": {
-       "power": 7,
-       "will": 6
+       "power": 8,
+       "will": 7
       },
       "tags": [
        "climb"
@@ -1160,7 +1160,7 @@
      {
       "name": "Вытянуть",
       "req": {
-       "power": 7
+       "power": 8
       },
       "tags": [
        "climb"
@@ -1199,7 +1199,7 @@
      {
       "name": "Не смотреть вниз",
       "req": {
-       "will": 8
+       "will": 9
       },
       "tags": [
        "social"
@@ -1238,7 +1238,7 @@
      {
       "name": "Пока никто не смотрит",
       "req": {
-       "cunning": 9
+       "cunning": 10
       },
       "tags": [
        "social"
@@ -1347,7 +1347,7 @@
      {
       "name": "Разговор у ручья",
       "req": {
-       "cunning": 10
+       "cunning": 11
       },
       "tags": [
        "social",
@@ -1379,8 +1379,8 @@
      {
       "name": "Слово за слово",
       "req": {
-       "cunning": 9,
-       "will": 7
+       "cunning": 10,
+       "will": 8
       },
       "tags": [
        "lie"
@@ -1408,7 +1408,7 @@
      {
       "name": "Не спать",
       "req": {
-       "will": 8
+       "will": 9
       },
       "tags": [
        "social"
@@ -1420,7 +1420,7 @@
      {
       "name": "Спрятать заточку",
       "req": {
-       "cunning": 10
+       "cunning": 11
       },
       "tags": [
        "stealth"
@@ -1936,6 +1936,7 @@
   "next": [],
   "requires_heroes": [
    "P01"
-  ]
+  ],
+  "next_chapter": "academy"
  }
 ]

@@ -162,14 +162,14 @@ func test_death_is_permanent_and_key_hero() -> void:
 	EffectApplier.add_card(c, s, "P09")
 	EffectApplier.add_card(c, s, "P10")
 	var entries: Array = []
-	TurnResolver._kill(c, s, "P10", entries)
+	InjuryRules.kill(c, s, "P10", entries)
 	check(not s.game_over, "Шифти погиб, но Санни и Шолар живы — игра идёт")
 	check(not MissionFlow.heroes(c, s).has("P10"), "погибший уходит из состава")
 	check(not ShopRules.can_offer(c, s, "P10"), "погибшего не вернуть и в магазине")
 	# Санни обязателен для финала главы (MS10, MS11: requires_heroes) — без него сюжет обрывается
 	eq(MissionFlow.key_mission_for(c, s, "P01"), "Храм Бога Теней", "Санни нужен сюжету:")
 	eq(MissionFlow.key_mission_for(c, s, "P09"), "", "Шолар сюжету не обязателен:")
-	TurnResolver._kill(c, s, "P01", entries)
+	InjuryRules.kill(c, s, "P01", entries)
 	check(s.game_over, "Санни погиб до Храма — конец, хотя Шолар жив")
 
 
@@ -180,9 +180,9 @@ func test_game_over_when_nobody_left() -> void:
 	for mid: String in ["MS10", "MS11"]:
 		s.missions[mid] = {"status": "done", "attempts": 0}
 	var entries: Array = []
-	TurnResolver._kill(c, s, "P01", entries)
+	InjuryRules.kill(c, s, "P01", entries)
 	check(not s.game_over, "сюжетные миссии Санни пройдены — его гибель не конец")
-	TurnResolver._kill(c, s, "P09", entries)
+	InjuryRules.kill(c, s, "P09", entries)
 	check(s.game_over, "героев не осталось — конец")
 
 
@@ -239,8 +239,14 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	var s := MissionFlow.new_run(c, seed_value)
 	var steps := 0
 	var attempts := 0
-	while steps < 6000 and not s.game_over and not s.demo_complete:
+	var nightmare_done := false
+	while steps < 12000 and not s.game_over:
 		steps += 1
+		if s.demo_complete:
+			if str(s.flags.get("next_chapter", "")) == "":
+				break
+			nightmare_done = true
+			MissionFlow.start_chapter(c, s, str(s.flags["next_chapter"]))
 		for sid: String in ShopRules.shops_of(c, s):
 			for it: Dictionary in ShopRules.ensure(c, s, sid)["items"]:
 				if c.card_kind(it["card"]) == "character" and not it["sold"] and int(s.resources.get("shards", 0)) >= int(it["price"]):
@@ -294,14 +300,16 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 			st["retreat"] += 1 if rep["outcome"] == "retreat" else 0
 			st["deaths"] += Array(rep["deaths"]).size()
 			stats[sq["mission"]] = st
-	return {"stuck": steps >= 6000, "over": s.game_over, "attempts": attempts, "clock": s.clock,
-		"story_done": s.demo_complete, "heroes": MissionFlow.heroes(c, s).size()}
+	return {"stuck": steps >= 12000, "over": s.game_over, "attempts": attempts, "clock": s.clock,
+		"nightmare_done": nightmare_done, "story_done": s.demo_complete and s.chapter == "academy",
+		"heroes": MissionFlow.heroes(c, s).size()}
 
 
 func test_mission_simulation() -> void:
 	var c := content()
 	var n := 120
 	var finished := 0
+	var nightmare := 0
 	var over := 0
 	var total_attempts := 0
 	var total_clock := 0.0
@@ -311,18 +319,20 @@ func test_mission_simulation() -> void:
 		check(not r.get("stuck", false), "бот застрял (сид %d): %s" % [5000 + i, r.get("error", "")])
 		if r.get("story_done", false):
 			finished += 1
+		if r.get("nightmare_done", false):
+			nightmare += 1
 		if r.get("over", false):
 			over += 1
 		total_attempts += int(r.get("attempts", 0))
 		total_clock += float(r.get("clock", 0.0))
-	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, гибель всех героев: %d" % [n, finished, over])
+	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, конец игры: %d" % [n, nightmare, finished, over])
 	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
 	var ids: Array = stats.keys()
 	ids.sort()
 	for mid: String in ids:
 		var st: Dictionary = stats[mid]
 		print("   [миссии] %s: попыток %d, удачно %d%%, отступлений %d, погибло героев %d" % [mid, st["tries"], int(100.0 * st["ok"] / maxf(1, st["tries"])), st["retreat"], st["deaths"]])
-	check(finished >= n * 0.6, "Первый Кошмар проходится в большинстве прохождений (%d из %d)" % [finished, n])
+	check(finished >= n * 0.6, "демо (Кошмар + Академия) проходится в большинстве прохождений (%d из %d)" % [finished, n])
 
 
 func test_combat_replay_matches() -> void:

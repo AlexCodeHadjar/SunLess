@@ -1,22 +1,22 @@
 extends TestCase
-## Бой «Столкновение»: ранги, теги, симбиозы, конфликты, поле, раунды, итог.
+## Бой «Столкновение» (автобой миссий): ранги, теги, симбиозы, конфликты, поле, раунды, итог.
+
+const LARVAE := {"enemies": ["M01", "M01"], "field": "F_05"}          # MS03 «Личинки Горного Короля»
+const KING := {"enemies": ["M02"], "field": "F_03", "kind": "boss"}     # MS05 «Горный Король»
+const AURO := {"enemies": ["H_AURO"], "field": "F_04"}                 # MS09 «Последние слова Героя»
+const PACK := {"enemies": ["M01", "M01", "M01"], "field": "F_01"}      # стая в узком проходе
 
 
 func _state(c: Content, stage: String = "slave") -> RunState:
-	var s := EventFlow.new_run(c, 7)
+	var s := MissionFlow.new_run(c, 7)
 	s.characters["P01"]["stage"] = stage
 	return s
 
 
-func _open(s: RunState, eid: String) -> void:
-	s.events[eid] = {"status": "active", "done_options": [], "spawned_week": 1}
-
-
-func _session(c: Content, s: RunState, eid: String, oid: String, enh: Array = []) -> CombatSession:
+func _session(c: Content, s: RunState, spec: Dictionary, enh: Array = [], support: Array = []) -> CombatSession:
 	for e: String in enh:
 		EffectApplier.add_card(c, s, e)
-	_open(s, eid)
-	var cs := CombatSession.create(c, s, eid, oid, {"character": "P01", "enhancements": enh})
+	var cs := CombatSession.create_for_mission(c, s, "T", spec, "P01", enh, support, {"id": "T", "tags": ["combat"]}, {"id": "T_a", "tags": []})
 	cs.round_no = 1
 	return cs
 
@@ -28,42 +28,37 @@ func test_data_valid() -> void:
 	check(c.combat_tags.size() >= 200, "тегов не меньше 200: %d" % c.combat_tags.size())
 	check(c.synergies.size() >= 40, "симбиозов не меньше 40")
 	check(c.conflicts.size() >= 50, "конфликтов не меньше 50")
+	for tid: String in c.tactics:
+		check(not c.tactics[tid].has("mana"), "приём %s без маны — маны в игре нет" % tid)
 
 
 func test_chance_is_clamped() -> void:
 	var c := content()
-	var s := _state(c)
-	var cs := _session(c, s, "E05", "E05_2")
+	var cs := _session(c, _state(c), KING)
 	var ch := int(cs.ledger({})["chance"])
 	check(ch >= CombatSession.CHANCE_MIN and ch <= CombatSession.CHANCE_MAX, "шанс в пределах 5–95: %d" % ch)
 	# бой до 2 побед из 3: p²(3 − 2p)
-	var p := ch / 100.0
-	var fight := p * p * (3.0 - 2.0 * p)
+	var fight := CombatSession.fight_chance(ch)
 	check(fight <= 0.15, "Санни-раб против Тирана почти без шансов: раунд %d%%, бой %.0f%%" % [ch, fight * 100])
 
 
 func test_even_fight_is_reasonable() -> void:
 	var c := content()
-	var s := _state(c)
-	var cs := _session(c, s, "E03", "E03_1", ["U01"])
-	var led := cs.ledger({})
+	var led := _session(c, _state(c), LARVAE, ["U01"]).ledger({})
 	check(int(led["chance"]) >= 20 and int(led["chance"]) <= 80, "бой с личинками — не приговор: %d" % int(led["chance"]))
 
 
 func test_conflict_chain_vs_soft_body() -> void:
 	var c := content()
-	var s := _state(c)
-	var cs := _session(c, s, "E03", "E03_1", ["U01"])
 	var names: Array = []
-	for l: Dictionary in cs.ledger({})["links"]:
+	for l: Dictionary in _session(c, _state(c), LARVAE, ["U01"]).ledger({})["links"]:
 		names.append(str(l["tags"]))
 	check(str(names).contains("Цепь") and str(names).contains("Мягкое тело"), "конфликт Цепь ⟷ Мягкое тело: %s" % str(names))
 
 
 func test_synergy_shadow_in_darkness() -> void:
 	var c := content()
-	var s := _state(c, "sleeper")
-	var cs := _session(c, s, "E09", "E09_1")
+	var cs := _session(c, _state(c, "sleeper"), AURO)
 	cs.field = c.fields["F_07"]  # собор: Тьма
 	var found := false
 	for l: Dictionary in cs.ledger({})["links"]:
@@ -74,25 +69,20 @@ func test_synergy_shadow_in_darkness() -> void:
 
 func test_narrow_pass_limits_pack() -> void:
 	var c := content()
-	var s := _state(c)
-	_open(s, "RE_HUNT")
-	var cs := CombatSession.create(c, s, "RE_HUNT", "RE_HUNT_1", {"character": "P01", "enhancements": []})
-	cs.round_no = 1
-	var led := cs.ledger({})
+	var led := _session(c, _state(c), PACK).ledger({})
 	var base_step: Dictionary = led["enemy_steps"][0]
 	check(float(base_step["value"]) <= 200.1, "в узком проходе считаются только двое: %.1f" % float(base_step["value"]))
 
 
 func test_tactic_bonus_raises_chance() -> void:
 	var c := content()
-	var s := _state(c)
-	var cs := _session(c, s, "E03", "E03_1", ["U01"])
+	var cs := _session(c, _state(c), LARVAE, ["U01"])
 	var base := int(cs.ledger({})["chance"])
 	var boosted := int(cs.ledger(c.tactics["X_ALL_IN"])["chance"])
 	check(boosted > base, "«Всё или ничего» повышает шанс: %d → %d" % [base, boosted])
 
 
-func test_full_combat_and_finish() -> void:
+func test_auto_combat_ends_and_has_both_outcomes() -> void:
 	var c := content()
 	var wins := 0
 	var losses := 0
@@ -100,89 +90,71 @@ func test_full_combat_and_finish() -> void:
 		var s := _state(c)
 		s.rng_seed = seed_value
 		s.rng_state = seed_value * 104729
-		EffectApplier.add_card(c, s, "U01")
-		_open(s, "E03")
-		var cs := CombatSession.create(c, s, "E03", "E03_1", {"character": "P01", "enhancements": ["U01"]})
-		var guard := 0
-		while not cs.finished and guard < 5:
-			cs.begin_round()
-			cs.play_round(cs.hand[0] if not cs.hand.is_empty() else "")
-			guard += 1
-		check(cs.finished, "бой завершается не позже 3 раундов")
+		var cs := _session(c, s, LARVAE, ["U01"])
+		cs.round_no = 0
+		cs.auto_play()
+		check(cs.finished, "автобой завершается")
 		check(cs.rounds_log.size() <= 3, "раундов не больше трёх")
-		var r := cs.finish()
-		var ns: RunState = r["state"]
 		if cs.outcome == "win":
 			wins += 1
-			check(ns.is_option_done("E03", "E03_1"), "победа — вариант выполнен")
-			check(int(ns.resources["shards"]) > 10, "добыча: осколки душ")
 		elif cs.outcome == "loss":
 			losses += 1
-			check(ns.is_event_active("E03"), "поражение — событие остаётся")
-			check(Array(ns.characters["P01"]["traumas"]).size() >= 1, "проигранный раунд — травма")
-		if cs.outcome == "death":
-			check(ns.game_over, "смерть в бою — конец прохождения")
-		else:
-			eq(ns.week, 2, "бой — это ход:")
+			eq(cs.enemy_wins, 2, "проигрыш — две проигранные схватки:")
 	check(wins > 0 and losses > 0, "у боя с личинками есть оба исхода (%d/%d)" % [wins, losses])
 
 
-func test_retreat_keeps_wounds() -> void:
+func test_mission_combat_loot_and_wounds() -> void:
 	var c := content()
-	var s := _state(c)
-	_open(s, "E03")
-	var cs := CombatSession.create(c, s, "E03", "E03_1", {"character": "P01", "enhancements": []})
-	cs.session_wounds = 1
-	cs.retreat()
-	var ns: RunState = cs.finish()["state"]
-	eq(int(ns.enemy_wounds.get("E03", 0)), 1, "раны врага сохранились:")
-	check(bool(ns.enemy_alert.get("E03", false)), "враг насторожен после отступления")
-	check(ns.is_event_active("E03"), "событие остаётся")
+	var won := false
+	var wounded := false
+	for seed_value in 60:
+		var s := MissionFlow.new_run(c, 300 + seed_value)
+		s.missions["MS03"] = {"status": "open", "attempts": 0}
+		var r := MissionFlow.launch(c, s, "MS03", ["P01"])
+		MissionFlow.tick(c, s, 20.0)
+		var res := MissionResolver.resolve(c, s, int(r["squad"]["id"]), "MS03_fight")
+		var rep: Dictionary = res["report"]
+		var ns: RunState = res["state"]
+		if rep["combats"].is_empty():
+			continue
+		var cb: Dictionary = rep["combats"][0]
+		if cb["outcome"] == "win":
+			won = true
+			check(int(ns.resources["shards"]) > 10, "победа — добыча: осколки душ")
+			eq(int(ns.enemy_wounds.get("MS03", 0)), 0, "после победы раны врага забыты:")
+		elif int(ns.enemy_wounds.get("MS03", 0)) > 0:
+			wounded = true
+	check(won, "в миссии бывают победы")
+	check(wounded, "раны врага сохраняются до следующей попытки")
 
 
-func test_option_adds_ally_to_combat() -> void:
+func test_squad_support_becomes_ally() -> void:
 	var c := content()
 	var s := _state(c)
 	EffectApplier.add_card(c, s, "P08")
-	var rng := RandomNumberGenerator.new()
-	EffectApplier.apply(c, s, {"cmd": "combat_mod", "event": "E05", "allies": ["P08"]}, "P01", rng)
-	_open(s, "E05")
-	var cs := CombatSession.create(c, s, "E05", "E05_2", {"character": "P01", "enhancements": []})
+	var cs := _session(c, s, KING, [], ["P08"])
 	check(cs.allies.has("P08"), "Ауро в бою как союзник")
-	cs.round_no = 1
 	check(cs.available_tactics().has("X_ALLY"), "с союзником доступен приём «Плечом к плечу»")
 
 
 func test_enemy_intent_chosen_and_negated() -> void:
 	var c := content()
-	var s := _state(c)
-	_open(s, "E03")
-	var cs := CombatSession.create(c, s, "E03", "E03_1", {"character": "P01", "enhancements": []})
+	var cs := _session(c, _state(c), LARVAE)
+	cs.round_no = 0
 	cs.begin_round()
 	check(not cs.intent.is_empty(), "враг выбрал намерение")
 	# Смертельный взгляд гасится Слепотой
 	cs.intent = c.enemy_abilities["EA_GAZE"].duplicate(true)
 	var with_gaze := float(cs.ledger({})["hero"])
-	cs.mods = {"hero_tags": ["Слепота"]}
+	cs.hero_extra_tags = ["Слепота"]
 	var blind := float(cs.ledger({})["hero"])
 	check(blind > with_gaze, "Слепота гасит взгляд: %.0f → %.0f" % [with_gaze, blind])
 
 
 func test_feint_cancels_intent() -> void:
 	var c := content()
-	var s := _state(c)
-	_open(s, "E05")
-	var cs := CombatSession.create(c, s, "E05", "E05_2", {"character": "P01", "enhancements": []})
-	cs.round_no = 1
+	var cs := _session(c, _state(c), KING)
 	cs.intent = c.enemy_abilities["EA_CHARGE"].duplicate(true)
 	var plain := float(cs.ledger({})["enemy"])
 	var feint := float(cs.ledger(c.tactics["X_FEINT"])["enemy"])
 	check(feint < plain, "Финт сбивает натиск: %.0f → %.0f" % [plain, feint])
-
-
-func test_combat_option_blocked_in_turn_resolver() -> void:
-	var c := content()
-	var s := _state(c)
-	_open(s, "E03")
-	var r := TurnResolver.resolve(c, s, "E03", "E03_1", {"character": "P01", "enhancements": []})
-	check(not r["ok"], "бой не разрешается обычной проверкой")
