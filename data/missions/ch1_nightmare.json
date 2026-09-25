@@ -80,10 +80,6 @@
       "cmd": "add_codex",
       "entry": "caravan",
       "text": "Ауро, Шолар и Шифти"
-     },
-     {
-      "cmd": "add_card",
-      "card": "I02"
      }
     ],
     "on_partial": [

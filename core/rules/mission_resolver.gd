@@ -149,8 +149,11 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	var hero: String = setup["hero"]
 	var support: Array = alive.filter(func(c: String) -> bool: return c != hero)
 	state.rng_state = rng.state
-	var s := CombatSession.create_for_mission(content, state, str(m.get("id", "")), st.get("combat", {}), hero,
-		MissionFlow.pocket(state, hero), support, MissionForecast.ctx_event(m), MissionForecast.ctx_option(a, st))
+	# всё, что нужно, чтобы экран боя воспроизвёл этот автобой точь-в-точь
+	var replay_setup := {"state": state.to_dict(), "key": str(m.get("id", "")), "spec": st.get("combat", {}), "hero": hero,
+		"enh": MissionFlow.pocket(state, hero), "support": support,
+		"ctx_event": MissionForecast.ctx_event(m), "ctx_option": MissionForecast.ctx_option(a, st)}
+	var s := replay_session(content, replay_setup)
 	s.auto_play()
 	var after := s.state
 	rng.state = s.rng.state
@@ -161,7 +164,7 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	rec["outcome"] = "ok" if won else "fail"
 	rec["combat"] = {"outcome": s.outcome, "hero_wins": s.hero_wins, "enemy_wins": s.enemy_wins, "allies": s.allies}
 	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": s.allies, "rounds": s.rounds_log,
-		"outcome": s.outcome, "discovered": s.discovered})
+		"outcome": s.outcome, "discovered": s.discovered, "setup": replay_setup})
 	report["entries"].append_array(s.entries)
 	if not Array(s.result["traumas"]).is_empty():
 		var got: Array = report["traumas"].get(hero, [])
@@ -184,6 +187,12 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	for e: Dictionary in s.enemies:
 		after.note(str(e.get("id", "")), "Бой «%s» · %s" % [m.get("title", key), "победа" if won else "поражение"])
 	return after
+
+
+## Бой в том же виде, в каком его сыграл резолвер (для просмотра автобоя).
+static func replay_session(content: Content, setup: Dictionary) -> CombatSession:
+	return CombatSession.create_for_mission(content, RunState.from_dict(setup["state"]), str(setup["key"]), setup["spec"],
+		str(setup["hero"]), setup["enh"], setup["support"], setup["ctx_event"], setup["ctx_option"])
 
 
 static func _executor(state: RunState, heroes: Array) -> String:

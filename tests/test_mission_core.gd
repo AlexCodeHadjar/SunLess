@@ -278,3 +278,19 @@ func test_mission_simulation() -> void:
 	print("   [миссии] прохождений: %d, сюжет главы пройден: %d, гибель всех героев: %d" % [n, finished, over])
 	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с" % [float(total_attempts) / n, total_clock / n])
 	check(finished >= n * 0.8, "сюжет пробных миссий проходится в большинстве прохождений")
+
+
+func test_combat_replay_matches() -> void:
+	var c := content()
+	for seed_value in [3, 11, 29]:
+		var s := _run(seed_value)
+		s.missions["MS03"] = {"status": "open", "attempts": 0}
+		var sid := _arrive(c, s, "MS03", ["P01"])
+		var rep: Dictionary = MissionResolver.resolve(c, s, sid, "MS03_fight")["report"]
+		var rec: Dictionary = rep["combats"][0]
+		var replay := MissionResolver.replay_session(c, rec["setup"])
+		replay.auto_play()
+		eq(replay.outcome, rec["outcome"], "просмотр боя совпадает с итогом (сид %d):" % seed_value)
+		eq(replay.rounds_log.size(), Array(rec["rounds"]).size(), "столько же раундов:")
+		for i in replay.rounds_log.size():
+			eq(int(replay.rounds_log[i]["roll"]), int(rec["rounds"][i]["roll"]), "тот же бросок в раунде %d:" % (i + 1))

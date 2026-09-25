@@ -62,4 +62,7 @@ static func missing_ids(content: Content, state: RunState) -> Array:
 	for eid: String in state.events:
 		if not content.events.has(eid):
 			out.append(eid)
+	for mid: String in state.missions:
+		if not content.missions.has(mid):
+			out.append(mid)
 	return out

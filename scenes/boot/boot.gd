@@ -12,6 +12,8 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shots="):
 			get_tree().root.add_child.call_deferred(load("res://tools/auto_shots.gd").new())
+		if a.begins_with("--mshots="):
+			get_tree().root.add_child.call_deferred(load("res://tools/mission_shots.gd").new())
 	get_tree().change_scene_to_file.call_deferred(MENU)
 
 

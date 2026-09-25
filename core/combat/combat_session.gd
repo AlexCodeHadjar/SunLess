@@ -129,17 +129,36 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 func auto_play() -> void:
 	while not finished:
 		begin_round()
-		var best := ""
-		var best_chance := int(ledger({})["chance"])
-		for tid: String in hand:
-			var t: Dictionary = content.tactics.get(tid, {})
-			if int(t.get("mana", 0)) > 0:
-				continue
-			var ch := int(ledger(t)["chance"])
-			if ch > best_chance:
-				best_chance = ch
-				best = tid
-		play_round(best)
+		play_round(auto_choice())
+
+
+## Приём, который выберет отряд в автобое: лучший шанс раунда ("" — без приёма).
+## Одна функция и для расчёта, и для просмотра боя — поэтому просмотр совпадает с итогом.
+## Отряд не безрассуден: «всё или ничего» (две травмы при проигрыше) — только при шансе от 55%,
+## а при слабом шансе он предпочтёт уйти в защиту, если такой приём есть в руке.
+const AUTO_ALL_IN_MIN := 55
+const AUTO_GUARD_BELOW := 35
+
+
+func auto_choice() -> String:
+	var best := ""
+	var best_chance := int(ledger({})["chance"])
+	var guard := ""
+	for tid: String in hand:
+		var t: Dictionary = content.tactics.get(tid, {})
+		if int(t.get("mana", 0)) > 0:
+			continue
+		var ch := int(ledger(t)["chance"])
+		if bool(t.get("guard", false)) and guard == "":
+			guard = tid
+		if bool(t.get("all_in", false)) and ch < AUTO_ALL_IN_MIN:
+			continue
+		if ch > best_chance:
+			best_chance = ch
+			best = tid
+	if best_chance < AUTO_GUARD_BELOW and guard != "":
+		return guard
+	return best
 
 
 ## Шанс выиграть бой целиком при шансе раунда p (до 2 побед из 3 раундов).

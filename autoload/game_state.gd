@@ -258,3 +258,63 @@ func finish_combat() -> Dictionary:
 	EventBus.option_resolved.emit(r["result"])
 	EventBus.state_changed.emit()
 	return r
+
+
+# --- миссии и отряды (docs/15, ветка gameplay/missions) --------------------------------
+
+signal missions_changed
+signal mission_events(events: Array)
+
+var _autosave_at := 0.0
+
+
+func is_missions() -> bool:
+	return state != null and state.mode == "missions"
+
+
+func new_mission_run(seed_value: int = -1) -> void:
+	if seed_value < 0:
+		seed_value = randi()
+	state = MissionFlow.new_run(content(), seed_value)
+	_reset_extras()
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+
+
+## Игровые часы: вызывается экраном миссий каждый кадр. События — прибытие, отдых, новые миссии.
+func mission_tick(dt: float) -> void:
+	if not is_missions() or state.game_over:
+		return
+	var ev: Array = MissionFlow.tick(content(), state, dt)
+	if not ev.is_empty():
+		mission_events.emit(ev)
+		missions_changed.emit()
+		SaveService.save_state(state)
+		_autosave_at = state.clock
+	elif state.clock - _autosave_at > 10.0:
+		SaveService.save_state(state)
+		_autosave_at = state.clock
+
+
+## "" — отряд ушёл; иначе причина.
+func launch_squad(mission_id: String, heroes: Array) -> String:
+	var r: Dictionary = MissionFlow.launch(content(), state, mission_id, heroes)
+	if not r["ok"]:
+		return r["error"]
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return ""
+
+
+## Выбор действия прибывшего отряда. Возвращает отчёт (или {"error": ...}).
+func resolve_squad(squad_id: int, action_id: String) -> Dictionary:
+	var r: Dictionary = MissionResolver.resolve(content(), state, squad_id, action_id)
+	if not r["ok"]:
+		return {"error": r["error"]}
+	state = r["state"]
+	# связи тегов открываются при просмотре боя или при закрытии отчёта (MissionWindow)
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return r["report"]
