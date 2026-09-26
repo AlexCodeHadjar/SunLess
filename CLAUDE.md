@@ -31,9 +31,9 @@ python tools/editor/server.py                          # редактор кон
 | Состояние прохождения | `core/state/run_state.gd` (всё сохраняемое; `SAVE_VERSION`), `autoload/save_service.gd` |
 | API для интерфейса | `autoload/game_state.gd` (запуск, тик часов, отряды, магазин, главы) |
 | Миссии | `core/rules/mission_flow.gd` (открытие, герои, отряды, часы, действия, главы), `mission_forecast.gd` (слова прогноза), `mission_resolver.gd` (этапы, бой, последствия, отдых) |
-| Правила | `chance_calculator.gd`, `stat_resolver.gd` (характеристики + бонусы по тегам), `condition_checker.gd`, `effect_applier.gd` (команды `cmd`), `injury_rules.gd` (травмы/износ/смерть), `trauma_rules.gd`, `wear_rules.gd`, `shop_rules.gd`, `atmosphere.gd` (небо) |
+| Правила | `chance_calculator.gd`, `stat_resolver.gd` (характеристики + бонусы по тегам), `condition_checker.gd`, `effect_applier.gd` (команды `cmd`), `injury_rules.gd` (травмы/износ/смерть), `trauma_rules.gd`, `wear_rules.gd`, `shop_rules.gd`, `atmosphere.gd` (небо); живой отряд — `trust_rules.gd` (доверие пар), `bond_rules.gd` (связки, `data/bonds.json`), `panic_rules.gd` (паника и реакции по тегам) |
 | Бой | `core/combat/combat_session.gd` (автобой, ledger — расчёт силы); экран — `scenes/combat/combat_screen.gd` (только просмотр) |
-| Экран карты | `scenes/missions/mission_game.gd` (карта, герои, небо, окна), `mission_marker.gd` (карта миссии + кольцо), `mission_window.gd` (брифинг → прибытие → отчёт), `shop_*.gd`, `drop_zone.gd` |
+| Экран карты | `scenes/missions/mission_game.gd` (карта, герои, небо, окна), `mission_marker.gd` (карта миссии + кольцо), `mission_window.gd` (брифинг → прибытие → отчёт), `shop_*.gd`, `drop_zone.gd`, `squad_life_ui.gd` (значки доверия/паники, строка брифинга) |
 | Карты | `scenes/cards/card_view.gd` (отрисовка, арт `art/cards/<ID>.webp`), `card_inspector.gd` (планшет), `card_aura.gd` (облик по тегам) |
 | Фон | `scenes/map/map_backdrop.gd` (рисунки неба `art/regions/<регион>_<небо>.webp` или процедурный), `map_life.gd` |
 | Общее UI | `ui/theme/palette.gd`, `ui_theme.gd` (`UITheme.label/box/font/plural`), `scenes/vfx/vfx.gd` |
@@ -49,6 +49,7 @@ python tools/editor/server.py                          # редактор кон
 | `characters.json` | герои | `stats` или `stages`, `tags`, `support_tags`, `traits[].bonuses`, `start_abilities`, `status` (temporary уходят в конце главы, если не куплены) |
 | `enhancements.json`, `abilities.json`, `traumas.json` | карты | `bonuses[{stat,value,tags}]` |
 | `combat/*.json` | бой: теги, симбиозы, конфликты, поля, противники, приёмы | генерируются `tools/gen_combat_data.py` из docs/12 + `editor_overrides.json`; `tactics.json` правится вручную |
+| `bonds.json` | связки героев | `heroes[2], name, text, effect{reveal, stat, combat, quarrel}, min_trust` |
 | `tags.json` | теги проверок (контекст: combat, stealth…) | |
 | `lore.json` | «По книге» (tools/gen_lore.py) | |
 

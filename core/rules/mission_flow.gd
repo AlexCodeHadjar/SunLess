@@ -173,6 +173,8 @@ static func squad_tags(content: Content, state: RunState, heroes_ids: Array) -> 
 
 
 static func has_scout(content: Content, state: RunState, heroes_ids: Array) -> bool:
+	if BondRules.reveals(content, state, heroes_ids):
+		return true
 	var tags := squad_tags(content, state, heroes_ids)
 	for t: String in SCOUT_TAGS:
 		if tags.has(t):
@@ -209,7 +211,7 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	for need: String in m.get("requires_heroes", []):
 		if not heroes_ids.has(need):
 			return "Нужен в отряде: %s" % content.card_name(need)
-	return ""
+	return TrustRules.refusal(content, state, heroes_ids)
 
 
 ## Отправляет отряд. Возвращает {ok, error, squad}.
@@ -246,6 +248,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			sq["phase"] = "arrived"
 			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
+	PanicRules.decay(state, dt)
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]
@@ -389,6 +392,18 @@ static func actions_for(content: Content, state: RunState, mission_id: String, h
 			ok = who.any(func(cid: String) -> bool: return heroes_ids.has(cid))
 			if not ok:
 				reason = "Нужен в отряде: %s" % " или ".join(who.map(func(cid: String) -> String: return content.card_name(cid)))
+		# доверие в отряде (docs/16 §5)
+		var tneed: Dictionary = a.get("requires_trust", {})
+		if ok and not tneed.is_empty() and not TrustRules.meets(state, heroes_ids, tneed):
+			ok = false
+			reason = "Нужно доверие %d%s" % [int(tneed.get("min", TrustRules.HIGH)),
+				(" между %s и %s" % [content.card_name(tneed["pair"][0]), content.card_name(tneed["pair"][1])]) if Array(tneed.get("pair", [])).size() == 2 else " в отряде"]
+		# Гордыня в панике не даёт отступить (docs/16 §7)
+		if ok and bool(a.get("retreat", false)):
+			var proud := PanicRules.refuses_retreat(content, state, heroes_ids)
+			if proud != "":
+				ok = false
+				reason = "%s в панике и не отступит" % proud
 		# жертва карты из кармашка отряда (docs/16 §3)
 		var cost: Dictionary = a.get("cost", {})
 		if ok and (cost.has("sacrifice") or cost.has("sacrifice_tag")) and sacrifice_card(content, state, a, heroes_ids) == "":

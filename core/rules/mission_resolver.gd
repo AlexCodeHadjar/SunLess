@@ -37,6 +37,10 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
 		return _finish(content, state, m, sq, run, report, rng)
 	_pay_cost(content, state, a, heroes, run, report, rng)
+	# угроза пугает с порога (docs/16 §7)
+	var threat_gain := PanicRules.GAIN_THREAT * maxi(0, int(m.get("threat", 1)) - 2)
+	for cid: String in heroes:
+		report["entries"].append_array(PanicRules.add(content, state, cid, threat_gain, "угроза"))
 	return _advance(content, state, m, sq, run, report, rng)
 
 
@@ -74,6 +78,9 @@ static func resume(content: Content, state_in: RunState, squad_id: int, option_i
 	rng.state = state.rng_state
 	report["forks"].append({"text": str(fork.get("text", "")), "choice": str(opt.get("label", ""))})
 	if str(opt.get("then", "continue")) == "retreat":
+		var proud := PanicRules.refuses_retreat(content, state, Array(sq["heroes"]))
+		if proud != "":
+			return {"ok": false, "error": "%s в панике и не отступит" % proud}
 		report["outcome"] = "retreat"
 		var executor := _executor(state, Array(sq["heroes"]))
 		if executor != "":
@@ -121,9 +128,22 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 	for i: int in run["temp_used"]:
 		temp_used[i] = true
 	var stages: Array = run["stages"]
+	var fled: Array = run.get("fled", [])
 	while int(run["done"]) < stages.size():
 		var st: Dictionary = stages[int(run["done"])]
-		var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))
+		# Трус в панике сбегает перед этапом (docs/16 §7)
+		for cid: String in heroes:
+			if state.is_alive(cid) and not fled.has(cid) and PanicRules.flees(content, state, cid):
+				fled.append(cid)
+				report["entries"].append({"kind": "panic", "card": cid, "text": "%s сбегает, не выдержав страха" % content.card_name(cid)})
+				for other: String in heroes:
+					if other != cid and state.is_alive(other):
+						report["entries"].append_array(TrustRules.change(content, state, cid, other, -1, "сбежал с миссии"))
+		run["fled"] = fled
+		var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c) and not fled.has(c))
+		var trauma_before := {}
+		for cid: String in alive:
+			trauma_before[cid] = Array(report["traumas"].get(cid, [])).size()
 		var rec := {"name": st.get("name", ""), "hero": "", "chance": 0, "roll": 0, "outcome": "fail", "text": ""}
 		if alive.is_empty():
 			rec["text"] = "Идти дальше некому."
@@ -141,6 +161,16 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 				rec["text"] = str(st.get("ok", ""))
 		if rec["outcome"] == "fail":
 			run["fails"] = int(run["fails"]) + 1
+		# паника от этапа: провал и частичный успех пугают всех, травма — раненого, гибель — остальных
+		var gain: int = {"fail": PanicRules.GAIN_FAIL, "partial": PanicRules.GAIN_PARTIAL}.get(rec["outcome"], 0)
+		for cid: String in alive:
+			if not state.is_alive(cid):
+				for other: String in alive:
+					if other != cid:
+						report["entries"].append_array(PanicRules.add(content, state, other, PanicRules.GAIN_DEATH, "гибель товарища"))
+				continue
+			var got := Array(report["traumas"].get(cid, [])).size() - int(trauma_before.get(cid, 0))
+			report["entries"].append_array(PanicRules.add(content, state, cid, int(gain) + PanicRules.GAIN_TRAUMA * got, "этап «%s»" % rec["name"]))
 		run["outcomes"].append(rec["outcome"])
 		report["stages"].append(rec)
 		run["done"] = int(run["done"]) + 1
@@ -226,6 +256,12 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 			status["attempts"] = int(status.get("attempts", 0)) + 1
 			entries.append({"kind": "info", "text": "Миссия провалена — её можно повторить."})
 	state.missions[mid] = status
+
+	# доверие и ссоры в связках (docs/16 §5–6)
+	if report["outcome"] != "retreat":
+		entries.append_array(TrustRules.after_mission(content, state, heroes.filter(func(c: String) -> bool: return not Array(run.get("fled", [])).has(c)),
+			str(report["outcome"]), str(m.get("title", mid))))
+		entries.append_array(BondRules.quarrels(content, state, heroes, rng))
 
 	# отдых выживших
 	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST)) + float(run.get("extra_rest", 0.0))

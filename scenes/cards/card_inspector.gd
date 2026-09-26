@@ -148,7 +148,7 @@ func _ready() -> void:
 	_hint_label.bbcode_enabled = true
 	_hint_label.fit_content = true
 	_hint_label.scroll_active = false
-	_hint_label.custom_minimum_size = Vector2(440, 0)
+	_hint_label.custom_minimum_size = Vector2(520, 0)
 	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hint_label.add_theme_font_size_override("normal_font_size", 18)
 	_hint_label.add_theme_font_size_override("bold_font_size", 19)
@@ -291,7 +291,38 @@ func _build_stats(y: float) -> float:
 			Palette.STAT_UP if delta > 0 else (Palette.STAT_DOWN if delta < 0 else Palette.TEXT_DIM))
 		dl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(dl)
+	if GameState.state.is_alive(card_id):
+		_life_box(row, "panic", str(PanicRules.value(GameState.state, card_id)), PanicRules.word(PanicRules.value(GameState.state, card_id)),
+			SquadLifeUI.panic_color(PanicRules.value(GameState.state, card_id)), SquadLifeUI.panic_hint(card_id))
+		var top := TrustRules.top(ContentDB.data, GameState.state, card_id)
+		var ends: Array = []
+		for side: String in ["positive", "negative"]:
+			if not Array(top[side]).is_empty():
+				ends.append("%+d" % int(top[side][0]["value"]))
+		_life_box(row, "trust", "  ".join(ends) if not ends.is_empty() else "—", "Доверие", Palette.SILVER, SquadLifeUI.trust_hint(card_id))
 	return y + 92.0
+
+
+## Значок «живого отряда» (паника / доверие) в строке характеристик; наведение — подробности.
+func _life_box(row: HBoxContainer, m: String, big: String, small: String, col: Color, hint: String) -> void:
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.mouse_default_cursor_shape = Control.CURSOR_HELP
+	box.mouse_entered.connect(_show_hint.bind(hint))
+	box.mouse_exited.connect(_hide_hint)
+	row.add_child(box)
+	box.add_child(SquadLifeUI.make(m, card_id))
+	var col_box := VBoxContainer.new()
+	col_box.add_theme_constant_override("separation", 0)
+	col_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col_box)
+	var num := UITheme.label(big, "title_bold", 46 if m == "panic" else 38, Palette.TEXT)
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col_box.add_child(num)
+	var dl := UITheme.label(small, "sans", 16, col)
+	dl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col_box.add_child(dl)
 
 
 ## Разбор характеристик персонажа вне события: база стадии, навсегда, кармашек, травмы; условные — отдельно.

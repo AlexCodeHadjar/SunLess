@@ -40,6 +40,9 @@ var completed_missions: int = 0
 var loc_timers: Dictionary = {}
 ## shop_id -> {gen, items: [{card, price, sold}], seen} — ассортимент магазинов (ShopRules)
 var shops: Dictionary = {}
+## "a|b" (по алфавиту) -> доверие −5…+5 и причина последнего изменения (TrustRules)
+var trust: Dictionary = {}
+var trust_notes: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -71,6 +74,8 @@ func to_dict() -> Dictionary:
 		"completed_missions": completed_missions,
 		"loc_timers": loc_timers.duplicate(true),
 		"shops": shops.duplicate(true),
+		"trust": trust.duplicate(true),
+		"trust_notes": trust_notes.duplicate(true),
 	}
 
 
@@ -115,6 +120,8 @@ static func from_dict(d: Dictionary) -> RunState:
 		s.rest_until[cid] = float(s.rest_until[cid])
 	s.completed_missions = int(d.get("completed_missions", 0))
 	s.loc_timers = Dictionary(d.get("loc_timers", {})).duplicate(true)
+	s.trust = _ints(d.get("trust", {}))
+	s.trust_notes = Dictionary(d.get("trust_notes", {})).duplicate(true)
 	s.shops = Dictionary(d.get("shops", {})).duplicate(true)
 	for sid: String in s.shops:
 		s.shops[sid]["gen"] = int(s.shops[sid].get("gen", 0))

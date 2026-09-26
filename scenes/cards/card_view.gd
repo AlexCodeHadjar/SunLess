@@ -276,6 +276,9 @@ func describe() -> String:
 				for t: String in traumas:
 					names.append(c.card_name(t))
 				lines.append("[color=#B65F63]Травмы: %s[/color]" % ", ".join(names))
+			var pv := PanicRules.value(s, card_id) if s else 0
+			if pv > 0:
+				lines.append("[color=#%s]♥ Паника: %d — %s[/color]" % [SquadLifeUI.panic_color(pv).to_html(false), pv, PanicRules.word(pv)])
 			var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 			if dc > 0:
 				lines.append("[color=#B65F63]☠ Шанс смерти при следующей травме: %d%%[/color]" % dc)
@@ -488,6 +491,13 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 			else:
 				draw_rect(tr, Palette.TRAUMA)
 				draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
+		var pv := PanicRules.value(s, card_id)
+		if pv > 0 and s.is_alive(card_id):
+			# паника: полоса снизу вверх у левого края, цвет по порогам
+			var bar := Rect2(r.position + Vector2(4 * k, r.size.y * 0.22), Vector2(4 * k, r.size.y * 0.5))
+			draw_rect(bar, Color(0, 0, 0, 0.55))
+			var fill := bar.size.y * pv / float(PanicRules.MAX)
+			draw_rect(Rect2(bar.position + Vector2(0, bar.size.y - fill), Vector2(bar.size.x, fill)), SquadLifeUI.panic_color(pv))
 		var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 		if dc > 0 and TraumaRules.counted(traumas) >= 2:
 			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "☠ %d%%" % dc, 11 * k, Palette.TRAUMA_BRIGHT, true)

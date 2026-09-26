@@ -125,6 +125,19 @@ func _run() -> void:
 		_window().show_report(r)
 		await _wait(0.8)
 	await _shot("m11_report_ms03")
+	# Ф9: планшет героя — паника и доверие (подсказка доверия открыта)
+	var gs := GameState.state
+	TrustRules.change(ContentDB.data, gs, "P01", "P03", 4, "успех вместе: «Тропа через перевал»")
+	TrustRules.change(ContentDB.data, gs, "P01", "P02", 2, "успех вместе: «Первый бой»")
+	TrustRules.change(ContentDB.data, gs, "P01", "P10", -3, "бегство с этапа")
+	PanicRules.add(ContentDB.data, gs, "P01", 70, "снимок")
+	var ins := CardInspector.open_for(game, "P01")
+	await _wait(0.8)
+	ins.call("_show_hint", SquadLifeUI.trust_hint("P01"))
+	await _wait(0.4)
+	await _shot("m11b_trust_panic")
+	ins.call("_close")
+	await _wait(0.3)
 	var rep: Dictionary = _window().report
 	if not Array(rep.get("combats", [])).is_empty():
 		game.call("_watch_combat", rep["combats"][0]["setup"])

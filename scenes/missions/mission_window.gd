@@ -242,6 +242,9 @@ func _refresh_forecast() -> void:
 	var err := MissionFlow.can_launch(_content(), GameState.state, mission_id, picked)
 	_go.disabled = err != ""
 	_go.tooltip_text = err
+	if err != "" and not picked.is_empty() and TrustRules.refusal(_content(), GameState.state, picked) != "":
+		_forecast_box.add_child(_rich(SquadLifeUI.squad_text(picked), 17))
+		return
 	if picked.is_empty():
 		_forecast_box.add_child(UITheme.label("Добавьте героя в отряд — появится прогноз.", "serif_italic", 19, Palette.TEXT_DIM))
 		return
@@ -271,6 +274,9 @@ func _refresh_forecast() -> void:
 	var why := _reasons(f.get("links", []))
 	if why != "":
 		_forecast_box.add_child(_rich(why, 17))
+	var life := SquadLifeUI.squad_text(picked)
+	if life != "":
+		_forecast_box.add_child(_rich(life, 17))
 
 
 func _launch() -> void:
@@ -524,6 +530,10 @@ func show_report(rep: Dictionary) -> void:
 		var kind := str(e.get("kind", "info"))
 		var col: Color = {"card": Palette.STAT_UP, "trauma": Palette.TRAUMA_BRIGHT, "death": Palette.TRAUMA_BRIGHT,
 			"mission": Color("#E3C98E"), "story": Color("#E3C98E"), "resource": Palette.COINS, "broken": Palette.STAT_DOWN}.get(kind, Palette.SILVER)
+		if kind == "trust":
+			col = Palette.STAT_UP if int(e.get("delta", 0)) > 0 else Palette.STAT_DOWN
+		elif kind == "panic":
+			col = Color("#D07A3A")
 		res.add_child(UITheme.label("• " + str(e.get("text", "")), "sans", 18, col))
 	var rest: Dictionary = rep.get("rest", {})
 	if not rest.is_empty():

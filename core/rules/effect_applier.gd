@@ -109,6 +109,9 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			if not stay.is_empty():
 				out2.append({"kind": "card", "text": "Остаются с Санни: %s" % ", ".join(stay)})
 			return out2
+		"adjust_trust":
+			var a2 := str(e.get("a", executor))
+			return TrustRules.change(content, state, a2, str(e["b"]), int(e["value"]), str(e.get("text", "сюжет")))
 		"reset_wear":
 			# кузнец: самое изношенное усиление — снова как новое
 			var worst := ""

@@ -22,6 +22,7 @@ var lore: Dictionary = {}          # сюжетные описания «По к
 var locations: Dictionary = {}     # локации глав: data/locations.json
 var missions: Dictionary = {}      # миссии: data/missions/*.json
 var shops: Dictionary = {}         # магазины глав: data/shops.json
+var bonds: Dictionary = {}         # связки героев: data/bonds.json (BondRules)
 var load_errors: Array[String] = []
 
 
@@ -47,6 +48,8 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.missions = c._load_dir(dir + "/missions", "миссии")
 	if FileAccess.file_exists(dir + "/shops.json"):
 		c.shops = c._load_map(dir + "/shops.json")
+	if FileAccess.file_exists(dir + "/bonds.json"):
+		c.bonds = c._load_map(dir + "/bonds.json")
 	return c
 
 

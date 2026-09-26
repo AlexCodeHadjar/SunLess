@@ -568,6 +568,21 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 		H *= 1.0 + Atmosphere.ECLIPSE_SHADOW
 		hs.append({"label": "Затмение: Тень", "kind": "field", "pct": Atmosphere.ECLIPSE_SHADOW, "value": H})
 
+	# 7в. Отряд (docs/16 §5–7): связка с союзником, доверие к союзнику, ярость в панике
+	var bond := BondRules.combat_bonus(content, state, hero, allies)
+	if float(bond["value"]) > 0.0:
+		H *= 1.0 + float(bond["value"])
+		hs.append({"label": "Связка: %s" % bond["name"], "kind": "state", "pct": float(bond["value"]), "value": H})
+	for ally: String in allies:
+		if TrustRules.value(state, hero, ally) >= TrustRules.HIGH:
+			H *= 1.0 + TrustRules.COMBAT_HIGH
+			hs.append({"label": "Доверие: %s" % content.card_name(ally), "kind": "state", "pct": TrustRules.COMBAT_HIGH, "value": H})
+			break
+	var rage := PanicRules.combat_bonus(content, state, hero)
+	if rage > 0.0:
+		H *= 1.0 + rage
+		hs.append({"label": "Ярость в панике", "kind": "state", "pct": rage, "value": H})
+
 	# 8. Состояния
 	var tr := TraumaRules.counted(state.character(hero).get("traumas", []))
 	if tr > 0:

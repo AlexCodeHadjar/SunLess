@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "add_trauma", "remove_trauma", "clear_traumas",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
-	"remove_temporaries", "text", "reset_wear"]
+	"remove_temporaries", "text", "reset_wear", "adjust_trust"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_has_trauma"]
 const POOLS := ["all", "physical", "environment", "mental"]
@@ -110,6 +110,14 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 		_validate_mission(c, mid, errors)
 	for sid: String in c.shops:
 		_validate_shop(c, sid, errors)
+	for bid: String in c.bonds:
+		var b: Dictionary = c.bonds[bid]
+		var pair: Array = b.get("heroes", [])
+		if pair.size() != 2 or not c.characters.has(str(pair[0])) or not c.characters.has(str(pair[1])):
+			errors.append("Связка %s: нужны два существующих героя" % bid)
+		var st: Dictionary = b.get("effect", {}).get("stat", {})
+		if not st.is_empty() and not STATS.has(str(st.get("stat", ""))):
+			errors.append("Связка %s: неизвестная характеристика" % bid)
 
 
 static func _validate_shop(c: Content, sid: String, errors: Array[String]) -> void:
@@ -237,6 +245,10 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 		for cid: String in a.get("requires_hero", []):
 			if not c.characters.has(cid):
 				errors.append("%s: requires_hero → нет персонажа %s" % [aw, cid])
+		var tneed: Dictionary = a.get("requires_trust", {})
+		for cid: String in tneed.get("pair", []):
+			if not c.characters.has(cid):
+				errors.append("%s: requires_trust → нет персонажа %s" % [aw, cid])
 		for cond: Dictionary in a.get("conditions", []):
 			if not KNOWN_CONDITIONS.has(str(cond.get("type", ""))):
 				errors.append("%s: неизвестное условие «%s»" % [aw, cond.get("type", "")])

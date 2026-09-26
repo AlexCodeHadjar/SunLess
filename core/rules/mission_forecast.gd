@@ -61,7 +61,12 @@ static func stage_actor(content: Content, state: RunState, m: Dictionary, a: Dic
 		if not state.is_alive(cid):
 			continue
 		var r := StatResolver.resolve(content, state, cid, MissionFlow.pocket(state, cid), ctx_event(m), ctx_option(a, st))
-		var c := clampi(ChanceCalculator.compute(r["totals"], st.get("req", {})), CHANCE_MIN, CHANCE_MAX)
+		var totals: Dictionary = r["totals"].duplicate()
+		# связки отряда и паника (docs/16 §6–7)
+		var tags: Array = Array(m.get("context", [])) + Array(st.get("tags", []))
+		for p: Dictionary in BondRules.check_parts(content, state, heroes, cid, tags) + PanicRules.check_parts(content, state, cid):
+			totals[p["stat"]] = int(totals.get(p["stat"], 0)) + int(p["value"])
+		var c := clampi(ChanceCalculator.compute(totals, st.get("req", {})), CHANCE_MIN, CHANCE_MAX)
 		if c > int(best["chance"]):
 			best = {"hero": cid, "chance": c, "temp_used": r["temp_used"]}
 	return best
