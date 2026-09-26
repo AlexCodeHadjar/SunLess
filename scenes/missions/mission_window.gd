@@ -522,6 +522,18 @@ func show_report(rep: Dictionary) -> void:
 			ci += 1
 	for f: Dictionary in rep.get("forks", []):
 		_body.add_child(_para("⑂ %s → %s" % [f.get("text", ""), f.get("choice", "")], "serif_italic", 18, Palette.SILVER))
+	# разбор (docs/16 §9): что решило исход — 2–3 строки с числами
+	var why := MissionDebrief.lines(rep)
+	if not why.is_empty():
+		var wp := PanelContainer.new()
+		wp.add_theme_stylebox_override("panel", UITheme.box(Color(0.07, 0.075, 0.095), Palette.LINE, 1, 6, 12))
+		var wv := VBoxContainer.new()
+		wv.add_theme_constant_override("separation", 4)
+		wp.add_child(wv)
+		wv.add_child(UITheme.label("ЧТО РЕШИЛО ИСХОД", "sans_bold", 14, Palette.TEXT_DIM))
+		for w: Dictionary in why:
+			wv.add_child(UITheme.label(("▲ " if w["good"] else "▼ ") + str(w["text"]), "sans", 18, Palette.STAT_UP if w["good"] else Palette.STAT_DOWN))
+		_body.add_child(wp)
 	_body.add_child(_caption("Итог"))
 	var res := VBoxContainer.new()
 	res.add_theme_constant_override("separation", 4)
@@ -649,7 +661,9 @@ func _tags_flow(tags: Array, hidden: int) -> Control:
 
 func _rumors(m: Dictionary) -> Control:
 	var lines: Array = []
+	var idx := -1
 	for r: Dictionary in m.get("rumors", []):
+		idx += 1
 		var tag := str(r.get("tag", ""))
 		var col := "#E3C98E"
 		if _content().combat_tags.has(tag):
@@ -659,7 +673,11 @@ func _rumors(m: Dictionary) -> Control:
 		var j := text.find("]")
 		if i >= 0 and j > i:
 			text = text.substr(0, i) + "[color=%s][u]%s[/u][/color]" % [col, text.substr(i + 1, j - i - 1)] + text.substr(j + 1)
-		lines.append("— [i]%s[/i]" % text)
+		# журнал слухов (docs/16 §9): подтверждённое отмечено
+		if JournalRules.confirmed(GameState.state, str(m.get("id", "")), idx):
+			lines.append("[color=#6FA47B]✓[/color] [i]%s[/i] [color=#6FA47B][font_size=15]подтвердилось[/font_size][/color]" % text)
+		else:
+			lines.append("— [i]%s[/i]" % text)
 	return _rich("\n".join(lines), 19)
 
 

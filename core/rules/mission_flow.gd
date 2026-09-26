@@ -259,6 +259,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
 	PanicRules.decay(state, dt, content)
 	out.append_array(CampRules.tick(content, state, dt))
+	out.append_array(OnslaughtRules.tick(content, state))
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]
@@ -266,6 +267,8 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 		if exp > 0.0 and str(stt.get("status", "")) == "open" and state.clock >= float(stt.get("opened_at", 0.0)) + exp:
 			stt["status"] = "expired"
 			out.append({"kind": "expired", "card": mid, "text": "Упущено: %s" % content.missions[mid].get("title", mid)})
+			if str(content.missions[mid].get("type", "")) == "onslaught":
+				out.append_array(OnslaughtRules.expire(content, state, mid))
 	for cid: String in state.rest_until.keys():
 		var until := float(state.rest_until[cid])
 		if until > before and until <= state.clock:

@@ -159,6 +159,19 @@ func _run() -> void:
 	for n in game.get_children():
 		if n is CampWindow:
 			n.close()
+	# журнал (Ф11): бестиарий после боя MS03
+	game.call("_on_nav", "journal")
+	await _wait(0.8)
+	await _shot("m11e_bestiary")
+	for n in game.get_children():
+		if n is JournalWindow:
+			n.set("_tab", "rumors")
+			n.call("_refresh")
+	await _wait(0.4)
+	await _shot("m11f_rumors")
+	for n in game.get_children():
+		if n is JournalWindow:
+			n.close()
 	GameState.camp_take("P01")
 	gs.character("P01")["traumas"] = []
 	await _wait(0.3)

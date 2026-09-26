@@ -134,7 +134,7 @@ func _build_left() -> void:
 	nav.position = Vector2(22, 150)
 	nav.add_theme_constant_override("separation", 6)
 	col.add_child(nav)
-	for item: Array in [["✦  КАРТА", "map"], ["✚  ЛАГЕРЬ", "camp"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
+	for item: Array in [["✦  КАРТА", "map"], ["✚  ЛАГЕРЬ", "camp"], ["✎  ЖУРНАЛ", "journal"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
 		var b := Button.new()
 		b.text = item[0]
 		b.flat = true
@@ -416,6 +416,8 @@ func _update_pins() -> void:
 		# устаревающая миссия: срок — меткой на карте
 		var left := MissionFlow.expires_in(ContentDB.data, s, mid)
 		var badge := ("⌛ %d с" % int(ceil(left))) if left >= 0.0 and progress < 0.0 and not arrived else ""
+		if badge != "" and str(ContentDB.data.missions.get(mid, {}).get("type", "")) == "onslaught":
+			badge = "НАТИСК · " + badge
 		if mk.card.badge != badge:
 			mk.card.badge = badge
 			mk.card.queue_redraw()
@@ -432,6 +434,9 @@ func _on_events(events: Array) -> void:
 				_show_toast("%s — щёлкните по карте миссии" % e["text"])
 			"rested", "expired":
 				_show_toast(str(e["text"]))
+			"onslaught":
+				AudioManager.play("bell", -2.0, 0.7)
+				_show_toast("%s — 60 с на ответ" % e["text"])
 			"mission":
 				AudioManager.play("open", -8.0)
 				_show_toast(str(e["text"]))
@@ -504,6 +509,10 @@ func _watch_combat(setup: Dictionary) -> void:
 
 func _on_nav(what: String) -> void:
 	match what:
+		"journal":
+			var jw := JournalWindow.new()
+			add_child(jw)
+			move_child(_toast, get_child_count() - 1)
 		"camp":
 			var cw := CampWindow.new()
 			add_child(cw)

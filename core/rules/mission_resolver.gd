@@ -286,6 +286,9 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	# рост тегов и эффекты развитий (docs/16 §8)
 	entries.append_array(GrowthRules.apply(content, state, run, heroes, str(report["outcome"]), rng))
 	entries.append_array(GrowthRules.after_mission(content, state, heroes, str(report["outcome"]), rng))
+	# натиск отбит: доверие; бестиарий и слухи (docs/16 §9)
+	entries.append_array(OnslaughtRules.reward(content, state, m, heroes, str(report["outcome"])))
+	entries.append_array(JournalRules.after_mission(content, state, m, report, heroes))
 
 	# отдых выживших
 	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST)) + float(run.get("extra_rest", 0.0))
@@ -324,6 +327,7 @@ static func _check_stage(content: Content, state: RunState, m: Dictionary, a: Di
 	rec["hero"] = cid
 	rec["chance"] = chance
 	rec["roll"] = roll
+	rec["why"] = MissionDebrief.check_why(content, state, m, a, st, alive, cid)
 	for i: int in actor["temp_used"]:
 		temp_used[i] = true
 	if roll <= chance:
@@ -366,6 +370,7 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	rec["chance"] = setup["round"]
 	rec["outcome"] = "ok" if won else "fail"
 	rec["combat"] = {"outcome": s.outcome, "hero_wins": s.hero_wins, "enemy_wins": s.enemy_wins, "allies": s.allies}
+	rec["why"] = MissionDebrief.combat_why(s.rounds_log, s.hero_wins, s.enemy_wins)
 	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": s.allies, "rounds": s.rounds_log,
 		"outcome": s.outcome, "discovered": s.discovered, "setup": replay_setup})
 	report["entries"].append_array(s.entries)

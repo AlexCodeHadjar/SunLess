@@ -47,6 +47,8 @@ var trust_notes: Dictionary = {}
 var sharpened: Dictionary = {}
 ## лагерь: {beds: [cid], heal: {cid: секунд}} (CampRules)
 var camp: Dictionary = {}
+## бестиарий и подтверждённые слухи (JournalRules)
+var journal: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -82,6 +84,7 @@ func to_dict() -> Dictionary:
 		"trust_notes": trust_notes.duplicate(true),
 		"sharpened": sharpened.duplicate(true),
 		"camp": camp.duplicate(true),
+		"journal": journal.duplicate(true),
 	}
 
 
@@ -130,6 +133,13 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.trust_notes = Dictionary(d.get("trust_notes", {})).duplicate(true)
 	s.sharpened = Dictionary(d.get("sharpened", {})).duplicate(true)
 	s.camp = Dictionary(d.get("camp", {})).duplicate(true)
+	s.journal = Dictionary(d.get("journal", {})).duplicate(true)
+	for mid: String in s.journal.get("rumors", {}):
+		s.journal["rumors"][mid] = Array(s.journal["rumors"][mid]).map(func(x: Variant) -> int: return int(x))
+	for eid: String in s.journal.get("bestiary", {}):
+		var rec: Dictionary = s.journal["bestiary"][eid]
+		rec["fights"] = int(rec.get("fights", 0))
+		rec["wins"] = int(rec.get("wins", 0))
 	s.shops = Dictionary(d.get("shops", {})).duplicate(true)
 	for sid: String in s.shops:
 		s.shops[sid]["gen"] = int(s.shops[sid].get("gen", 0))

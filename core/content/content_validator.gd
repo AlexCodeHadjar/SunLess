@@ -92,7 +92,7 @@ static func _validate_combat(c: Content, errors: Array[String]) -> void:
 
 
 ## Миссии и локации (docs/15, ветка gameplay/missions).
-const MISSION_TYPES := ["story", "side", "random"]
+const MISSION_TYPES := ["story", "side", "random", "onslaught"]
 
 
 static func _validate_missions(c: Content, errors: Array[String]) -> void:
@@ -118,6 +118,13 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 		var st: Dictionary = b.get("effect", {}).get("stat", {})
 		if not st.is_empty() and not STATS.has(str(st.get("stat", ""))):
 			errors.append("Связка %s: неизвестная характеристика" % bid)
+	# натиск Кошмара (docs/16 §9)
+	for oid: String in c.onslaught:
+		for nm: String in c.onslaught[oid].get("pool", []):
+			if str(c.missions.get(nm, {}).get("type", "")) != "onslaught":
+				errors.append("Натиск %s: %s — не миссия type onslaught" % [oid, nm])
+		if Array(c.onslaught[oid].get("every", [])).size() != 2:
+			errors.append("Натиск %s: every должен быть [от, до]" % oid)
 	# рост тегов (docs/16 §8)
 	var ctx_ids: Array = []
 	for t: String in c.tags:
@@ -232,6 +239,9 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 		if not c.characters.has(cid):
 			errors.append("%s: exclude_heroes → нет персонажа %s" % [w, cid])
 	_validate_effects(c, w + " on_complete", m.get("on_complete", []), errors)
+	_validate_effects(c, w + " on_expire", m.get("on_expire", []), errors)
+	if str(m.get("type", "")) == "onslaught" and not m.has("expires"):
+		errors.append("%s: у натиска должен быть срок expires" % w)
 	for other: String in m.get("exclusive", []):
 		if not c.missions.has(other):
 			errors.append("%s: exclusive → нет миссии %s" % [w, other])
