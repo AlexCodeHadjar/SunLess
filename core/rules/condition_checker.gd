@@ -17,6 +17,8 @@ static func blockers(content: Content, state: RunState, option: Dictionary, exec
 			out.append(reason)
 	var cost: Dictionary = option.get("cost", {})
 	for r: String in cost:
+		if not RESOURCE_NAMES.has(r):
+			continue   # жертва карты, отдых, травма — проверяются в MissionFlow
 		if int(state.resources.get(r, 0)) < int(cost[r]):
 			out.append("Нужно: %d %s" % [int(cost[r]), RESOURCE_NAMES.get(r, r)])
 	return out

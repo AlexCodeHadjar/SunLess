@@ -14,7 +14,7 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	if sq.is_empty():
 		return {"ok": false, "error": "Нет такого отряда"}
 	if sq["phase"] != "arrived":
-		return {"ok": false, "error": "Отряд ещё в пути"}
+		return {"ok": false, "error": "Отряд ещё в пути" if sq["phase"] == "travel" else "Отряд ждёт решения на развилке"}
 	var mid: String = sq["mission"]
 	var m: Dictionary = content.missions.get(mid, {})
 	var a := MissionFlow.action(content, mid, action_id)
@@ -29,58 +29,171 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	rng.seed = state.rng_seed
 	rng.state = state.rng_state
 	var report := {"mission": mid, "action": action_id, "heroes": heroes, "stages": [], "outcome": "",
-		"entries": [], "traumas": {}, "deaths": [], "rest": {}, "combats": [], "opened": []}
-	var entries: Array = report["entries"]
-	var fails := 0
-	var temp_used := {}
-
+		"entries": [], "traumas": {}, "deaths": [], "rest": {}, "combats": [], "opened": [], "forks": []}
+	var run := {"action": action_id, "stages": Array(a.get("stages", [])).duplicate(true), "done": 0, "outcomes": [],
+		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false))}
 	if bool(a.get("retreat", false)):
 		report["outcome"] = "retreat"
-		entries.append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
-	else:
-		# цена действия (например, осколки за лечение) платится при выборе
-		var cost: Dictionary = a.get("cost", {})
-		for r: String in cost:
-			state.resources[r] = int(state.resources.get(r, 0)) - int(cost[r])
-			entries.append({"kind": "resource", "text": "Потрачено: %d %s" % [int(cost[r]), ConditionChecker.RESOURCE_NAMES.get(r, r)]})
-		var outcomes: Array = []
-		for st: Dictionary in a.get("stages", []):
-			var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))
-			var rec := {"name": st.get("name", ""), "hero": "", "chance": 0, "roll": 0, "outcome": "fail", "text": ""}
-			if alive.is_empty():
-				rec["text"] = "Идти дальше некому."
-			elif bool(st.get("auto", false)):
-				rec["outcome"] = "ok"
-			elif st.has("combat"):
-				state = _combat_stage(content, state, m, a, st, alive, rec, report, rng)
-			else:
-				_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used)
-			if rec["text"] == "":
-				rec["text"] = str(st.get({"ok": "ok", "partial": "partial", "fail": "fail"}[rec["outcome"]], ""))
-				if rec["text"] == "" and rec["outcome"] == "partial":
-					rec["text"] = str(st.get("ok", ""))
-			if rec["outcome"] == "fail":
-				fails += 1
-			outcomes.append(rec["outcome"])
-			report["stages"].append(rec)
-		report["outcome"] = MissionForecast.combine(outcomes)
-		_consume_temps(state, temp_used)
-		var executor := _executor(state, heroes)
-		var key: String = {"success": "on_success", "partial": "on_partial", "failure": "on_failure"}[report["outcome"]]
-		if executor != "" and not state.game_over:
-			entries.append_array(EffectApplier.apply_all(content, state, a.get(key, []), executor, rng))
-			# общее для любого удачного действия: последствия самой миссии
-			if report["outcome"] in ["success", "partial"]:
-				entries.append_array(EffectApplier.apply_all(content, state, m.get("on_complete", []), executor, rng))
-		# износ усилений из кармашков участников
-		var pockets: Array = []
-		for cid: String in heroes:
-			pockets.append_array(MissionFlow.pocket(state, cid))
-		InjuryRules.apply_wear(content, state, pockets, rng, entries, {"wear": []})
+		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
+		return _finish(content, state, m, sq, run, report, rng)
+	_pay_cost(content, state, a, heroes, run, report, rng)
+	return _advance(content, state, m, sq, run, report, rng)
 
-	# статус миссии и что открывается дальше
+
+## Действие целиком: на развилках — первый вариант (продолжить). Для бота, тестов и прогноза.
+static func resolve_through(content: Content, state_in: RunState, squad_id: int, action_id: String) -> Dictionary:
+	var r := resolve(content, state_in, squad_id, action_id)
+	var guard := 0
+	while r["ok"] and r.has("fork") and guard < 5:
+		r = resume(content, r["state"], squad_id, str(r["fork"]["options"][0]["id"]))
+		guard += 1
+	return r
+
+
+## Выбор на развилке (docs/16 §2): продолжить, сменить путь (свои этапы) или отступить с добытым.
+static func resume(content: Content, state_in: RunState, squad_id: int, option_id: String) -> Dictionary:
+	var state := state_in.copy()
+	var sq := MissionFlow.squad(state, squad_id)
+	if sq.is_empty() or sq["phase"] != "fork":
+		return {"ok": false, "error": "Отряд не ждёт решения"}
+	var m: Dictionary = content.missions.get(str(sq["mission"]), {})
+	var run: Dictionary = sq["pending"]["run"]
+	var report: Dictionary = sq["pending"]["report"]
+	var fork: Dictionary = run["stages"][int(run["done"]) - 1].get("fork", {})
+	var opt: Dictionary = {}
+	for o: Dictionary in fork.get("options", []):
+		if str(o.get("id", "")) == option_id:
+			opt = o
+	if opt.is_empty():
+		return {"ok": false, "error": "Нет такого выбора"}
+	sq.erase("pending")
+	sq["phase"] = "arrived"
+	report.erase("fork")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = state.rng_seed
+	rng.state = state.rng_state
+	report["forks"].append({"text": str(fork.get("text", "")), "choice": str(opt.get("label", ""))})
+	if str(opt.get("then", "continue")) == "retreat":
+		report["outcome"] = "retreat"
+		var executor := _executor(state, Array(sq["heroes"]))
+		if executor != "":
+			report["entries"].append_array(EffectApplier.apply_all(content, state, opt.get("keep", []), executor, rng))
+		report["entries"].append({"kind": "info", "text": "Отряд отступил с тем, что успел добыть. Миссия не выполнена."})
+		return _finish(content, state, m, sq, run, report, rng)
+	if opt.has("stages"):
+		# сменить путь: оставшиеся этапы заменяются своими
+		var done: Array = Array(run["stages"]).slice(0, int(run["done"]))
+		run["stages"] = done + Array(opt["stages"]).duplicate(true)
+	run["extra_success"] = Array(run["extra_success"]) + Array(opt.get("on_success", []))
+	return _advance(content, state, m, sq, run, report, rng)
+
+
+## Цена действия (docs/16 §3): осколки, жертва карты из кармашка отряда, лишний отдых, травма.
+static func _pay_cost(content: Content, state: RunState, a: Dictionary, heroes: Array, run: Dictionary,
+		report: Dictionary, rng: RandomNumberGenerator) -> void:
+	var cost: Dictionary = a.get("cost", {})
+	var entries: Array = report["entries"]
+	if cost.has("shards"):
+		state.resources["shards"] = int(state.resources.get("shards", 0)) - int(cost["shards"])
+		entries.append({"kind": "resource", "text": "Потрачено: %d осколков душ" % int(cost["shards"])})
+	var victim := MissionFlow.sacrifice_card(content, state, a, heroes)
+	if victim != "":
+		EffectApplier._remove_card(state, victim)
+		state.wear.erase(victim)
+		entries.append({"kind": "broken", "text": "Отдано ради успеха: %s" % content.card_name(victim), "card": victim})
+	if cost.has("rest"):
+		run["extra_rest"] = float(cost["rest"])
+	if int(cost.get("trauma", 0)) > 0:
+		var who := _executor(state, heroes)
+		if who != "":
+			var res := {"traumas": [], "death": {}}
+			InjuryRules.give_traumas(content, state, who, MissionFlow.pocket(state, who), int(cost["trauma"]), "physical", rng, res, entries)
+			if not res["traumas"].is_empty():
+				report["traumas"][who] = Array(report["traumas"].get(who, [])) + Array(res["traumas"])
+
+
+## Этапы по порядку до конца или до развилки: на развилке отряд ждёт решения игрока.
+static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dictionary, run: Dictionary,
+		report: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var a := MissionFlow.action(content, str(m.get("id", "")), str(run["action"]))
+	var heroes: Array = Array(sq["heroes"])
+	var temp_used := {}
+	for i: int in run["temp_used"]:
+		temp_used[i] = true
+	var stages: Array = run["stages"]
+	while int(run["done"]) < stages.size():
+		var st: Dictionary = stages[int(run["done"])]
+		var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))
+		var rec := {"name": st.get("name", ""), "hero": "", "chance": 0, "roll": 0, "outcome": "fail", "text": ""}
+		if alive.is_empty():
+			rec["text"] = "Идти дальше некому."
+		elif bool(st.get("auto", false)) or bool(run["guaranteed"]):
+			rec["outcome"] = "ok"
+		elif st.has("combat"):
+			var after := _combat_stage(content, state, m, a, MissionFlow.boss_stage(state, m, st), alive, rec, report, rng)
+			_copy_into(state, after)
+			sq = MissionFlow.squad(state, int(sq["id"]))
+		else:
+			_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used)
+		if rec["text"] == "":
+			rec["text"] = str(st.get({"ok": "ok", "partial": "partial", "fail": "fail"}[rec["outcome"]], ""))
+			if rec["text"] == "" and rec["outcome"] == "partial":
+				rec["text"] = str(st.get("ok", ""))
+		if rec["outcome"] == "fail":
+			run["fails"] = int(run["fails"]) + 1
+		run["outcomes"].append(rec["outcome"])
+		report["stages"].append(rec)
+		run["done"] = int(run["done"]) + 1
+		# развилка после этапа: если ещё есть кому решать и что решать
+		if st.has("fork") and not alive.is_empty() and not state.game_over and not bool(st.get("_fork_passed", false)):
+			st["_fork_passed"] = true
+			run["temp_used"] = temp_used.keys()
+			sq["phase"] = "fork"
+			sq["pending"] = {"run": run, "report": report}
+			report["fork"] = st["fork"]
+			state.rng_state = rng.state
+			return {"ok": true, "error": "", "state": state, "report": report, "fork": st["fork"]}
+	run["temp_used"] = temp_used.keys()
+	report["outcome"] = MissionForecast.combine(run["outcomes"])
+	_consume_temps(state, temp_used)
+	var executor := _executor(state, heroes)
+	var key: String = {"success": "on_success", "partial": "on_partial", "failure": "on_failure"}[report["outcome"]]
+	var entries: Array = report["entries"]
+	if executor != "" and not state.game_over:
+		entries.append_array(EffectApplier.apply_all(content, state, a.get(key, []), executor, rng))
+		if report["outcome"] in ["success", "partial"]:
+			entries.append_array(EffectApplier.apply_all(content, state, run["extra_success"], executor, rng))
+	# износ усилений из кармашков участников
+	var pockets: Array = []
+	for cid: String in heroes:
+		pockets.append_array(MissionFlow.pocket(state, cid))
+	InjuryRules.apply_wear(content, state, pockets, rng, entries, {"wear": []})
+	return _finish(content, state, m, sq, run, report, rng)
+
+
+## Итог миссии: статус, следующее по сюжету, взаимоисключения, фазы босса, отдых, отряд распущен.
+static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictionary, run: Dictionary,
+		report: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
+	var mid := str(m.get("id", ""))
+	var heroes: Array = Array(sq["heroes"])
+	var squad_id := int(sq["id"])
+	var entries: Array = report["entries"]
+	var a := MissionFlow.action(content, mid, str(run["action"]))
 	var status: Dictionary = state.missions.get(mid, {"attempts": 0})
-	if report["outcome"] in ["success", "partial"]:
+	var boss: Array = m.get("boss", {}).get("phases", [])
+	var phase := int(status.get("phase", 0))
+	var won_combat := Array(report["combats"]).any(func(c: Dictionary) -> bool: return c["outcome"] == "win")
+	var executor := _executor(state, heroes)
+	if report["outcome"] in ["success", "partial"] and not boss.is_empty() and won_combat and phase < boss.size() - 1:
+		# босс в несколько заходов: победа снимает фазу, миссия остаётся
+		status["phase"] = phase + 1
+		status["status"] = "open"
+		report["boss_phase"] = phase + 1
+		entries.append({"kind": "story", "text": "%s ранен и отступил — заход %d из %d. %s" % [
+			m.get("title", mid), phase + 2, boss.size(), str(boss[phase + 1].get("text", ""))]})
+	elif report["outcome"] in ["success", "partial"]:
+		if executor != "" and not state.game_over:
+			entries.append_array(EffectApplier.apply_all(content, state, m.get("on_complete", []), executor, rng))
 		status["status"] = "done"
 		var story := bool(a.get("story", false)) or str(m.get("type", "")) == "story"
 		entries.append({"kind": "story" if story else "info",
@@ -92,6 +205,11 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 				entries.append_array(opened)
 				if not opened.is_empty():
 					report["opened"].append(nid)
+		# миссия-выбор: выполненная закрывает свою пару
+		for other: String in m.get("exclusive", []):
+			if str(state.missions.get(other, {}).get("status", "")) == "open":
+				state.missions[other]["status"] = "closed"
+				entries.append({"kind": "lost", "text": "Упущено: %s" % content.missions.get(other, {}).get("title", other)})
 		var more := MissionFlow.after_completion(content, state)
 		entries.append_array(more)
 		for e: Dictionary in more:
@@ -110,7 +228,7 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	state.missions[mid] = status
 
 	# отдых выживших
-	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST))
+	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST)) + float(run.get("extra_rest", 0.0))
 	for cid: String in heroes:
 		if not state.is_alive(cid):
 			if not report["deaths"].has(cid):
@@ -118,14 +236,23 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 			continue
 		var rest := base_rest
 		if report["outcome"] != "retreat":
-			rest += REST_PER_FAIL * fails + REST_PER_TRAUMA * Array(report["traumas"].get(cid, [])).size()
+			rest += REST_PER_FAIL * int(run["fails"]) + REST_PER_TRAUMA * Array(report["traumas"].get(cid, [])).size()
 		state.rest_until[cid] = state.clock + rest
 		report["rest"][cid] = rest
 
 	state.squads = state.squads.filter(func(s: Dictionary) -> bool: return int(s["id"]) != squad_id)
-	state.log.append({"clock": state.clock, "mission": mid, "action": action_id, "outcome": report["outcome"], "heroes": heroes})
+	state.log.append({"clock": state.clock, "mission": mid, "action": str(run["action"]), "outcome": report["outcome"], "heroes": heroes})
 	state.rng_state = rng.state
 	return {"ok": true, "error": "", "state": state, "report": report}
+
+
+## Бой возвращает новое состояние — переносим его в текущее (ссылки на state у вызывающих не меняются).
+static func _copy_into(dst: RunState, src: RunState) -> void:
+	var d := src.to_dict()
+	var fresh := RunState.from_dict(d)
+	for p: Dictionary in dst.get_property_list():
+		if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			dst.set(p["name"], fresh.get(p["name"]))
 
 
 static func _check_stage(content: Content, state: RunState, m: Dictionary, a: Dictionary, st: Dictionary,
@@ -193,6 +320,8 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 			var echo: Dictionary = e.get("echo", {})
 			if not echo.is_empty() and rng.randf() < float(echo.get("chance", 0.0)):
 				report["entries"].append_array(EffectApplier.add_card(content, after, str(echo["card"])))
+		if shards > 0 and Atmosphere.sky(content, after) == "blood_moon":
+			shards = int(ceil(shards * Atmosphere.BLOOD_LOOT))
 		if shards > 0:
 			report["entries"].append_array(EffectApplier.apply(content, after, {"cmd": "adjust_resource", "resource": "shards", "value": shards}, hero, rng))
 		after.enemy_wounds.erase(key)

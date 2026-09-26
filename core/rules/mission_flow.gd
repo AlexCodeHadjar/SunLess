@@ -246,6 +246,13 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			sq["phase"] = "arrived"
 			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
+	# устаревающие миссии (docs/16 §4): не успели — ушла
+	for mid: String in _sorted(state.missions):
+		var stt: Dictionary = state.missions[mid]
+		var exp := float(content.missions.get(mid, {}).get("expires", 0))
+		if exp > 0.0 and str(stt.get("status", "")) == "open" and state.clock >= float(stt.get("opened_at", 0.0)) + exp:
+			stt["status"] = "expired"
+			out.append({"kind": "expired", "card": mid, "text": "Упущено: %s" % content.missions[mid].get("title", mid)})
 	for cid: String in state.rest_until.keys():
 		var until := float(state.rest_until[cid])
 		if until > before and until <= state.clock:
@@ -278,7 +285,7 @@ static func _spawn_random(content: Content, state: RunState, lid: String) -> Arr
 		var m: Dictionary = content.missions.get(mid, {})
 		if st in ["open", "active"]:
 			continue
-		if st == "done" and str(m.get("type", "")) != "random":
+		if st in ["done", "expired", "closed"] and str(m.get("type", "")) != "random":
 			continue
 		return open(content, state, mid)
 	return []
@@ -308,6 +315,42 @@ static func after_completion(content: Content, state: RunState) -> Array:
 
 
 # --- действия после прибытия -------------------------------------------------------------
+
+## Сколько секунд осталось до ухода устаревающей миссии (-1 — не устаревает).
+static func expires_in(content: Content, state: RunState, mission_id: String) -> float:
+	var exp := float(content.missions.get(mission_id, {}).get("expires", 0))
+	var st: Dictionary = state.missions.get(mission_id, {})
+	if exp <= 0.0 or str(st.get("status", "")) != "open":
+		return -1.0
+	return maxf(0.0, float(st.get("opened_at", 0.0)) + exp - state.clock)
+
+
+## Этап с учётом захода босса: у босса в несколько заходов поле боя меняется (docs/16 §4).
+static func boss_stage(state: RunState, m: Dictionary, st: Dictionary) -> Dictionary:
+	var phases: Array = m.get("boss", {}).get("phases", [])
+	if phases.is_empty() or not st.has("combat"):
+		return st
+	var ph: Dictionary = phases[clampi(int(state.missions.get(str(m.get("id", "")), {}).get("phase", 0)), 0, phases.size() - 1)]
+	if not ph.has("field"):
+		return st
+	var out := st.duplicate(true)
+	out["combat"]["field"] = str(ph["field"])
+	return out
+
+
+## Какую карту отряд отдаст за действие с ценой-жертвой ("" — нечего отдать).
+static func sacrifice_card(content: Content, state: RunState, a: Dictionary, heroes_ids: Array) -> String:
+	var cost: Dictionary = a.get("cost", {})
+	if not cost.has("sacrifice") and not cost.has("sacrifice_tag"):
+		return ""
+	for cid: String in heroes_ids:
+		for card: String in pocket(state, cid):
+			if cost.has("sacrifice") and card == str(cost["sacrifice"]):
+				return card
+			if cost.has("sacrifice_tag") and Array(content.enhancements.get(card, {}).get("tags", [])).has(str(cost["sacrifice_tag"])):
+				return card
+	return ""
+
 
 ## Незавершённая сюжетная миссия главы, без которой не обойтись без этого героя (`requires_heroes`).
 ## Его гибель обрывает сюжет — прохождение окончено. "" — герой сюжету не обязателен.
@@ -346,6 +389,11 @@ static func actions_for(content: Content, state: RunState, mission_id: String, h
 			ok = who.any(func(cid: String) -> bool: return heroes_ids.has(cid))
 			if not ok:
 				reason = "Нужен в отряде: %s" % " или ".join(who.map(func(cid: String) -> String: return content.card_name(cid)))
+		# жертва карты из кармашка отряда (docs/16 §3)
+		var cost: Dictionary = a.get("cost", {})
+		if ok and (cost.has("sacrifice") or cost.has("sacrifice_tag")) and sacrifice_card(content, state, a, heroes_ids) == "":
+			ok = false
+			reason = "Нужно отдать: %s" % (content.card_name(str(cost["sacrifice"])) if cost.has("sacrifice") else "усиление с тегом «%s»" % cost["sacrifice_tag"])
 		# условия и цена — как у вариантов событий (ConditionChecker); исполнитель — первый в отряде
 		if ok and (a.has("conditions") or a.has("cost")):
 			var pockets: Array = []

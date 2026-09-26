@@ -43,6 +43,10 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 		if n > 0:
 			parts.append({"source": "Концентрация", "stat": s, "value": n})
 
+	# небо над картой (docs/16 §4)
+	if state.mode == "missions" and not content.locations.is_empty():
+		parts.append_array(Atmosphere.check_parts(content, state, tags))
+
 	for tid: String in ch.get("traumas", []):
 		var t: Dictionary = content.traumas.get(tid, {})
 		var ctx: String = t.get("context_tag", "")

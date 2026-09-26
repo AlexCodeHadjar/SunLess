@@ -113,6 +113,18 @@ func launch_squad(mission_id: String, heroes: Array) -> String:
 	return ""
 
 
+## Выбор на развилке (docs/16 §2): продолжить, сменить путь или отступить. Отчёт — как у resolve_squad.
+func resolve_fork(squad_id: int, option_id: String) -> Dictionary:
+	var r: Dictionary = MissionResolver.resume(content(), state, squad_id, option_id)
+	if not r["ok"]:
+		return {"error": r["error"]}
+	state = r["state"]
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return r["report"]
+
+
 ## Выбор действия прибывшего отряда. Возвращает отчёт (или {"error": ...}).
 func resolve_squad(squad_id: int, action_id: String) -> Dictionary:
 	var r: Dictionary = MissionResolver.resolve(content(), state, squad_id, action_id)

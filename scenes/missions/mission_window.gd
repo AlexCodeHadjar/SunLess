@@ -15,7 +15,7 @@ const OUTCOME := {
 	"ok": ["успех", "#6FB27A"], "partial": ["частично", "#D08A48"], "fail": ["провал", "#C0414C"],
 }
 
-var mode := ""              # brief | arrival | report
+var mode := ""              # brief | arrival | fork | report
 var mission_id := ""
 var squad_id := 0
 var report: Dictionary = {}
@@ -133,6 +133,9 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 		col.add_child(_caption("Что говорят"))
 		col.add_child(_rumors(m))
 	col.add_child(_intel(m))
+	var notes := _notes(m)
+	if notes.get_child_count() > 0:
+		col.add_child(notes)
 	col.add_child(_caption("Вероятные теги врага и места"))
 	col.add_child(_tags_flow(m.get("known_tags", []), Array(m.get("hidden_tags", [])).size()))
 
@@ -291,6 +294,9 @@ func show_arrival(sid: int) -> void:
 	if sq.is_empty():
 		close()
 		return
+	if sq["phase"] == "fork":
+		show_fork(sid)
+		return
 	mission_id = sq["mission"]
 	var m: Dictionary = c.missions[mission_id]
 	_clear()
@@ -343,6 +349,9 @@ func _action_button(entry: Dictionary, sq: Dictionary) -> Control:
 	var head := ("✦ %s · " % " / ".join(need) if not need.is_empty() else "") + str(a.get("label", ""))
 	col.add_child(_ignore(UITheme.label(head + ("  ★" if bool(a.get("story", false)) else ""), "title_bold", 26, Palette.TEXT if ok else Palette.TEXT_DIM)))
 	col.add_child(_ignore(UITheme.label(str(a.get("text", "")) if ok else str(entry["reason"]), "sans", 16, Palette.TEXT_DIM)))
+	var price := _cost_text(a, sq)
+	if price != "":
+		col.add_child(_ignore(UITheme.label(price, "sans_bold", 16, Palette.GOLD)))
 	if ok:
 		var f := MissionForecast.action_forecast(_content(), GameState.state, mission_id, a, sq["heroes"], true)
 		var w := UITheme.label(str(f["word"]), "title_bold", 26, Color(WORD_COLORS.get(f["word"], "#A8ADB4")))
@@ -358,7 +367,130 @@ func _choose(action_id: String) -> void:
 		EventBus.toast.emit(str(r["error"]))
 		return
 	AudioManager.play("roll", -4.0)
-	show_report(r)
+	if r.has("fork"):
+		show_fork(squad_id)
+	else:
+		show_report(r)
+
+
+# --- развилка (docs/16 §2) ---------------------------------------------------------------
+
+func show_fork(sid: int) -> void:
+	mode = "fork"
+	squad_id = sid
+	var c := _content()
+	var s := GameState.state
+	var sq := MissionFlow.squad(s, sid)
+	if sq.is_empty() or sq["phase"] != "fork":
+		close()
+		return
+	mission_id = sq["mission"]
+	var m: Dictionary = c.missions[mission_id]
+	var rep: Dictionary = sq["pending"]["report"]
+	var run: Dictionary = sq["pending"]["run"]
+	var fork: Dictionary = rep["fork"]
+	_clear()
+	_title.text = "Развилка · " + str(m.get("title", ""))
+	_body.add_child(_caption("Что уже произошло"))
+	var done := HBoxContainer.new()
+	done.add_theme_constant_override("separation", 14)
+	var ci := 0
+	for st: Dictionary in rep["stages"]:
+		done.add_child(_stage_card(st, rep, ci))
+		if st.has("combat"):
+			ci += 1
+	_body.add_child(done)
+	_body.add_child(_caption("Что изменилось"))
+	_body.add_child(_para(str(fork.get("text", "")), "serif", 22, Palette.TEXT))
+	var team := HBoxContainer.new()
+	team.add_theme_constant_override("separation", 8)
+	for cid: String in sq["heroes"]:
+		team.add_child(CardView.make(cid, Vector2(84, 144), false))
+	_body.add_child(team)
+	_body.add_child(_caption("Что делать дальше"))
+	for opt: Dictionary in fork.get("options", []):
+		_body.add_child(_fork_button(opt, sq, run))
+
+
+func _fork_button(opt: Dictionary, sq: Dictionary, run: Dictionary) -> Control:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(0, 80)
+	b.add_theme_stylebox_override("normal", UITheme.box(Color(0.08, 0.085, 0.11), Palette.LINE, 1, 6, 0))
+	b.add_theme_stylebox_override("hover", UITheme.box(Color(0.11, 0.1, 0.09), Palette.GOLD, 1, 6, 0))
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = 20
+	row.offset_right = -20
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(row)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	col.add_child(_ignore(UITheme.label(str(opt.get("label", "")), "title_bold", 25, Palette.TEXT)))
+	col.add_child(_ignore(UITheme.label(str(opt.get("text", "")), "sans", 16, Palette.TEXT_DIM)))
+	var word := "Без риска"
+	if str(opt.get("then", "continue")) != "retreat":
+		var rest: Array = Array(opt["stages"]) if opt.has("stages") else Array(run["stages"]).slice(int(run["done"]))
+		var pseudo := {"id": str(run["action"]), "stages": rest}
+		word = str(MissionForecast.action_forecast(_content(), GameState.state, mission_id, pseudo, sq["heroes"], true)["word"])
+	row.add_child(_ignore(UITheme.label(word, "title_bold", 24, Color(WORD_COLORS.get(word, "#A8ADB4")))))
+	b.pressed.connect(func() -> void:
+		var r := GameState.resolve_fork(squad_id, str(opt.get("id", "")))
+		if r.has("error"):
+			EventBus.toast.emit(str(r["error"]))
+			return
+		AudioManager.play("roll", -4.0)
+		if r.has("fork"):
+			show_fork(squad_id)
+		else:
+			show_report(r))
+	return b
+
+
+## Цена действия на кнопке: «Цена: отдать Колокольчик · +30 с отдыха» и «успех наверняка».
+func _cost_text(a: Dictionary, sq: Dictionary) -> String:
+	var c := _content()
+	var cost: Dictionary = a.get("cost", {})
+	var parts: Array = []
+	if cost.has("sacrifice") or cost.has("sacrifice_tag"):
+		var card := MissionFlow.sacrifice_card(c, GameState.state, a, sq["heroes"])
+		parts.append("отдать %s" % (c.card_name(card) if card != "" else (c.card_name(str(cost["sacrifice"])) if cost.has("sacrifice") else "усиление «%s»" % cost["sacrifice_tag"])))
+	if cost.has("shards"):
+		parts.append("✧ %d" % int(cost["shards"]))
+	if cost.has("rest"):
+		parts.append("+%d с отдыха" % int(cost["rest"]))
+	if int(cost.get("trauma", 0)) > 0:
+		parts.append("травма")
+	var out := ("Цена: " + " · ".join(parts)) if not parts.is_empty() else ""
+	if bool(a.get("guaranteed", false)):
+		out += ("  ·  " if out != "" else "") + "успех наверняка"
+	return out
+
+
+## Заметки брифинга: срок, миссия-выбор, заход босса, небо.
+func _notes(m: Dictionary) -> VBoxContainer:
+	var c := _content()
+	var s := GameState.state
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	var left := MissionFlow.expires_in(c, s, str(m.get("id", "")))
+	if left >= 0.0:
+		v.add_child(UITheme.label("⌛ Уйдёт через %d с — потом её не будет" % int(ceil(left)), "sans_bold", 17, Palette.REQ_MISS))
+	for other: String in m.get("exclusive", []):
+		v.add_child(UITheme.label("⇄ Выбор: выполните эту — и «%s» будет упущена" % c.missions.get(other, {}).get("title", other), "sans_bold", 17, Palette.REQ_MISS))
+	var phases: Array = m.get("boss", {}).get("phases", [])
+	if not phases.is_empty():
+		var ph := clampi(int(s.missions.get(str(m.get("id", "")), {}).get("phase", 0)), 0, phases.size() - 1)
+		v.add_child(UITheme.label("☗ Заход %d из %d: %s" % [ph + 1, phases.size(), phases[ph].get("text", "")], "sans_bold", 17, Palette.TRAUMA_BRIGHT))
+	var sky := Atmosphere.sky(c, s)
+	if Atmosphere.HINTS.has(sky):
+		var l := UITheme.label("☾ " + str(Atmosphere.HINTS[sky]), "sans", 16, Palette.SILVER)
+		l.tooltip_text = "Небо меняется со временем: к прибытию отряда может быть другим."
+		l.mouse_filter = Control.MOUSE_FILTER_STOP
+		v.add_child(l)
+	return v
 
 
 # --- отчёт -----------------------------------------------------------------------------
@@ -382,6 +514,8 @@ func show_report(rep: Dictionary) -> void:
 		stages.add_child(_stage_card(st, rep, ci))
 		if st.has("combat"):
 			ci += 1
+	for f: Dictionary in rep.get("forks", []):
+		_body.add_child(_para("⑂ %s → %s" % [f.get("text", ""), f.get("choice", "")], "serif_italic", 18, Palette.SILVER))
 	_body.add_child(_caption("Итог"))
 	var res := VBoxContainer.new()
 	res.add_theme_constant_override("separation", 4)

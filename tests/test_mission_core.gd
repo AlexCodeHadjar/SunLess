@@ -125,7 +125,7 @@ func test_combat_stage_runs() -> void:
 	var s := _run(3)
 	s.missions["MS03"] = {"status": "open", "attempts": 0}
 	var sid := _arrive(c, s, "MS03", ["P01"])
-	var r := MissionResolver.resolve(c, s, sid, "MS03_fight")
+	var r := MissionResolver.resolve_through(c, s, sid, "MS03_fight")
 	check(r["ok"], "бой прошёл")
 	var rep: Dictionary = r["report"]
 	eq(rep["combats"].size(), 1, "один автобой:")
@@ -226,7 +226,7 @@ func test_forecast_is_honest() -> void:
 			var s := _run(1000 + i)
 			s.missions[mid] = {"status": "open", "attempts": 0}
 			var sid := _arrive(c, s, mid, ["P01"])
-			var rep: Dictionary = MissionResolver.resolve(c, s, sid, aid)["report"]
+			var rep: Dictionary = MissionResolver.resolve_through(c, s, sid, aid)["report"]
 			score += {"success": 1.0, "partial": 0.5}.get(rep["outcome"], 0.0)
 		var real := int(round(100.0 * score / n))
 		print("   [прогноз] %s/%s: обещано %d (%s), на деле %d" % [mid, aid, int(fc["value"]), fc["word"], real])
@@ -273,7 +273,19 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 		MissionFlow.tick(c, s, 1.0)
 		for sq: Dictionary in s.squads.duplicate():
 			# отряд мог исчезнуть: сюжет увёл его единственного героя (remove_card)
-			if sq["phase"] != "arrived" or MissionFlow.squad(s, int(sq["id"])).is_empty():
+			if MissionFlow.squad(s, int(sq["id"])).is_empty():
+				continue
+			if sq["phase"] == "fork":
+				# на развилке бот идёт дальше первым вариантом
+				var opts: Array = sq["pending"]["report"]["fork"]["options"]
+				var rf := MissionResolver.resume(c, s, int(sq["id"]), str(opts[0]["id"]))
+				if not rf["ok"]:
+					return {"stuck": true, "error": rf["error"]}
+				s = rf["state"]
+				if not rf.has("fork"):
+					_count(stats, sq["mission"], rf["report"])
+				continue
+			if sq["phase"] != "arrived":
 				continue
 			var best := ""
 			var best_v := -1
@@ -293,16 +305,20 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 				return {"stuck": true, "error": r["error"]}
 			s = r["state"]
 			attempts += 1
-			var rep: Dictionary = r["report"]
-			var st: Dictionary = stats.get(sq["mission"], {"tries": 0, "ok": 0, "retreat": 0, "deaths": 0})
-			st["tries"] += 1
-			st["ok"] += 1 if rep["outcome"] in ["success", "partial"] else 0
-			st["retreat"] += 1 if rep["outcome"] == "retreat" else 0
-			st["deaths"] += Array(rep["deaths"]).size()
-			stats[sq["mission"]] = st
+			if not r.has("fork"):
+				_count(stats, sq["mission"], r["report"])
 	return {"stuck": steps >= 12000, "over": s.game_over, "attempts": attempts, "clock": s.clock,
 		"nightmare_done": nightmare_done, "story_done": s.demo_complete and s.chapter == "academy",
 		"heroes": MissionFlow.heroes(c, s).size()}
+
+
+func _count(stats: Dictionary, mid: String, rep: Dictionary) -> void:
+	var st: Dictionary = stats.get(mid, {"tries": 0, "ok": 0, "retreat": 0, "deaths": 0})
+	st["tries"] += 1
+	st["ok"] += 1 if rep["outcome"] in ["success", "partial"] else 0
+	st["retreat"] += 1 if rep["outcome"] == "retreat" else 0
+	st["deaths"] += Array(rep["deaths"]).size()
+	stats[mid] = st
 
 
 func test_mission_simulation() -> void:
@@ -341,7 +357,7 @@ func test_combat_replay_matches() -> void:
 		var s := _run(seed_value)
 		s.missions["MS03"] = {"status": "open", "attempts": 0}
 		var sid := _arrive(c, s, "MS03", ["P01"])
-		var rep: Dictionary = MissionResolver.resolve(c, s, sid, "MS03_fight")["report"]
+		var rep: Dictionary = MissionResolver.resolve_through(c, s, sid, "MS03_fight")["report"]
 		var rec: Dictionary = rep["combats"][0]
 		var replay := MissionResolver.replay_session(c, rec["setup"])
 		replay.auto_play()

@@ -53,7 +53,8 @@ python tools/editor/server.py                          # редактор кон
 | `lore.json` | «По книге» (tools/gen_lore.py) | |
 
 **Миссия (кратко):** `id, location, type(story|side|random), title, briefing, rumors[{text с [намёком], tag}], threat 1–5, duration 5–15, rest, squad{min,max}, requires_heroes, exclude_heroes, enemies, field, known_tags, hidden_tags, context, trauma_pool, arrival, actions[], on_complete, next[], unlock{after_missions, after_all}, start, end_chapter, next_chapter, sky(eclipse|blood_moon)`.
-**Действие:** `id, label, text, story, retreat, requires_any(теги), requires_hero, conditions, cost{shards}, stages[1–3]{name, req{stat:n}|combat{enemies,field}|auto, tags, ok/partial/fail}, on_success/on_partial/on_failure[cmd…]`.
+Ещё у миссии: `exclusive[]` (миссия-выбор, взаимно), `expires` (с, побочные/случайные), `boss{phases[{field,sky,text}]}` (заходы босса; фаза — `state.missions[id].phase`).
+**Действие:** `id, label, text, story, retreat, guaranteed, requires_any(теги), requires_hero, conditions, cost{shards, sacrifice(карта), sacrifice_tag, rest, trauma}, stages[1–3]{name, req{stat:n}|combat{enemies,field}|auto, tags, ok/partial/fail, fork{text, options[{id,label,text,then,stages,on_success,keep}]}}, on_success/on_partial/on_failure[cmd…]`. Резолвер: `resolve` → может вернуть `fork`; `resume(option)`; `resolve_through` проходит развилки первым вариантом.
 
 ## Главы
 

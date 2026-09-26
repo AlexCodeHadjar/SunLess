@@ -245,13 +245,16 @@ func _refresh() -> void:
 ## Небо над картой: день и ночь по часам, кровавая луна и затмение — по сюжету (Atmosphere).
 ## Смена неба красит и живую карту: туман, искры, облака и стаи.
 func _update_sky() -> void:
-	if not _backdrop.has_sky_art():
-		return
 	var next := Atmosphere.sky(ContentDB.data, GameState.state)
 	if next == _sky:
 		return
 	var first := _sky == ""
 	_sky = next
+	if not _backdrop.has_sky_art():
+		# нарисованный фон (Академия): день и ночь — временем суток
+		_backdrop.set_tod(float(Atmosphere.TOD[next]), not first)
+		_life.set_tod(float(Atmosphere.TOD[next]), not first)
+		return
 	_backdrop.set_sky(next, not first)
 	_life.set_tod(float(Atmosphere.TOD[next]), not first)
 	var tint := {"night": Color(1, 1, 1), "day": Color(1.1, 1.1, 1.15), "eclipse": Color(0.55, 0.58, 0.7),
@@ -398,16 +401,24 @@ func _update_pins() -> void:
 		var progress := -1.0
 		var remaining := 0.0
 		var arrived := false
+		mk.fork_wait = false
 		for sq: Dictionary in s.squads:
 			if sq["mission"] != mid:
 				continue
-			if sq["phase"] == "arrived":
+			if sq["phase"] == "arrived" or sq["phase"] == "fork":
 				arrived = true
+				mk.fork_wait = sq["phase"] == "fork"
 			else:
 				var total := maxf(0.1, float(sq["arrive_at"]) - float(sq["launched_at"]))
 				progress = clampf((s.clock - float(sq["launched_at"])) / total, 0.0, 1.0)
 				remaining = maxf(0.0, float(sq["arrive_at"]) - s.clock)
 		mk.set_state(progress, remaining, arrived)
+		# устаревающая миссия: срок — меткой на карте
+		var left := MissionFlow.expires_in(ContentDB.data, s, mid)
+		var badge := ("⌛ %d с" % int(ceil(left))) if left >= 0.0 and progress < 0.0 and not arrived else ""
+		if mk.card.badge != badge:
+			mk.card.badge = badge
+			mk.card.queue_redraw()
 	for sid: String in _shops:
 		var icon: ShopIcon = _shops[sid]
 		icon.set_state(ShopRules.has_news(ContentDB.data, s, sid), ShopRules.missions_to_refresh(ContentDB.data, s, sid))
@@ -419,7 +430,7 @@ func _on_events(events: Array) -> void:
 			"arrived":
 				AudioManager.play("bell", -6.0, 1.2)
 				_show_toast("%s — щёлкните по карте миссии" % e["text"])
-			"rested":
+			"rested", "expired":
 				_show_toast(str(e["text"]))
 			"mission":
 				AudioManager.play("open", -8.0)
@@ -434,7 +445,7 @@ func _open_mission(mid: String) -> void:
 	for sq: Dictionary in GameState.state.squads:
 		if sq["mission"] != mid:
 			continue
-		if sq["phase"] == "arrived":
+		if sq["phase"] == "arrived" or sq["phase"] == "fork":
 			_open_window()
 			_window.show_arrival(int(sq["id"]))
 		else:

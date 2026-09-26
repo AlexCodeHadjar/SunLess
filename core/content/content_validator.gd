@@ -199,6 +199,18 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 		if not c.characters.has(cid):
 			errors.append("%s: exclude_heroes → нет персонажа %s" % [w, cid])
 	_validate_effects(c, w + " on_complete", m.get("on_complete", []), errors)
+	for other: String in m.get("exclusive", []):
+		if not c.missions.has(other):
+			errors.append("%s: exclusive → нет миссии %s" % [w, other])
+		elif not Array(c.missions[other].get("exclusive", [])).has(mid):
+			errors.append("%s: миссия-выбор с %s должна быть взаимной" % [w, other])
+	if m.has("expires") and (float(m["expires"]) < 20.0 or str(m.get("type", "")) == "story"):
+		errors.append("%s: expires — только у побочных и случайных, не меньше 20 с" % w)
+	for ph: Dictionary in m.get("boss", {}).get("phases", []):
+		if ph.has("field") and not c.fields.has(str(ph["field"])):
+			errors.append("%s: у захода босса нет поля %s" % [w, ph["field"]])
+		if ph.has("sky") and not ["eclipse", "blood_moon"].has(str(ph["sky"])):
+			errors.append("%s: у захода босса неизвестное небо %s" % [w, ph["sky"]])
 	if m.has("sky") and not ["eclipse", "blood_moon"].has(str(m["sky"])):
 		errors.append("%s: небо «%s» — бывает только eclipse или blood_moon" % [w, m["sky"]])
 	for other: String in m.get("unlock", {}).get("after_all", []):
@@ -231,9 +243,14 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 			for card: String in Array(cond.get("ids", [])) + Array(cond.get("cards", [])) + ([str(cond["card"])] if cond.has("card") else []):
 				if c.card_kind(card) == "":
 					errors.append("%s: условие ссылается на несуществующую карту %s" % [aw, card])
-		for r: String in a.get("cost", {}):
-			if r != "shards":
-				errors.append("%s: цена может быть только в осколках душ, а не «%s»" % [aw, r])
+		var cost: Dictionary = a.get("cost", {})
+		for r: String in cost:
+			if not ["shards", "sacrifice", "sacrifice_tag", "rest", "trauma"].has(r):
+				errors.append("%s: неизвестная цена «%s» (shards, sacrifice, sacrifice_tag, rest, trauma)" % [aw, r])
+		if cost.has("sacrifice") and c.card_kind(str(cost["sacrifice"])) != "enhancement":
+			errors.append("%s: жертвовать можно только усиление, а не %s" % [aw, cost["sacrifice"]])
+		if cost.has("sacrifice_tag") and not c.combat_tags.has(str(cost["sacrifice_tag"])):
+			errors.append("%s: нет тега «%s» для жертвы" % [aw, cost["sacrifice_tag"]])
 		if bool(a.get("story", false)):
 			story += 1
 		if bool(a.get("retreat", false)):
@@ -278,3 +295,19 @@ static func _validate_stage(c: Content, w: String, st: Dictionary, errors: Array
 	for t: String in st.get("tags", []):
 		if not c.tags.has(t):
 			errors.append("%s: нет тега проверки «%s»" % [w, t])
+	if st.has("fork"):
+		var f: Dictionary = st["fork"]
+		if str(f.get("text", "")) == "":
+			errors.append("%s: у развилки нет текста" % w)
+		var opts: Array = f.get("options", [])
+		if opts.size() < 2:
+			errors.append("%s: у развилки меньше двух вариантов" % w)
+		for o: Dictionary in opts:
+			if str(o.get("id", "")) == "" or str(o.get("label", "")) == "":
+				errors.append("%s: у варианта развилки нет id или названия" % w)
+			if not ["continue", "retreat"].has(str(o.get("then", "continue"))):
+				errors.append("%s: then у развилки — continue или retreat" % w)
+			for st2: Dictionary in o.get("stages", []):
+				_validate_stage(c, w + " / " + str(o.get("id", "")), st2, errors)
+			_validate_effects(c, w + " fork on_success", o.get("on_success", []), errors)
+			_validate_effects(c, w + " fork keep", o.get("keep", []), errors)

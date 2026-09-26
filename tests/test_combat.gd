@@ -112,7 +112,7 @@ func test_mission_combat_loot_and_wounds() -> void:
 		s.missions["MS03"] = {"status": "open", "attempts": 0}
 		var r := MissionFlow.launch(c, s, "MS03", ["P01"])
 		MissionFlow.tick(c, s, 20.0)
-		var res := MissionResolver.resolve(c, s, int(r["squad"]["id"]), "MS03_fight")
+		var res := MissionResolver.resolve_through(c, s, int(r["squad"]["id"]), "MS03_fight")
 		var rep: Dictionary = res["report"]
 		var ns: RunState = res["state"]
 		if rep["combats"].is_empty():

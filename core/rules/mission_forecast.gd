@@ -93,7 +93,7 @@ static func stage_odds(content: Content, state: RunState, m: Dictionary, a: Dict
 	if bool(st.get("auto", false)):
 		return {"ok": 1.0, "partial": 0.0, "fail": 0.0, "hero": "", "kind": "auto", "links": [], "risk": 0.0}
 	if st.has("combat"):
-		var c := combat_setup(content, state, m, a, st, heroes, reveal)
+		var c := combat_setup(content, state, m, a, MissionFlow.boss_stage(state, m, st), heroes, reveal)
 		var f := float(c["fight"])
 		# в бою травмы бывают и при победе (проигранный раунд) — риск чуть выше вероятности поражения
 		return {"ok": f, "partial": 0.0, "fail": 1.0 - f, "hero": c["hero"], "kind": "combat", "links": c["links"],

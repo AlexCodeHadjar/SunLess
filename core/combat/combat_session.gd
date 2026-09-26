@@ -559,6 +559,15 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 					E *= 1.0 + v2
 					es.append({"label": src["label"], "kind": src["kind"], "pct": v2, "value": E})
 
+	# 7б. Небо (docs/16 §4): под кровавой луной враги злее, в затмение сильнее Тень
+	var sky := Atmosphere.sky(content, state)
+	if sky == "blood_moon":
+		E *= 1.0 + Atmosphere.BLOOD_ENEMY
+		es.append({"label": "Кровавая луна", "kind": "field", "pct": Atmosphere.BLOOD_ENEMY, "value": E})
+	elif sky == "eclipse" and ht.has("Тень"):
+		H *= 1.0 + Atmosphere.ECLIPSE_SHADOW
+		hs.append({"label": "Затмение: Тень", "kind": "field", "pct": Atmosphere.ECLIPSE_SHADOW, "value": H})
+
 	# 8. Состояния
 	var tr := TraumaRules.counted(state.character(hero).get("traumas", []))
 	if tr > 0:

@@ -14,6 +14,7 @@ var mission_id := ""
 var progress := -1.0      # 0..1 — отряд в пути; -1 — отряда нет
 var remaining := 0.0      # секунд до прибытия
 var arrived := false
+var fork_wait := false    # отряд стоит на развилке и ждёт решения игрока
 var card: CardView
 var _ring: Control
 var _t := 0.0
@@ -117,12 +118,12 @@ func _draw_ring() -> void:
 	var gold := Color("#E3C98E")
 	var p := 1.0 if arrived else clampf(progress, 0.0, 1.0)
 	_ring.draw_arc(c, RING_R, -PI / 2.0, -PI / 2.0 + TAU * p, 56, gold, 6.0, true)
-	var center := "!" if arrived else "%dс" % int(ceil(remaining))
+	var center := ("?" if fork_wait else "!") if arrived else "%dс" % int(ceil(remaining))
 	var f := UITheme.font("title_bold")
 	var fs := 32 if center.length() <= 2 else 24
 	var tw := f.get_string_size(center, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	_ring.draw_string(f, c + Vector2(-tw / 2.0, fs * 0.34), center, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gold if arrived else Palette.TEXT)
-	var cap := "отряд прибыл" if arrived else "отряд в пути"
+	var cap := ("ждёт решения" if fork_wait else "отряд прибыл") if arrived else "отряд в пути"
 	var sf := UITheme.font("sans_bold")
 	var cw := sf.get_string_size(cap, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 	var cp := c + Vector2(-cw / 2.0, RING_R + 22.0)

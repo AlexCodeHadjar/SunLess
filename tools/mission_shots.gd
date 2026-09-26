@@ -119,6 +119,11 @@ func _run() -> void:
 	await _shot("m10_arrival_ms03")
 	_window().call("_choose", "MS03_fight")
 	await _wait(0.8)
+	await _shot("m10b_fork")
+	if _window().mode == "fork":
+		var r: Dictionary = GameState.resolve_fork(_window().squad_id, "push")
+		_window().show_report(r)
+		await _wait(0.8)
 	await _shot("m11_report_ms03")
 	var rep: Dictionary = _window().report
 	if not Array(rep.get("combats", [])).is_empty():
