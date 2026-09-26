@@ -5,7 +5,10 @@ extends Control
 signal closed
 signal watch_combat(setup: Dictionary)
 
-const PANEL := Rect2(250, 70, 1420, 900)
+const PANEL := Rect2(250, 70, 1420, 996)   # до низа экрана — поверх ряда героев
+const SLOT := Vector2(168, 288)    # место в отряде
+const BENCH := Vector2(156, 268)   # свободные герои
+const TEAM := Vector2(120, 206)    # отряд на месте и на развилке
 const WORD_COLORS := {
 	"Безнадёжно": "#9A2A33", "Очень опасно": "#C0414C", "Опасно": "#D08A48", "Неясно": "#A8ADB4",
 	"Хорошие шансы": "#6FB27A", "Уверенно": "#D6BC57", "Без риска": "#A8ADB4",
@@ -46,10 +49,10 @@ func _ready() -> void:
 	add_child(panel)
 	var m := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 28)
+		m.add_theme_constant_override("margin_" + side, 20 if side in ["top", "bottom"] else 28)
 	panel.add_child(m)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 14)
+	v.add_theme_constant_override("separation", 8)
 	m.add_child(v)
 	var head := HBoxContainer.new()
 	_title = UITheme.label("", "title_bold", 40, Palette.TEXT)
@@ -68,7 +71,7 @@ func _ready() -> void:
 	v.add_child(scroll)
 	_body = VBoxContainer.new()
 	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_body.add_theme_constant_override("separation", 16)
+	_body.add_theme_constant_override("separation", 10)
 	scroll.add_child(_body)
 	_footer = HBoxContainer.new()
 	_footer.add_theme_constant_override("separation", 24)
@@ -124,10 +127,10 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 26)
 	_body.add_child(top)
-	top.add_child(_art(m, Vector2(250, 390)))
+	top.add_child(_art(m, Vector2(230, 360)))
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 12)
+	col.add_theme_constant_override("separation", 8)
 	top.add_child(col)
 	col.add_child(_caption("Что происходит"))
 	col.add_child(_para(str(m.get("briefing", "")), "serif", 20, Palette.TEXT))
@@ -177,7 +180,7 @@ func _refresh_squad() -> void:
 	for i in mx:
 		if i < picked.size():
 			var cid: String = picked[i]
-			var cv := CardView.make(cid, Vector2(118, 202), false)
+			var cv := CardView.make(cid, SLOT, false)
 			cv.highlight = true
 			cv.tooltip_text = "Щёлкните, чтобы убрать из отряда · правый щелчок — кармашек"
 			cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
@@ -190,7 +193,7 @@ func _refresh_squad() -> void:
 			var dz := DropZone.new()
 			dz.accepts = ["character"]
 			dz.hint = "место в отряде" if i < int(m.get("squad", {}).get("min", 1)) else "ещё место\n(необязательно)"
-			dz.custom_minimum_size = Vector2(118, 202)
+			dz.custom_minimum_size = SLOT
 			dz.dropped.connect(_add_hero)
 			_slots.add_child(dz)
 	var gap := Control.new()
@@ -198,9 +201,11 @@ func _refresh_squad() -> void:
 	_slots.add_child(gap)
 	var bench := VBoxContainer.new()
 	bench.add_theme_constant_override("separation", 6)
+	bench.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bench.add_child(UITheme.label("Свободные герои", "sans", 16, Palette.TEXT_DIM))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	var row := HFlowContainer.new()   # много героев — переносятся на следующую строку
+	row.add_theme_constant_override("h_separation", 12)
+	row.add_theme_constant_override("v_separation", 10)
 	bench.add_child(row)
 	for cid: String in MissionFlow.heroes(c, s):
 		if picked.has(cid):
@@ -208,7 +213,7 @@ func _refresh_squad() -> void:
 		var why := MissionFlow.busy_reason(c, s, cid)
 		if why == "" and MissionFlow.excluded(c, mission_id, cid):
 			why = "не может"
-		var cv := CardView.make(cid, Vector2(96, 164), false)
+		var cv := CardView.make(cid, BENCH, false)
 		cv.dimmed = why != ""
 		cv.badge = why
 		cv.clicked.connect(_add_hero)
@@ -334,7 +339,7 @@ func show_arrival(sid: int) -> void:
 	var team := HBoxContainer.new()
 	team.add_theme_constant_override("separation", 8)
 	for cid: String in sq["heroes"]:
-		team.add_child(CardView.make(cid, Vector2(84, 144), false))
+		team.add_child(CardView.make(cid, TEAM, false))
 	col.add_child(_caption("Отряд"))
 	col.add_child(team)
 	_body.add_child(_caption("Что делает отряд"))
@@ -430,7 +435,7 @@ func show_fork(sid: int) -> void:
 	var team := HBoxContainer.new()
 	team.add_theme_constant_override("separation", 8)
 	for cid: String in sq["heroes"]:
-		team.add_child(CardView.make(cid, Vector2(84, 144), false))
+		team.add_child(CardView.make(cid, TEAM, false))
 	_body.add_child(team)
 	_body.add_child(_caption("Что делать дальше"))
 	HintTargets.put("fork_options", [])

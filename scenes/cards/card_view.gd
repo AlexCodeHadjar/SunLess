@@ -115,7 +115,6 @@ func _ready() -> void:
 		_plate = Control.new()
 		_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_plate.size = size
-		_plate.z_index = 2
 		_plate.draw.connect(func() -> void:
 			if _readable():
 				var k := size.x / SIZE_PANEL.x
@@ -168,6 +167,8 @@ func refresh_aura() -> void:
 	if _combat_tags().has("Коралл"):
 		aura.tint = Color(1.25, 0.85, 0.85)
 	add_child(aura)
+	if _plate:
+		move_child(_plate, get_child_count() - 1)   # плашка — последней, поверх ауры (без z_index: он поднял бы её над окнами)
 
 
 var _last_psy := ""
@@ -618,7 +619,7 @@ func _readable() -> bool:
 
 ## Чёткая плашка внизу маленькой карты: имя крупно (в две строки, если длинное), у героя — характеристики.
 func _draw_readable_plate_on(ci: CanvasItem, r: Rect2, d: Dictionary, k: float) -> void:
-	var top := r.position.y + r.size.y * (0.70 if kind == "character" else 0.74)
+	var top := r.position.y + r.size.y * (0.665 if kind == "character" else 0.74)
 	var plate := Rect2(r.position.x + 3 * k, top, r.size.x - 6 * k, r.end.y - top - 3 * k)
 	ci.draw_rect(plate, Color(0.035, 0.035, 0.045, 1.0))
 	ci.draw_line(plate.position, Vector2(plate.end.x, plate.position.y), _border_color(d).darkened(0.1), 1.2)
@@ -628,7 +629,7 @@ func _draw_readable_plate_on(ci: CanvasItem, r: Rect2, d: Dictionary, k: float) 
 	var w := plate.size.x - 6 * k
 	while fs > 9 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w * 1.9:
 		fs -= 1
-	var name_h := plate.size.y * (0.52 if kind == "character" else 1.0)
+	var name_h := plate.size.y * (0.46 if kind == "character" else 1.0)
 	var lines := 1 if font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= w else 2
 	var y0 := plate.position.y + (name_h - fs * 1.1 * lines) / 2.0 + fs * 0.85
 	ci.draw_multiline_string(font, Vector2(plate.position.x + 3 * k, y0), nm, HORIZONTAL_ALIGNMENT_CENTER, w, fs, 2, Palette.TEXT)
@@ -640,13 +641,15 @@ func _draw_readable_plate_on(ci: CanvasItem, r: Rect2, d: Dictionary, k: float) 
 			var p: Dictionary = sheet[st]
 			var cx := plate.position.x + plate.size.x * (0.2 + 0.3 * i)
 			var em := UITheme.emblem(st)
-			var ic := clampf(r.size.x * 0.13, 11.0, 20.0)
+			var ic := clampf(r.size.x * 0.14, 12.0, 22.0)
 			if em:
 				ci.draw_texture_rect(em, Rect2(Vector2(cx - ic * 1.05, sy - ic / 2), Vector2(ic, ic)), false)
 			var delta := int(p["total"]) - int(p["base"])
 			var col := Palette.STAT_UP if delta > 0 else (Palette.STAT_DOWN if delta < 0 else Palette.TEXT)
-			var nfs := int(clampf(r.size.x * 0.13, 11.0, 19.0))
-			ci.draw_string(UITheme.font("title_bold"), Vector2(cx + 1, sy + nfs * 0.36), str(int(p["total"])), HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, col)
+			var nfs := int(clampf(r.size.x * 0.155, 13.0, 24.0))
+			# ровные (не «старинные») цифры — читаются и на маленькой карте
+			ci.draw_string_outline(UITheme.font("sans_bold"), Vector2(cx + 1, sy + nfs * 0.36), str(int(p["total"])), HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, 3, Color(0, 0, 0, 0.9))
+			ci.draw_string(UITheme.font("sans_bold"), Vector2(cx + 1, sy + nfs * 0.36), str(int(p["total"])), HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, col)
 			i += 1
 
 
