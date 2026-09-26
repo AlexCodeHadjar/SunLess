@@ -240,11 +240,14 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	var steps := 0
 	var attempts := 0
 	var nightmare_done := false
+	var academy_done := false
 	while steps < 12000 and not s.game_over:
 		steps += 1
 		if s.demo_complete:
 			if str(s.flags.get("next_chapter", "")) == "":
 				break
+			if s.chapter == "academy":
+				academy_done = true
 			nightmare_done = true
 			MissionFlow.start_chapter(c, s, str(s.flags["next_chapter"]))
 		for sid: String in ShopRules.shops_of(c, s):
@@ -266,9 +269,13 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 				if free.has(need):
 					team.append(need)
 			for h: String in free:
-				if team.size() < mx and not team.has(h):
+				# не берёт в отряд тех, кто не пойдёт вместе (доверие −3)
+				if team.size() < mx and not team.has(h) and TrustRules.refusal(c, s, team + [h]) == "":
 					team.append(h)
 			if MissionFlow.can_launch(c, s, mid, team) == "":
+				# как осторожный игрок: на несюжетное — только с хорошим прогнозом
+				if str(c.missions[mid]["type"]) != "story" and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < 50:
+					continue
 				MissionFlow.launch(c, s, mid, team)
 		MissionFlow.tick(c, s, 1.0)
 		for sq: Dictionary in s.squads.duplicate():
@@ -299,7 +306,8 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 					if v > best_v:
 						best_v = v
 						best = str(a["id"])
-			var pick := best if best_v >= 20 or retreat == "" else retreat
+			var need := 20 if str(c.missions[sq["mission"]]["type"]) == "story" else 50
+			var pick := best if best_v >= need or retreat == "" else retreat
 			var r := MissionResolver.resolve(c, s, int(sq["id"]), pick)
 			if not r["ok"]:
 				return {"stuck": true, "error": r["error"]}
@@ -313,8 +321,12 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 			var gst := GrowthRules.stage(s, cid, tag)
 			if gst != "":
 				grown[gst] += 1
-	return {"stuck": steps >= 12000, "over": s.game_over, "attempts": attempts, "clock": s.clock, "grown": grown,
-		"nightmare_done": nightmare_done, "story_done": s.demo_complete and s.chapter == "academy",
+	if steps >= 12000:
+		return {"stuck": true, "error": "12000 шагов: глава %s, открыто %s, отряды %s, герои %s" % [s.chapter, MissionFlow.open_missions(s),
+			s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]]), MissionFlow.heroes(c, s)]}
+	return {"stuck": false, "over": s.game_over, "attempts": attempts, "clock": s.clock, "grown": grown, "academy_done": academy_done,
+		"shore_done": s.demo_complete and s.chapter == "shore",
+		"nightmare_done": nightmare_done, "story_done": academy_done or (s.demo_complete and s.chapter == "academy"),
 		"heroes": MissionFlow.heroes(c, s).size()}
 
 
@@ -331,6 +343,7 @@ func test_mission_simulation() -> void:
 	var c := content()
 	var n := 120
 	var finished := 0
+	var shore := 0
 	var nightmare := 0
 	var over := 0
 	var total_attempts := 0
@@ -344,13 +357,15 @@ func test_mission_simulation() -> void:
 		check(not r.get("stuck", false), "бот застрял (сид %d): %s" % [5000 + i, r.get("error", "")])
 		if r.get("story_done", false):
 			finished += 1
+		if r.get("shore_done", false):
+			shore += 1
 		if r.get("nightmare_done", false):
 			nightmare += 1
 		if r.get("over", false):
 			over += 1
 		total_attempts += int(r.get("attempts", 0))
 		total_clock += float(r.get("clock", 0.0))
-	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, конец игры: %d" % [n, nightmare, finished, over])
+	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, Забытый Берег пройден: %d, конец игры: %d" % [n, nightmare, finished, shore, over])
 	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
 	print("   [рост] на прохождение: опытных тегов %.1f, эволюций %.1f, мутаций %.2f" % [float(grown["vet"]) / n, float(grown["evo"]) / n, float(grown["mut"]) / n])
 	var ids: Array = stats.keys()
@@ -359,6 +374,7 @@ func test_mission_simulation() -> void:
 		var st: Dictionary = stats[mid]
 		print("   [миссии] %s: попыток %d, удачно %d%%, отступлений %d, погибло героев %d" % [mid, st["tries"], int(100.0 * st["ok"] / maxf(1, st["tries"])), st["retreat"], st["deaths"]])
 	check(finished >= n * 0.6, "демо (Кошмар + Академия) проходится в большинстве прохождений (%d из %d)" % [finished, n])
+	check(shore >= n * 0.5, "Забытый Берег проходится хотя бы в половине прохождений (%d из %d)" % [shore, n])
 
 
 func test_combat_replay_matches() -> void:

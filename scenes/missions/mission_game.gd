@@ -265,9 +265,9 @@ func _update_sky() -> void:
 	_backdrop.set_sky(next, not first)
 	_life.set_tod(float(Atmosphere.TOD[next]), not first)
 	var tint := {"night": Color(1, 1, 1), "day": Color(1.1, 1.1, 1.15), "eclipse": Color(0.55, 0.58, 0.7),
-		"blood_moon": Color(1.25, 0.45, 0.4)}
+		"blood_moon": Color(1.25, 0.45, 0.4), "storm": Color(0.6, 0.65, 0.8)}
 	var fog_tint := {"night": Color(1, 1, 1), "day": Color(1.2, 1.2, 1.25), "eclipse": Color(0.5, 0.52, 0.6),
-		"blood_moon": Color(1.1, 0.6, 0.6)}
+		"blood_moon": Color(1.1, 0.6, 0.6), "storm": Color(0.85, 0.9, 1.05)}
 	if first or Vfx.reduced():
 		_embers.modulate = tint[next]
 		_fog.modulate = fog_tint[next]

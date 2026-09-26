@@ -1,160 +1,439 @@
 [
-  {
-    "id": "U01",
-    "name": "Импровизированное оружие",
-    "origin": "improvised",
-    "rarity": "common",
-    "wears": true,
-    "bonuses": [
-      {
-        "stat": "power",
-        "value": 2,
-        "tags": []
-      },
-      {
-        "stat": "cunning",
-        "value": 1,
-        "tags": [
-          "survival"
-        ]
-      }
-    ],
-    "text": "+2 Сила; в выживании ещё +1 Хитрость.",
-    "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 5–7",
+ {
+  "id": "U01",
+  "name": "Импровизированное оружие",
+  "origin": "improvised",
+  "rarity": "common",
+  "wears": true,
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 2,
+    "tags": []
+   },
+   {
+    "stat": "cunning",
+    "value": 1,
     "tags": [
-      "Импровизация",
-      "Цепь",
-      "Тяжёлый удар"
+     "survival"
     ]
-  },
-  {
-    "id": "U02",
-    "name": "Серебряный Колокольчик",
-    "origin": "memory",
-    "rarity": "rare",
-    "wears": true,
-    "wear_exempt_arcs": [
-      "nightmare"
-    ],
-    "art": "res://art/cards/U02.png",
-    "art_has_frame": true,
-    "bonuses": [
-      {
-        "stat": "cunning",
-        "value": 2,
-        "tags": [
-          "lure",
-          "stealth"
-        ]
-      }
-    ],
-    "text": "+2 Хитрость в приманке и скрытности. Дальний звон слышен за километры. Не изнашивается до конца Первого Кошмара.",
-    "canon": "канон",
-    "source": "«Дитя Теней», гл. 8, 13–14",
+   }
+  ],
+  "text": "+2 Сила; в выживании ещё +1 Хитрость.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 5–7",
+  "tags": [
+   "Импровизация",
+   "Цепь",
+   "Тяжёлый удар"
+  ]
+ },
+ {
+  "id": "U02",
+  "name": "Серебряный Колокольчик",
+  "origin": "memory",
+  "rarity": "rare",
+  "wears": true,
+  "wear_exempt_arcs": [
+   "nightmare"
+  ],
+  "art": "res://art/cards/U02.png",
+  "art_has_frame": true,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 2,
     "tags": [
-      "Звон",
-      "Приманка",
-      "Серебро",
-      "Воспоминание"
+     "lure",
+     "stealth"
     ]
-  },
-  {
-    "id": "U06",
-    "name": "Саван Кукловода",
-    "origin": "memory",
-    "rarity": "rare",
-    "wears": true,
-    "art": "res://art/cards/U06.png",
-    "art_has_frame": true,
-    "soften_first_physical": true,
-    "bonuses": [
-      {
-        "stat": "will",
-        "value": 1,
-        "tags": []
-      }
-    ],
-    "text": "+1 Воля; первая физическая травма события смягчается на ступень.",
-    "canon": "канон",
-    "source": "«Дитя Теней», гл. 16, 83",
+   }
+  ],
+  "text": "+2 Хитрость в приманке и скрытности. Дальний звон слышен за километры. Не изнашивается до конца Первого Кошмара.",
+  "canon": "канон",
+  "source": "«Дитя Теней», гл. 8, 13–14",
+  "tags": [
+   "Звон",
+   "Приманка",
+   "Серебро",
+   "Воспоминание"
+  ]
+ },
+ {
+  "id": "U06",
+  "name": "Саван Кукловода",
+  "origin": "memory",
+  "rarity": "rare",
+  "wears": true,
+  "art": "res://art/cards/U06.png",
+  "art_has_frame": true,
+  "soften_first_physical": true,
+  "bonuses": [
+   {
+    "stat": "will",
+    "value": 1,
+    "tags": []
+   }
+  ],
+  "text": "+1 Воля; первая физическая травма события смягчается на ступень.",
+  "canon": "канон",
+  "source": "«Дитя Теней», гл. 16, 83",
+  "tags": [
+   "Ткань",
+   "Нить",
+   "Кукловод",
+   "Оборона"
+  ]
+ },
+ {
+  "id": "K01",
+  "name": "Природа Заклинания",
+  "origin": "knowledge",
+  "rarity": "common",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 1,
     "tags": [
-      "Ткань",
-      "Нить",
-      "Кукловод",
-      "Оборона"
+     "knowledge",
+     "ritual"
     ]
-  },
-  {
-    "id": "K01",
-    "name": "Природа Заклинания",
-    "origin": "knowledge",
-    "rarity": "common",
-    "wears": false,
-    "bonuses": [
-      {
-        "stat": "cunning",
-        "value": 1,
-        "tags": [
-          "knowledge",
-          "ritual"
-        ]
-      }
-    ],
-    "text": "Знание: +1 Хитрость в знаниях и ритуалах.",
-    "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 1",
+   }
+  ],
+  "text": "Знание: +1 Хитрость в знаниях и ритуалах.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 1",
+  "tags": [
+   "Заклинание Кошмара"
+  ]
+ },
+ {
+  "id": "K02",
+  "name": "Горные тропы",
+  "origin": "knowledge",
+  "rarity": "common",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 2,
     "tags": [
-      "Заклинание Кошмара"
+     "survival",
+     "weather",
+     "climb"
     ]
-  },
-  {
-    "id": "K02",
-    "name": "Горные тропы",
-    "origin": "knowledge",
-    "rarity": "common",
-    "wears": false,
-    "bonuses": [
-      {
-        "stat": "cunning",
-        "value": 2,
-        "tags": [
-          "survival",
-          "weather",
-          "climb"
-        ]
-      }
-    ],
-    "text": "Знание: +2 Хитрость в пути, непогоде и подъёме.",
-    "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 8–9",
+   }
+  ],
+  "text": "Знание: +2 Хитрость в пути, непогоде и подъёме.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 8–9",
+  "tags": [
+   "Выслеживание"
+  ]
+ },
+ {
+  "id": "K03",
+  "name": "Устройство Аспекта",
+  "origin": "knowledge",
+  "rarity": "rare",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "will",
+    "value": 1,
+    "tags": []
+   }
+  ],
+  "text": "Знание: +1 Воля.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 15–16",
+  "tags": [
+   "Воспоминание"
+  ]
+ },
+ {
+  "id": "K04",
+  "name": "Мир Пробуждённых",
+  "origin": "knowledge",
+  "rarity": "common",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 1,
     "tags": [
-      "Выслеживание"
+     "social",
+     "knowledge"
     ]
-  },
-  {
-    "id": "K03",
-    "name": "Устройство Аспекта",
-    "origin": "knowledge",
-    "rarity": "rare",
-    "wears": false,
-    "bonuses": [
-      {
-        "stat": "will",
-        "value": 1,
-        "tags": []
-      }
-    ],
-    "text": "Знание: +1 Воля.",
-    "canon": "адаптация",
-    "source": "«Дитя Теней», гл. 15–16",
+   }
+  ],
+  "text": "Знание: +1 Хитрость в общении и знаниях.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 17–18",
+  "tags": [
+   "Разумный"
+  ]
+ },
+ {
+  "id": "K05",
+  "name": "Знание Царства Снов",
+  "origin": "knowledge",
+  "rarity": "rare",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 2,
     "tags": [
-      "Воспоминание"
+     "survival"
     ]
-  },
-  {"id": "K04", "name": "Мир Пробуждённых", "origin": "knowledge", "rarity": "common", "wears": false, "bonuses": [{"stat": "cunning", "value": 1, "tags": ["social", "knowledge"]}], "text": "Знание: +1 Хитрость в общении и знаниях.", "canon": "адаптация", "source": "«Дитя Теней», гл. 17–18", "tags": ["Разумный"]},
-  {"id": "K05", "name": "Знание Царства Снов", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "cunning", "value": 2, "tags": ["survival"]}], "text": "Знание: +2 Хитрость в выживании в Царстве Снов.", "canon": "адаптация", "source": "«Дитя Теней», гл. 22–24", "tags": ["Чутьё"]},
-  {"id": "K06", "name": "Предчувствие Берега", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "will", "value": 1, "tags": ["weather"]}], "text": "Знание: +1 Воля в непогоду; раскроет первые события Берега.", "canon": "адаптация", "source": "«Дитя Теней», гл. 29", "tags": ["Пророчество"]},
-  {"id": "U14", "name": "Уроки меча Нефис", "origin": "knowledge", "rarity": "epic", "wears": false, "bonuses": [{"stat": "power", "value": 2, "tags": []}, {"stat": "cunning", "value": 1, "tags": ["combat", "duel"]}], "text": "Навык: +2 Сила; в бою и дуэли ещё +1 Хитрость.", "canon": "адаптация", "source": "«Дитя Теней», гл. 26–27", "tags": ["Дуэль"]},
-  {"id": "U15", "name": "Выживание в Дикой Природе", "origin": "knowledge", "rarity": "rare", "wears": false, "bonuses": [{"stat": "cunning", "value": 2, "tags": ["survival", "weather", "climb"]}, {"stat": "will", "value": 1, "tags": ["survival", "weather", "climb"]}], "text": "Навык: в выживании, непогоде и подъёмах +2 Хитрость и +1 Воля.", "canon": "адаптация", "source": "«Дитя Теней», гл. 25", "tags": ["Выслеживание"]}
+   }
+  ],
+  "text": "Знание: +2 Хитрость в выживании в Царстве Снов.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 22–24",
+  "tags": [
+   "Чутьё"
+  ]
+ },
+ {
+  "id": "K06",
+  "name": "Предчувствие Берега",
+  "origin": "knowledge",
+  "rarity": "rare",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "will",
+    "value": 1,
+    "tags": [
+     "weather"
+    ]
+   }
+  ],
+  "text": "Знание: +1 Воля в непогоду; раскроет первые события Берега.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 29",
+  "tags": [
+   "Пророчество"
+  ]
+ },
+ {
+  "id": "U14",
+  "name": "Уроки меча Нефис",
+  "origin": "knowledge",
+  "rarity": "epic",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 2,
+    "tags": []
+   },
+   {
+    "stat": "cunning",
+    "value": 1,
+    "tags": [
+     "combat",
+     "duel"
+    ]
+   }
+  ],
+  "text": "Навык: +2 Сила; в бою и дуэли ещё +1 Хитрость.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 26–27",
+  "tags": [
+   "Дуэль"
+  ]
+ },
+ {
+  "id": "U15",
+  "name": "Выживание в Дикой Природе",
+  "origin": "knowledge",
+  "rarity": "rare",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 2,
+    "tags": [
+     "survival",
+     "weather",
+     "climb"
+    ]
+   },
+   {
+    "stat": "will",
+    "value": 1,
+    "tags": [
+     "survival",
+     "weather",
+     "climb"
+    ]
+   }
+  ],
+  "text": "Навык: в выживании, непогоде и подъёмах +2 Хитрость и +1 Воля.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 25",
+  "tags": [
+   "Выслеживание"
+  ]
+ },
+ {
+  "id": "U07",
+  "name": "Лазурный Клинок",
+  "origin": "memory",
+  "rarity": "epic",
+  "wears": true,
+  "art": "res://art/cards/U07.webp",
+  "art_has_frame": true,
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 3,
+    "tags": []
+   }
+  ],
+  "text": "Воспоминание-оружие: +3 Сила.",
+  "canon": "канон",
+  "source": "«Дитя Теней», гл. 33–34, 56",
+  "tags": [
+   "Режущий",
+   "Воспоминание",
+   "Сталь"
+  ]
+ },
+ {
+  "id": "U11",
+  "name": "Золотая Верёвка",
+  "origin": "memory",
+  "rarity": "rare",
+  "wears": true,
+  "art": "res://art/cards/U11.webp",
+  "art_has_frame": true,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 3,
+    "tags": [
+     "climb"
+    ]
+   },
+   {
+    "stat": "cunning",
+    "value": 1,
+    "tags": [
+     "chase",
+     "weather"
+    ]
+   }
+  ],
+  "text": "Воспоминание: +3 Хитрость в подъёме; в погоне и непогоду +1 Хитрость.",
+  "canon": "канон, игровое имя",
+  "source": "«Дитя Теней», гл. 34–37, 48, 51",
+  "tags": [
+   "Нить",
+   "Воспоминание",
+   "Ловушка"
+  ]
+ },
+ {
+  "id": "U12",
+  "name": "Эхо Падальщика Карапакса",
+  "origin": "echo",
+  "rarity": "epic",
+  "wears": false,
+  "art": "res://art/cards/U12.webp",
+  "art_has_frame": true,
+  "soften_first_physical": true,
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 3,
+    "tags": [
+     "combat"
+    ]
+   }
+  ],
+  "text": "Эхо: +3 Сила в бою; первая физическая травма события смягчается — Эхо принимает удар.",
+  "canon": "канон",
+  "source": "«Дитя Теней», гл. 46–47",
+  "tags": [
+   "Эхо",
+   "Панцирь",
+   "Хитин"
+  ]
+ },
+ {
+  "id": "U16",
+  "name": "Доспехи Звёздного Легиона",
+  "origin": "memory",
+  "rarity": "epic",
+  "wears": true,
+  "art": "res://art/cards/U16.webp",
+  "art_has_frame": true,
+  "soften_first_physical": true,
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 1,
+    "tags": []
+   }
+  ],
+  "text": "Броня: +1 Сила; первая физическая травма события смягчается.",
+  "canon": "канон",
+  "source": "«Дитя Теней», гл. 54, 56",
+  "tags": [
+   "Броня",
+   "Воспоминание",
+   "Звёздный свет"
+  ]
+ },
+ {
+  "id": "K07",
+  "name": "Знание Карапакса",
+  "origin": "knowledge",
+  "rarity": "rare",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 2,
+    "tags": [
+     "combat"
+    ]
+   }
+  ],
+  "text": "Знание: где у панцирных сочленения. +2 Хитрость в бою.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 40–43",
+  "tags": [
+   "Точность",
+   "Пробивание"
+  ]
+ },
+ {
+  "id": "K08",
+  "name": "Карта прилива",
+  "origin": "knowledge",
+  "rarity": "common",
+  "wears": false,
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 1,
+    "tags": [
+     "survival",
+     "weather"
+    ]
+   }
+  ],
+  "text": "Знание: когда вода уходит и когда возвращается. +1 Хитрость в выживании и непогоду.",
+  "canon": "адаптация",
+  "source": "«Дитя Теней», гл. 31–32",
+  "tags": [
+   "Прилив / Отлив"
+  ]
+ }
 ]

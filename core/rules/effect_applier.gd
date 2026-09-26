@@ -27,6 +27,9 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			return add_card(content, state, str(e["card"]))
 		"remove_card":
 			var card: String = e["card"]
+			# unless_bought: купленный в магазине спутник остаётся (решение владельца)
+			if bool(e.get("unless_bought", false)) and bool(state.characters.get(card, {}).get("bought", false)):
+				return []
 			if state.owns(card):
 				_remove_card(state, card)
 				return [{"kind": "lost", "text": str(e.get("text", "%s покидает коллекцию" % content.card_name(card))), "card": card}]

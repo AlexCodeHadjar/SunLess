@@ -975,7 +975,28 @@
    }
   ],
   "end_chapter": true,
-  "next": []
+  "next": [],
+  "next_chapter": "shore",
+  "on_complete": [
+   {
+    "cmd": "remove_card",
+    "card": "P02",
+    "text": "Нефис уносит в другую часть Царства Снов",
+    "unless_bought": false
+   },
+   {
+    "cmd": "remove_card",
+    "card": "P03",
+    "text": "Касси уносит в другую часть Царства Снов",
+    "unless_bought": false
+   },
+   {
+    "cmd": "remove_card",
+    "card": "P04",
+    "text": "Кастер просыпается где-то далеко",
+    "unless_bought": true
+   }
+  ]
  },
  {
   "id": "SA01",

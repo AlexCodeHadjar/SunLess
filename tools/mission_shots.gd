@@ -221,4 +221,31 @@ func _run() -> void:
 	get_tree().current_scene.call("_open_mission", "MA16")
 	await _wait(0.8)
 	await _shot("m18_brief_ma16")
+	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
+	# Забытый Берег (Ф13): после Зимнего солнцестояния — Санни один, ночь, потом шторм и день
+	var sa := GameState.state
+	sa.demo_complete = true
+	sa.flags["next_chapter"] = "shore"
+	for cid: String in ["P02", "P03", "P04"]:
+		sa.collection.erase(cid)
+	GameState.next_chapter()
+	get_tree().reload_current_scene()
+	await _wait(1.5)
+	sa = GameState.state
+	sa.clock = 10.0
+	GameState.missions_changed.emit()
+	await _wait(5.0)
+	await _shot("m19_shore_night")
+	for mid: String in ["SH19", "SH20", "SH21", "SH22", "SH23", "SH24", "SH25", "SH26"]:
+		sa.missions[mid] = {"status": "done", "attempts": 0}
+	for cid: String in ["P02", "P03"]:
+		EffectApplier.add_card(ContentDB.data, sa, cid)
+	MissionFlow.open(ContentDB.data, sa, "SH27")
+	MissionFlow.open(ContentDB.data, sa, "RS01")
+	GameState.missions_changed.emit()
+	await _wait(5.0)
+	await _shot("m20_shore_storm")
+	get_tree().current_scene.call("_open_mission", "SH27")
+	await _wait(0.8)
+	await _shot("m21_brief_sh27")
 	get_tree().quit()

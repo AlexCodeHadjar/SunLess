@@ -12,5 +12,12 @@
   "arc": "academy",
   "arc_name": "Академия",
   "combat_field": "F_02"
+ },
+ {
+  "id": "forgotten_shore",
+  "name": "Забытый Берег",
+  "arc": "shore",
+  "arc_name": "Забытый Берег",
+  "combat_field": "F_08"
  }
 ]

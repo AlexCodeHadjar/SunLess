@@ -252,10 +252,10 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 	for ph: Dictionary in m.get("boss", {}).get("phases", []):
 		if ph.has("field") and not c.fields.has(str(ph["field"])):
 			errors.append("%s: у захода босса нет поля %s" % [w, ph["field"]])
-		if ph.has("sky") and not ["eclipse", "blood_moon"].has(str(ph["sky"])):
+		if ph.has("sky") and not ["eclipse", "blood_moon", "storm"].has(str(ph["sky"])):
 			errors.append("%s: у захода босса неизвестное небо %s" % [w, ph["sky"]])
-	if m.has("sky") and not ["eclipse", "blood_moon"].has(str(m["sky"])):
-		errors.append("%s: небо «%s» — бывает только eclipse или blood_moon" % [w, m["sky"]])
+	if m.has("sky") and not ["eclipse", "blood_moon", "storm"].has(str(m["sky"])):
+		errors.append("%s: небо «%s» — бывает только eclipse, blood_moon или storm" % [w, m["sky"]])
 	for other: String in m.get("unlock", {}).get("after_all", []):
 		if not c.missions.has(other):
 			errors.append("%s: unlock.after_all → нет миссии %s" % [w, other])

@@ -2,7 +2,7 @@ class_name MapBackdrop
 extends Control
 ## Фон региона. Если есть рисунки неба art/regions/<регион>_<небо>.webp (ночь, день, затмение, кровавая луна) —
 ## показывает их и плавно перетекает между ними (set_sky), с медленным «дыханием» кадра и живыми накладками:
-## ореол луны, кровавый пульс, корона затмения, снег в цвет неба. Иначе рисует гравюрный перевал или город.
+## ореол луны, кровавый пульс, корона затмения, дождь и молнии шторма, снег в цвет неба. Иначе рисует гравюрный перевал или город.
 ## Время суток tod: 0 ночь, 0.25 рассвет, 0.5 день, 0.75 сумерки — для процедурного фона.
 
 const TOD_NAMES := ["ночь", "рассвет", "день", "сумерки"]
@@ -10,11 +10,11 @@ const TOD_NAMES := ["ночь", "рассвет", "день", "сумерки"]
 const SKY_TOP := [Color("#07080C"), Color("#1C1B2E"), Color("#4E5A70"), Color("#150E1C")]
 const SKY_BOT := [Color("#4A5264"), Color("#B8826E"), Color("#AEB6C2"), Color("#9A5540")]
 const LAND_TINT := [Color(1, 1, 1), Color(1.22, 1.08, 1.08), Color(1.5, 1.5, 1.55), Color(1.18, 0.98, 0.95)]
-const SKIES := ["night", "day", "eclipse", "blood_moon"]
+const SKIES := ["night", "day", "eclipse", "blood_moon", "storm"]
 # где на рисунке луна (солнце) — доли кадра; одинаковая композиция у всех четырёх
 const MOON_AT := Vector2(0.227, 0.105)
 const SNOW_COLORS := {"night": Color(0.85, 0.87, 0.92, 0.35), "day": Color(0.97, 0.98, 1.0, 0.55),
-	"eclipse": Color(0.7, 0.72, 0.8, 0.3), "blood_moon": Color(1.0, 0.72, 0.72, 0.38)}
+	"eclipse": Color(0.7, 0.72, 0.8, 0.3), "blood_moon": Color(1.0, 0.72, 0.72, 0.38), "storm": Color(0.75, 0.8, 0.9, 0.3)}
 const FADE_SEC := 4.0
 
 var region := "mountain_pass"
@@ -35,6 +35,7 @@ var _mix := 1.0              # 0 — ещё прежнее небо, 1 — уж�
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	snow = region == "mountain_pass"   # регион могут задать полем, минуя set_region
 	_load_region_art()
 	resized.connect(_rebuild)
 	_rebuild()
@@ -74,6 +75,40 @@ func _build_city() -> void:
 		_layers.append({"poly": PackedVector2Array([Vector2(mx - 3, size.y * 0.66), Vector2(mx - 1, size.y * 0.30), Vector2(mx + 1, size.y * 0.30), Vector2(mx + 3, size.y * 0.66)]),
 			"color": Color("#232A34"), "snow": false, "depth": 4})
 	_flakes.clear()
+	_stars.clear()
+	for i in 150:
+		_stars.append(Vector3(rng.randf() * size.x, rng.randf() * size.y * 0.4, rng.randf() * TAU))
+	queue_redraw()
+
+
+## Забытый Берег (пока нет рисунков): тёмное море до горизонта, багровые стены кораллового лабиринта
+## ярусами, сломанная башня справа. Вода дышит — уровень прилива медленно ходит вверх-вниз.
+func _build_shore() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+	var colors: Array[Color] = [Color("#4A2228"), Color("#381A1F"), Color("#261216"), Color("#170A0D")]
+	var bases: Array[float] = [0.58, 0.68, 0.80, 0.93]
+	for li in 4:
+		var poly := PackedVector2Array([Vector2(0, size.y)])
+		var x := 0.0
+		while x < size.x:
+			var w := rng.randf_range(24, 70) * (1.0 + li * 0.25)
+			var top := size.y * (bases[li] - rng.randf_range(0.03, 0.10 + li * 0.02))
+			# коралловая стена: зубцы и ветви
+			poly.append(Vector2(x, top + rng.randf_range(4, 18)))
+			poly.append(Vector2(x + w * 0.3, top - rng.randf_range(0, 22)))
+			poly.append(Vector2(x + w * 0.55, top + rng.randf_range(0, 10)))
+			poly.append(Vector2(x + w * 0.8, top - rng.randf_range(4, 30)))
+			x += w
+		poly.append(Vector2(size.x, size.y))
+		_layers.append({"poly": poly, "color": colors[li], "snow": false, "depth": li})
+	# сломанная башня справа
+	var tx := size.x * 0.82
+	_layers.append({"poly": PackedVector2Array([Vector2(tx - 34, size.y * 0.72), Vector2(tx - 26, size.y * 0.30), Vector2(tx - 6, size.y * 0.26),
+		Vector2(tx + 4, size.y * 0.33), Vector2(tx + 18, size.y * 0.29), Vector2(tx + 30, size.y * 0.72)]), "color": Color("#14090C"), "snow": false, "depth": 4})
+	_flakes.clear()
+	for i in 90:
+		_flakes.append(Vector3(rng.randf() * size.x, rng.randf() * size.y, rng.randf_range(200, 420)))
 	_stars.clear()
 	for i in 150:
 		_stars.append(Vector3(rng.randf() * size.x, rng.randf() * size.y * 0.4, rng.randf() * TAU))
@@ -125,6 +160,7 @@ func _blend(keys: Array, w: Array) -> Color:
 func set_region(r: String) -> void:
 	region = r
 	snow = r == "mountain_pass"
+	queue_redraw()
 	_load_region_art()
 	_built_for = Vector2.ZERO
 	_rebuild()
@@ -185,6 +221,9 @@ func _rebuild() -> void:
 	if region == "academy":
 		_build_city()
 		return
+	if region == "forgotten_shore":
+		_build_shore()
+		return
 	var noise := FastNoiseLite.new()
 	noise.seed = 7
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
@@ -227,6 +266,18 @@ func _rebuild() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if region == "forgotten_shore":
+		# дождь Берега: косые быстрые струи (видны в шторм)
+		for i in _flakes.size():
+			var r: Vector3 = _flakes[i]
+			r.y += r.z * delta
+			r.x -= r.z * 0.35 * delta
+			if r.y > size.y:
+				r.y = -20
+				r.x = fposmod(r.x + size.x * 0.4, size.x + 200)
+			_flakes[i] = r
+		queue_redraw()
+		return
 	if not snow:
 		queue_redraw()
 		return
@@ -293,6 +344,14 @@ func _draw_sky() -> void:
 		for i in 16:
 			draw_circle(moon, 30.0 + i * 16.0, Color(0.85, 0.08, 0.06, (0.02 + 0.02 * beat) * blood))
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.35, 0.0, 0.02, (0.06 + 0.05 * beat) * blood))
+	# шторм: косой дождь и редкие вспышки молний на всё небо
+	var storm := sky_weight("storm")
+	if storm > 0.01:
+		for f: Vector3 in _flakes:
+			draw_line(Vector2(f.x, f.y), Vector2(f.x - 7, f.y + 20), Color(0.75, 0.8, 0.9, 0.22 * storm), 1.0)
+		var ph := fposmod(_t, 9.7)
+		if ph < 0.09 or (ph > 0.18 and ph < 0.24):
+			draw_rect(Rect2(Vector2.ZERO, size), Color(0.85, 0.9, 1.0, 0.13 * storm))
 	# затмение: мерцающая корона и тьма, сгущающаяся к краям
 	if eclipse > 0.01:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0.02, 0.14 * eclipse))
@@ -357,6 +416,13 @@ func _draw_procedural() -> void:
 			draw_circle(sun, 44.0 + i * 12, Color(sc, 0.022 * sun_a))
 		draw_circle(sun, 40, Color(sc, sun_a))
 	var win_a := night + 0.6 * twilight
+	if region == "forgotten_shore":
+		# тёмное море: от горизонта до подножия лабиринта; прилив медленно дышит
+		var tide := 0.52 + 0.015 * sin(_t * 0.15)
+		draw_rect(Rect2(0, size.y * tide, size.x, size.y * (1.0 - tide)), Color("#06080C").lerp(Color("#1C2230"), day * 0.6))
+		for j in 14:
+			var y := size.y * tide + j * 9.0 + 3.0 * sin(_t * 0.5 + j)
+			draw_line(Vector2(0, y), Vector2(size.x, y), Color(0.6, 0.65, 0.75, 0.05 * (1.0 - j / 14.0) * (0.4 + night)), 1.0)
 	for L: Dictionary in _layers:
 		var poly: PackedVector2Array = L["poly"]
 		draw_colored_polygon(poly, (L["color"] as Color) * tint)

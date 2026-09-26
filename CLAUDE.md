@@ -44,6 +44,7 @@ python tools/editor/server.py                          # редактор кон
 |---|---|---|
 | `missions/ch1_*.json` | Первый Кошмар (обучение) | см. docs/15 §13, §17 |
 | `missions/ch2_academy.json` | Академия (обучение) | docs/15 §18 |
+| `missions/ch3_shore.json` | Забытый Берег | генерируется `tools/gen_shore.py` (docs/16 §9в) |
 | `locations.json` | места глав на карте | `chapter`, `region`, `pos`, `random{pool,every,after_missions}` |
 | `shops.json` | магазины глав | `stock[{card,price?}]`, `slots`, `refresh_every`, `services[heal,sharpen,unwear]` |
 | `characters.json` | герои | `stats` или `stages`, `tags`, `support_tags`, `traits[].bonuses`, `start_abilities`, `status` (temporary уходят в конце главы, если не куплены) |
@@ -65,7 +66,7 @@ python tools/editor/server.py                          # редактор кон
 |---|---|---|---|
 | `nightmare` | Первый Кошмар | обучение: базовый цикл | `ch1_*`, регион `mountain_pass` (4 фона неба) |
 | `academy` | Академия | обучение: новые механики на простых примерах | `ch2_academy`, регион `academy` (процедурный) |
-| `shore` | Забытый Берег (E19–E32) | **основной геймплей** начинается здесь | в работе (docs/16) |
+| `shore` | Забытый Берег (E19–E32) | **основной геймплей** начинается здесь | `ch3_shore` из `tools/gen_shore.py` (не править JSON руками), регион `forgotten_shore` (5 небес, с `storm`) |
 | — | Древо Души (E33–E48) | следующая | — |
 
 ## Правила, которые нельзя ломать без владельца
