@@ -85,10 +85,6 @@ static func _validate_combat(c: Content, errors: Array[String]) -> void:
 				+ Array(a.get("backfire_tags", [])) + Array(a.get("reduced_by", {}).get("tags", [])):
 			if not T.has(t):
 				errors.append("Способность врага %s: нет тега «%s»" % [aid, t])
-	for xid: String in c.tactics:
-		for t: String in Array(c.tactics[xid].get("add_tags", [])) + Array(c.tactics[xid].get("self_tags", [])):
-			if not T.has(t):
-				errors.append("Приём %s: нет тега «%s»" % [xid, t])
 
 
 ## Миссии и локации (docs/15, ветка gameplay/missions).
@@ -118,6 +114,24 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 		var st: Dictionary = b.get("effect", {}).get("stat", {})
 		if not st.is_empty() and not STATS.has(str(st.get("stat", ""))):
 			errors.append("Связка %s: неизвестная характеристика" % bid)
+	# особые навыки карт (docs/16 §9д)
+	for id: String in c.enhancements.keys() + c.abilities.keys():
+		var m: Dictionary = c.enhancements.get(id, c.abilities.get(id, {})).get("memory", {})
+		if m.is_empty():
+			continue
+		if not ["round", "lose"].has(str(m.get("phase", "round"))):
+			errors.append("Навык %s: неизвестная фаза %s" % [id, m.get("phase", "")])
+		var w: Dictionary = m.get("when", {})
+		var e: Dictionary = m.get("effect", {})
+		var tags: Array = Array(w.get("enemy_any", [])) + Array(w.get("env_any", [])) + Array(w.get("hero_any", []))
+		for alt: Dictionary in w.get("any_of", []):
+			tags += Array(alt.get("enemy_any", [])) + Array(alt.get("env_any", [])) + Array(alt.get("hero_any", []))
+		for k: String in ["add_tags", "cancel_enemy_tags", "double_tags", "blocked_by_env", "self_tags"]:
+			tags += Array(e.get(k, []))
+		tags += Array(e.get("enemy_penalty", {}).get("tags", []))
+		for t: String in tags:
+			if not c.combat_tags.has(t):
+				errors.append("Навык %s: нет тега «%s»" % [id, t])
 	# натиск Кошмара (docs/16 §9)
 	for oid: String in c.onslaught:
 		for nm: String in c.onslaught[oid].get("pool", []):

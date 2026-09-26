@@ -45,7 +45,7 @@ var pending_enemy_bonus := 0.0
 var carry_enemy_bonus := 0.0
 var next_round_card: Dictionary = {}
 var used_round_cards: Array = []
-var hand: Array = []              # id приёмов
+var used_memories: Array = []     # навыки карт «раз за бой», уже сработавшие (MemoryRules)
 var hero_extra_tags: Array = []   # «Боль» и т.п. до конца боя
 var session_wounds := 0
 var finished := false
@@ -92,38 +92,12 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 	return s
 
 
-## Автобой: отряд сам выбирает приём с лучшим шансом в каждом раунде (docs/15 — вмешаться нельзя).
+## Автобой (docs/15 — вмешаться нельзя). Приёмов нет: особые навыки карт в кармашке ведущего и способности
+## отряда срабатывают сами, когда выполнено их условие (MemoryRules, docs/16 §9д).
 func auto_play() -> void:
 	while not finished:
 		begin_round()
-		play_round(auto_choice())
-
-
-## Приём, который выберет отряд в автобое: лучший шанс раунда ("" — без приёма).
-## Одна функция и для расчёта, и для просмотра боя — поэтому просмотр совпадает с итогом.
-## Отряд не безрассуден: «всё или ничего» (две травмы при проигрыше) — только при шансе от 55%,
-## а при слабом шансе он предпочтёт уйти в защиту, если такой приём есть в руке.
-const AUTO_ALL_IN_MIN := 55
-const AUTO_GUARD_BELOW := 35
-
-
-func auto_choice() -> String:
-	var best := ""
-	var best_chance := int(ledger({})["chance"])
-	var guard := ""
-	for tid: String in hand:
-		var t: Dictionary = content.tactics.get(tid, {})
-		var ch := int(ledger(t)["chance"])
-		if bool(t.get("guard", false)) and guard == "":
-			guard = tid
-		if bool(t.get("all_in", false)) and ch < AUTO_ALL_IN_MIN:
-			continue
-		if ch > best_chance:
-			best_chance = ch
-			best = tid
-	if best_chance < AUTO_GUARD_BELOW and guard != "":
-		return guard
-	return best
+		play_round()
 
 
 ## Шанс выиграть бой целиком при шансе раунда p (до 2 побед из 3 раундов).
@@ -158,7 +132,6 @@ func begin_round() -> void:
 	carry_enemy_bonus = pending_enemy_bonus
 	pending_enemy_bonus = 0.0
 	_choose_intent()
-	hand = _draw_hand()
 
 
 ## Враг выбирает способность по своим тегам (взвешенно). Эффекты начала раунда применяются сразу.
@@ -213,7 +186,7 @@ func _intent_negator(ht: Array, env: Array, tactic: Dictionary) -> String:
 	if intent.is_empty():
 		return ""
 	if bool(tactic.get("cancel_intent", false)):
-		return "Финт"
+		return str(tactic.get("cancel_intent_by", "Воспоминание"))
 	for t: String in intent.get("negated_by", []):
 		if ht.has(t) or env.has(t):
 			return t
@@ -235,48 +208,12 @@ func _draw_round_card() -> Dictionary:
 	return content.round_cards[pick].duplicate(true)
 
 
-func available_tactics() -> Array:
-	var out: Array = []
-	var own := _hero_tags({})
-	var ids: Array = content.tactics.keys()
-	ids.sort()
-	for id: String in ids:
-		var t: Dictionary = content.tactics[id]
-		var req: Dictionary = t.get("requires", {})
-		if req.has("hero_any"):
-			var hit := false
-			for tag: String in req["hero_any"]:
-				if own.has(tag):
-					hit = true
-			if not hit:
-				continue
-		if req.has("attached") and not enh.has(str(req["attached"])):
-			continue
-		if bool(req.get("ally", false)) and allies.is_empty():
-			continue
-		if req.has("traumas_at_least") and TraumaRules.counted(state.character(hero).get("traumas", [])) < int(req["traumas_at_least"]):
-			continue
-		out.append(id)
-	return out
-
-
-func _draw_hand() -> Array:
-	var pool := available_tactics()
-	var out: Array = []
-	while out.size() < HAND_SIZE and not pool.is_empty():
-		var i := rng.randi_range(0, pool.size() - 1)
-		out.append(pool[i])
-		pool.remove_at(i)
-	return out
-
-
-## Сыграть раунд с приёмом (или без: ""). Возвращает запись раунда.
-func play_round(tactic_id: String = "") -> Dictionary:
+## Сыграть раунд: сначала срабатывают навыки карт (условия раунда), затем бросок. Возвращает запись раунда.
+func play_round() -> Dictionary:
 	if finished:
 		return {}
-	var tactic: Dictionary = {}
-	if tactic_id != "" and hand.has(tactic_id):
-		tactic = content.tactics[tactic_id]
+	var fired := MemoryRules.fire(self, "round", true)
+	var tactic: Dictionary = fired["effect"]
 	var led := ledger(tactic)
 	var intent_active := _intent_negator(led["hero_tags"], led["env_tags"], tactic) == ""
 	if intent_active and float(intent.get("next_bonus", 0.0)) > 0.0:
@@ -291,7 +228,7 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	for l: Dictionary in led["links"]:
 		if not discovered.has(l["id"]):
 			discovered.append(l["id"])
-	var rec := {"round": round_no, "card": round_card, "tactic": tactic_id, "chance": led["chance"], "roll": roll,
+	var rec := {"round": round_no, "card": round_card, "memories": fired["fired"], "chance": led["chance"], "roll": roll,
 		"hero_won": won, "ledger": led, "traumas": [], "intent": intent, "intent_active": intent_active}
 	if won:
 		hero_wins += 1
@@ -329,17 +266,21 @@ func play_round(tactic_id: String = "") -> Dictionary:
 
 
 func _lose_round(tactic: Dictionary, rec: Dictionary, extra: int = 0) -> void:
+	var lose := MemoryRules.fire(self, "lose", true)
+	rec["memories_lose"] = lose["fired"]
+	var guard := maxi(int(tactic.get("guard", 0)), int(lose["effect"].get("guard", 0)))
 	var count := (2 if bool(tactic.get("all_in", false)) else 1) + extra
-	if bool(tactic.get("guard", false)) and rng.randi_range(1, 100) <= 50:
-		entries.append({"kind": "info", "text": "Удар принят в защите — травмы нет"})
+	if guard > 0 and rng.randi_range(1, 100) <= guard:
+		entries.append({"kind": "info", "text": "Удар отведён — травмы нет"})
 		return
-	if bool(tactic.get("echo_guard", false)):
-		for card: String in enh:
-			if Array(content.enhancements.get(card, {}).get("tags", [])).has("Эхо"):
-				state.collection.erase(card)
-				enh.erase(card)
-				entries.append({"kind": "broken", "text": "%s принимает удар и рассыпается" % content.card_name(card), "card": card})
-				return
+	if bool(lose["effect"].get("echo_guard", false)):
+		var echo := str(lose["effect"].get("echo_card", ""))
+		if echo != "" and enh.has(echo):
+			state.collection.erase(echo)
+			enh.erase(echo)
+			Array(state.character(hero).get("pocket", [])).erase(echo)
+			entries.append({"kind": "broken", "text": "%s принимает удар и рассыпается" % content.card_name(echo), "card": echo})
+			return
 	if bool(tactic.get("ally_guard", false)) and not allies.is_empty():
 		var ally: String = allies[0]
 		var before: Array = Array(state.character(ally).get("traumas", [])).duplicate()
@@ -423,7 +364,7 @@ static func _add_unique(arr: Array, v: String) -> void:
 		arr.append(v)
 
 
-## Полный расчёт текущего раунда с приёмом. Возвращает силы, шанс, шаги и сработавшие связи.
+## Полный расчёт текущего раунда с навыками карт (effect от MemoryRules.fire). Возвращает силы, шанс, шаги и сработавшие связи.
 func ledger(tactic: Dictionary = {}) -> Dictionary:
 	var ht := _hero_tags(tactic)
 	var et := _enemy_tags(tactic)
@@ -525,13 +466,12 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 				pen = float(contrib[side].get(loser_tag, 0.0)) * pen + 0.05
 			con[side] += pen
 			links.append(_link_rec(c, side, -pen, "conflict"))
-	if tactic.has("enemy_penalty_if"):
-		var cond: Dictionary = tactic["enemy_penalty_if"]
-		for t: String in cond.get("tags", []):
+	for pen: Dictionary in tactic.get("enemy_penalties", []):
+		for t: String in pen.get("tags", []):
 			if et.has(t):
-				con["enemy"] += float(cond.get("value", 0.2))
-				links.append({"id": "tac:%s>%s" % [tactic.get("id", ""), t], "type": "conflict", "name": tactic.get("name", ""),
-					"tags": [str(tactic.get("add_tags", ["?"])[0]), t], "side": "enemy", "value": -float(cond.get("value", 0.2))})
+				con["enemy"] += float(pen.get("value", 0.2))
+				links.append({"id": "mem:%s>%s" % [pen.get("card", ""), t], "type": "conflict", "name": str(pen.get("name", "")),
+					"tags": [str(pen.get("name", "")), t], "side": "enemy", "value": -float(pen.get("value", 0.2))})
 				break
 	var hcon := minf(con["hero"], CON_CAP)
 	var econ := minf(con["enemy"], CON_CAP)
@@ -615,10 +555,9 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 		var w := -minf(0.4, wounds * WOUND)
 		E *= 1.0 + w
 		es.append({"label": "Раны (%d)" % wounds, "kind": "state", "pct": w, "value": E})
-	if float(tactic.get("bonus", 0.0)) > 0.0:
-		var tb := float(tactic["bonus"])
-		H *= 1.0 + tb
-		hs.append({"label": "Приём: %s" % tactic.get("name", ""), "kind": "tactic", "pct": tb, "value": H})
+	for bs: Dictionary in tactic.get("bonus_steps", []):
+		H *= 1.0 + float(bs["pct"])
+		hs.append({"label": str(bs["label"]), "kind": "memory", "pct": float(bs["pct"]), "value": H, "card": str(bs.get("card", ""))})
 
 	# 8б. Намерение врага
 	if not intent.is_empty():

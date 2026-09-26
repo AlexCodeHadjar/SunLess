@@ -28,8 +28,10 @@ func test_data_valid() -> void:
 	check(c.combat_tags.size() >= 200, "тегов не меньше 200: %d" % c.combat_tags.size())
 	check(c.synergies.size() >= 40, "симбиозов не меньше 40")
 	check(c.conflicts.size() >= 50, "конфликтов не меньше 50")
-	for tid: String in c.tactics:
-		check(not c.tactics[tid].has("mana"), "приём %s без маны — маны в игре нет" % tid)
+	for id: String in c.enhancements.keys() + c.abilities.keys():
+		var m: Dictionary = c.enhancements.get(id, c.abilities.get(id, {})).get("memory", {})
+		if not m.is_empty():
+			check(str(m.get("name", "")) != "" and str(m.get("cond", "")) != "" and str(m.get("text", "")) != "", "навык %s описан: имя, условие, эффект" % id)
 
 
 func test_chance_is_clamped() -> void:
@@ -74,12 +76,14 @@ func test_narrow_pass_limits_pack() -> void:
 	check(float(base_step["value"]) <= 200.1, "в узком проходе считаются только двое: %.1f" % float(base_step["value"]))
 
 
-func test_tactic_bonus_raises_chance() -> void:
+func test_memory_bonus_raises_chance() -> void:
 	var c := content()
 	var cs := _session(c, _state(c), LARVAE, ["U01"])
 	var base := int(cs.ledger({})["chance"])
-	var boosted := int(cs.ledger(c.tactics["X_ALL_IN"])["chance"])
-	check(boosted > base, "«Всё или ничего» повышает шанс: %d → %d" % [base, boosted])
+	var f := MemoryRules.fire(cs, "round", false)
+	check(Array(f["fired"]).any(func(m: Dictionary) -> bool: return m["card"] == "U01"), "«Что под рукой» срабатывает на павшем караване")
+	var boosted := int(cs.ledger(f["effect"])["chance"])
+	check(boosted > base, "навык карты повышает шанс: %d → %d" % [base, boosted])
 
 
 func test_auto_combat_ends_and_has_both_outcomes() -> void:
@@ -134,7 +138,6 @@ func test_squad_support_becomes_ally() -> void:
 	EffectApplier.add_card(c, s, "P08")
 	var cs := _session(c, s, KING, [], ["P08"])
 	check(cs.allies.has("P08"), "Ауро в бою как союзник")
-	check(cs.available_tactics().has("X_ALLY"), "с союзником доступен приём «Плечом к плечу»")
 
 
 func test_enemy_intent_chosen_and_negated() -> void:
@@ -151,10 +154,10 @@ func test_enemy_intent_chosen_and_negated() -> void:
 	check(blind > with_gaze, "Слепота гасит взгляд: %.0f → %.0f" % [with_gaze, blind])
 
 
-func test_feint_cancels_intent() -> void:
+func test_bell_cancels_intent() -> void:
 	var c := content()
-	var cs := _session(c, _state(c), KING)
+	var cs := _session(c, _state(c), LARVAE, ["U02"])
 	cs.intent = c.enemy_abilities["EA_CHARGE"].duplicate(true)
 	var plain := float(cs.ledger({})["enemy"])
-	var feint := float(cs.ledger(c.tactics["X_FEINT"])["enemy"])
-	check(feint < plain, "Финт сбивает натиск: %.0f → %.0f" % [plain, feint])
+	var bell := float(cs.ledger(MemoryRules.fire(cs, "round", false)["effect"])["enemy"])
+	check(bell < plain, "Колокольчик уводит стаю и гасит намерение: %.0f → %.0f" % [plain, bell])

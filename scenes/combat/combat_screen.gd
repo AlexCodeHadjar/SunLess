@@ -23,10 +23,9 @@ const SIDE_SIZE := Vector2(136, 234)
 const SIDE_COMPACT := Vector2(112, 192)
 const TAG_COL := 200.0      # ширина столбца тегов справа от карты героя/врага
 const SIDE_COL := 158.0     # то же для союзников и усилений
-const STAGES := ["base", "tags", "synergy", "conflict", "field", "round_no", "state", "tactic", "intent", "stat"]
+const STAGES := ["base", "tags", "synergy", "conflict", "field", "round_no", "state", "memory", "intent", "stat"]
 
 var phase := Phase.PREP
-var _selected := ""
 var _hover_tag := ""
 var _graph_forced := false
 var _anim_token := 0
@@ -45,7 +44,6 @@ var _scale: ScaleBar
 var _beams: Beams
 var _hand_box: HBoxContainer
 var _action_btn: Button
-var _no_tactic_btn: Button
 var _ledger_btn: Button
 var _ledger_panel: PanelContainer
 var _ledger: RichTextLabel
@@ -55,7 +53,7 @@ var _info: TagInfoPanel
 var _graph: LinkGraph
 var _glass: Array = []
 var _last_led: Dictionary = {}
-# просмотр автобоя миссии (docs/15): отряд выбирает приёмы сам, исход уже в отчёте
+# просмотр автобоя миссии (docs/15): навыки карт срабатывают сами, исход уже в отчёте
 var _retreat_btn: Button
 
 
@@ -281,13 +279,6 @@ func _ready() -> void:
 	_ledger_btn.tooltip_text = "Пошаговый расчёт обеих сторон"
 	_ledger_btn.pressed.connect(_toggle_ledger)
 	add_child(_ledger_btn)
-	_no_tactic_btn = Button.new()
-	_no_tactic_btn.text = "Без приёма"
-	_no_tactic_btn.position = Vector2(1060, 918)
-	_no_tactic_btn.custom_minimum_size = Vector2(270, 54)
-	_no_tactic_btn.add_theme_font_size_override("font_size", 21)
-	_no_tactic_btn.pressed.connect(_pick_tactic.bind(""))
-	add_child(_no_tactic_btn)
 	_action_btn = Button.new()
 	_action_btn.position = Vector2(1400, 856)
 	_action_btn.custom_minimum_size = Vector2(440, 110)
@@ -617,9 +608,10 @@ func _env_node(src_name: String) -> Control:
 	return _field_row
 
 
-func _tactic_node() -> Control:
+## Карта навыка на полке у ведущего (или сам ведущий, если полки нет).
+func _memory_node(card: String) -> Control:
 	for c in _hand_box.get_children():
-		if c is TacticCard and c.tactic_id == _selected:
+		if c.has_meta("memory") and str(c.get_meta("memory")) == card:
 			return c
 	return _hero_card
 
@@ -643,8 +635,8 @@ func _link_segments(l: Dictionary, kind: String) -> Array:
 				segs.append([_tag_node(str(tags[j]), [side, "env"]), _tag_node(str(tags[j + 1]), [side, "env"])])
 			return segs
 	# конфликт: луч летит от победившего тега к проигравшему
-	if id.begins_with("tac:"):
-		return [[_tactic_node(), _tag_node(str(tags[1]), ["enemy"])]]
+	if id.begins_with("mem:"):
+		return [[_memory_node(id.substr(4).get_slice(">", 0)), _tag_node(str(tags[1]), ["enemy"])]]
 	var c: Dictionary = ContentDB.data.conflicts.get(id, {})
 	var loser := str(c.get("a", "")) if c.get("loser", "b") == "a" else str(c.get("b", ""))
 	var winner := str(tags[1]) if str(tags[0]) == loser else str(tags[0])
@@ -668,14 +660,13 @@ func open_replay(setup: Dictionary) -> void:
 	_clear_hand()
 	_retreat_btn.text = "ПРОМОТАТЬ"
 	_retreat_btn.tooltip_text = "Закрыть просмотр — итог боя уже в отчёте"
-	_no_tactic_btn.visible = false
 	_action_btn.text = "СМОТРЕТЬ ›"
 	var cs := GameState.combat
 	cs.round_no = 1
 	_pips.text = "Автобой · %s" % cs.rounds_total_label()
 	_layout(cs)
 	cs.round_no = 0
-	_hand_box.add_child(UITheme.label("Отряд сражается сам — приёмы выбирает по лучшему шансу.", "serif_italic", 20, Palette.TEXT_DIM))
+	_build_memories()
 	AudioManager.play("open", -2.0, 0.8)
 	_replay_later(1.2)
 
@@ -714,34 +705,150 @@ func _next_round() -> void:
 	var cs := GameState.combat
 	cs.begin_round()
 	phase = Phase.SELECT
-	_selected = ""
 	_layout(cs)
 	_reveal_round_card()
 	for note: String in cs.intent_notes:
 		EventBus.toast.emit(note)
-	_build_hand()
+	_build_memories()
 	_update_pips()
-	# отряд выбирает приём сам — как в расчёте миссии
-	_no_tactic_btn.visible = false
-	for c in _hand_box.get_children():
-		if c is TacticCard:
-			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_pick_tactic(cs.auto_choice())
 	_action_btn.text = "ДАЛЬШЕ ›"
+	# навыки карт, чьё условие выполнено в этом раунде, срабатывают сами (docs/16 §9д)
+	var pre := MemoryRules.fire(cs, "round", false)
+	var token := _anim_token
+	if not Array(pre["fired"]).is_empty():
+		await _show_memories(pre["fired"])
+		if token != _anim_token or not is_inside_tree():
+			return
 	_replay_later(1.6)
-	_play_links(cs, cs.ledger({}), true)
+	_play_links(cs, cs.ledger(pre["effect"]), true)
 
 
-func _build_hand() -> void:
+## Полка навыков: карты кармашка и способности отряда с особым навыком — условие под картой.
+func _build_memories() -> void:
 	_clear_hand()
 	var cs := GameState.combat
-	for t: String in cs.hand:
-		var tc := TacticCard.make(t)
-		tc.selected = t == _selected
-		tc.picked.connect(_pick_tactic)
-		_hand_box.add_child(tc)
-	if cs.hand.is_empty():
-		_hand_box.add_child(UITheme.label("Приёмов нет.", "sans", 18, Palette.TEXT_DIM))
+	var list := MemoryRules.listing(cs)
+	if list.is_empty():
+		_hand_box.add_child(UITheme.label("У отряда нет карт с особыми навыками — положите Воспоминания в кармашек.", "serif_italic", 18, Palette.TEXT_DIM))
+		return
+	var head := UITheme.label("НАВЫКИ КАРТ\nсрабатывают сами", "sans_bold", 14, Palette.GOLD)
+	_hand_box.add_child(head)
+	for m: Dictionary in list:
+		var d: Dictionary = m["def"]
+		var box := VBoxContainer.new()
+		box.set_meta("memory", str(m["card"]))
+		box.add_theme_constant_override("separation", 2)
+		box.custom_minimum_size.x = 150
+		box.mouse_filter = Control.MOUSE_FILTER_STOP
+		box.tooltip_text = "%s\nУсловие: %s\n%s" % [d.get("name", ""), d.get("cond", ""), d.get("text", "")]
+		var cv := CardView.make(str(m["card"]), Vector2(70, 120), false)
+		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cv.dimmed = bool(m["used"])
+		box.add_child(cv)
+		var n := UITheme.label(str(d.get("name", "")), "sans_bold", 13, Palette.TEXT_DIM if bool(m["used"]) else Palette.GOLD)
+		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(n)
+		var c := UITheme.label("использован" if bool(m["used"]) else str(d.get("cond", "")), "sans", 11, Palette.TEXT_DIM)
+		c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		c.custom_minimum_size.x = 150
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(c)
+		_hand_box.add_child(box)
+
+
+## Навык срабатывает: карта выходит из героя, встаёт рядом, загорается её условие и эффект — и карта возвращается.
+func _show_memories(list: Array) -> void:
+	for m: Dictionary in list:
+		if not is_inside_tree() or not is_instance_valid(_hero_card):
+			return
+		var c := ContentDB.data
+		var src_card := str(m["card"])
+		var owner_card: Control = _hero_card
+		var from := owner_card.get_global_rect()
+		var csz := Vector2(170, 291)
+		var card := CardView.make(src_card, csz, false)
+		card.hover_lift = false
+		card.smoke_on_hover = false
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.top_level = true
+		card.z_index = 60
+		card.pivot_offset = csz / 2
+		card.global_position = from.get_center() - csz / 2
+		card.scale = Vector2(0.3, 0.3)
+		card.modulate.a = 0.0
+		card.highlight = true
+		add_child(card)
+		var target := Vector2(from.end.x + 30, from.position.y + from.size.y / 2 - csz.y / 2)
+		if target.x + csz.x + 420 > get_viewport_rect().size.x:
+			target.x = from.position.x - 30 - csz.x - 420
+		# тёмная плашка под картой и надписью — поверх того, что стоит рядом с героем
+		var bg := Panel.new()
+		bg.top_level = true
+		bg.z_index = 59
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bg.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.05, 0.07, 0.95), Palette.GOLD.darkened(0.15), 1, 10, 0))
+		bg.global_position = target - Vector2(16, 16)
+		bg.size = Vector2(csz.x + 18 + 400 + 36, csz.y + 32)
+		bg.modulate.a = 0.0
+		add_child(bg)
+		var info := VBoxContainer.new()
+		info.top_level = true
+		info.z_index = 60
+		info.add_theme_constant_override("separation", 6)
+		info.custom_minimum_size = Vector2(400, 0)
+		info.global_position = target + Vector2(csz.x + 18, 40)
+		info.modulate.a = 0.0
+		var title := UITheme.label("✦ " + str(m.get("name", "")), "title_bold", 28, Palette.GOLD)
+		info.add_child(title)
+		var who := UITheme.label(c.card_name(src_card) + ("" if str(m.get("owner", "")) == GameState.combat.hero else " · " + c.card_name(str(m["owner"]))), "sans", 15, Palette.TEXT_DIM)
+		info.add_child(who)
+		var cond := UITheme.label("Условие: " + str(m.get("cond", "")), "sans_bold", 17, Palette.TEXT)
+		cond.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cond.custom_minimum_size.x = 400
+		info.add_child(cond)
+		var eff := UITheme.label("→ " + str(m.get("text", "")), "serif_italic", 19, Palette.SILVER)
+		eff.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		eff.custom_minimum_size.x = 400
+		info.add_child(eff)
+		add_child(info)
+		AudioManager.play("open", -4.0, 1.25)
+		var shelf := _memory_node(src_card)
+		if shelf != _hero_card and is_instance_valid(shelf):
+			var st := create_tween()
+			st.tween_property(shelf, "modulate", Color(1.6, 1.4, 0.8), 0.2)
+			st.tween_property(shelf, "modulate", Color.WHITE, 0.6)
+		var t1 := create_tween().set_parallel()
+		t1.tween_property(card, "global_position", target, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t1.tween_property(card, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t1.tween_property(card, "modulate:a", 1.0, 0.2)
+		t1.tween_property(info, "modulate:a", 1.0, 0.3).set_delay(0.2)
+		t1.tween_property(bg, "modulate:a", 1.0, 0.25)
+		await t1.finished
+		# условие загорается золотом
+		var glow := create_tween()
+		glow.tween_property(cond, "modulate", Color(1.8, 1.5, 0.7), 0.25)
+		glow.tween_property(cond, "modulate", Color(1.2, 1.1, 0.85), 0.4)
+		var spark := Vfx.embers_burst(Rect2(target, csz))
+		add_child(spark)
+		spark.emitting = true
+		Vfx.autofree(spark)
+		await get_tree().create_timer(0.35 if Vfx.reduced() else 1.35).timeout
+		if not is_instance_valid(card):
+			return
+		# карта возвращается в героя
+		var back := owner_card.get_global_rect().get_center() - csz / 2 if is_instance_valid(owner_card) else target
+		var t2 := create_tween().set_parallel()
+		t2.tween_property(card, "global_position", back, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		t2.tween_property(card, "scale", Vector2(0.3, 0.3), 0.3)
+		t2.tween_property(card, "modulate:a", 0.0, 0.3)
+		t2.tween_property(info, "modulate:a", 0.0, 0.25)
+		t2.tween_property(bg, "modulate:a", 0.0, 0.25)
+		await t2.finished
+		card.queue_free()
+		info.queue_free()
+		bg.queue_free()
+		if is_instance_valid(_hero_card):
+			_hero_card.shudder()
 
 
 func _clear_hand() -> void:
@@ -749,22 +856,10 @@ func _clear_hand() -> void:
 		c.queue_free()
 
 
-func _pick_tactic(id: String) -> void:
-	if phase != Phase.SELECT:
-		return
-	_selected = "" if _selected == id else id
-	for c in _hand_box.get_children():
-		if c is TacticCard:
-			c.selected = c.tactic_id == _selected
-			c.queue_redraw()
-	var cs := GameState.combat
-	_play_links(cs, cs.ledger(ContentDB.data.tactics.get(_selected, {})), false)
-
-
 ## Главный эффект — «набор силы»: числа обеих сторон растут с нуля шаг за шагом в порядке расчёта
-## (база → теги → симбиозы → конфликты → поле → раунд → состояния → приём → намерение → характеристика).
+## (база → теги → симбиозы → конфликты → поле → раунд → состояния → навыки карт → намерение → характеристика).
 ## У каждого шага — подпись у числа; связи бьют лучами от тега к тегу в момент своего шага.
-## При смене приёма (from_base = false) досчитывается только разница. Щелчок по полю — сразу к итогу.
+## При повторном показе (from_base = false) досчитывается только разница. Щелчок по полю — сразу к итогу.
 func _play_links(cs: CombatSession, led: Dictionary, from_base: bool) -> void:
 	_anim_token += 1
 	var token := _anim_token
@@ -984,11 +1079,9 @@ func _play() -> void:
 	var cs := GameState.combat
 	_anim_token += 1
 	phase = Phase.RESULT
-	_no_tactic_btn.visible = false
 	_action_btn.disabled = true
-	_clear_hand()
 	AudioManager.play("roll_shake", -4.0)
-	var rec := cs.play_round(_selected)
+	var rec := cs.play_round()
 	var led: Dictionary = rec["ledger"]
 	_scale.building = false
 	_scale.set_values(float(led["hero"]), float(led["enemy"]), int(led["chance"]), 0.2)
@@ -998,6 +1091,10 @@ func _play() -> void:
 	AudioManager.play("roll", -6.0)
 	var won: bool = rec["hero_won"]
 	_clash(won)
+	# реакции карт на проигранный раунд (отвести удар, Щит Эха)
+	if not Array(rec.get("memories_lose", [])).is_empty():
+		await _show_memories(rec["memories_lose"])
+	_build_memories()
 	_banner.text = ("РАУНД ВЫИГРАН" if won else "РАУНД ПРОИГРАН") + "  ·  шанс %d%% · выпало %d" % [int(rec["chance"]), int(rec["roll"])]
 	_banner.add_theme_color_override("font_color", Palette.SILVER if won else Palette.STAT_DOWN)
 	var tw := create_tween()

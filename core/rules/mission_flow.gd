@@ -215,6 +215,9 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	for need: String in m.get("requires_heroes", []):
 		if not heroes_ids.has(need):
 			return "Нужен в отряде: %s" % content.card_name(need)
+	# вражда (доверие −3) не пускает в один отряд — кроме сюжета: там идут через силу, иначе глава встанет
+	if str(m.get("type", "")) == "story":
+		return ""
 	return TrustRules.refusal(content, state, heroes_ids)
 
 

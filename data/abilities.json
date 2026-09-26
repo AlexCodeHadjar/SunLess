@@ -1,9 +1,248 @@
 [
-  {"id": "A01", "name": "Контроль Теней", "owner": "P01", "bonuses": [{"stat": "cunning", "value": 3, "tags": []}], "reveal": 1, "text": "+3 Хитрость; раскрывает последствия одного варианта."},
-  {"id": "A02", "name": "Теневое усиление", "owner": "P01", "bonuses": [], "modes": [{"stat": "power", "value": 3}, {"stat": "cunning", "value": 2}], "text": "Перед проверкой: +3 Сила или +2 Хитрость."},
-  {"id": "A03", "name": "Бессмертное Пламя", "owner": "P02", "bonuses": [], "modes": [{"stat": "power", "value": 4}], "text": "Раз за событие: +4 Сила или снять физическую травму; цена — Боль."},
-  {"id": "A04", "name": "Пророческое Видение", "owner": "P03", "bonuses": [{"stat": "cunning", "value": 3, "tags": []}], "reveal": 1, "text": "+3 Хитрость; раскрывает награду и штраф."},
-  {"id": "A05", "name": "Вспышка Скорости", "owner": "P04", "bonuses": [{"stat": "power", "value": 4, "tags": ["chase", "first_strike"]}, {"stat": "cunning", "value": 2, "tags": ["chase", "first_strike"]}], "text": "+4 Сила и +2 Хитрость в погоне и первом ударе."},
-  {"id": "A06", "name": "Благословение Теней", "owner": "P01", "bonuses": [{"stat": "will", "value": 1, "tags": []}, {"stat": "cunning", "value": 1, "tags": []}], "text": "+1 Воля, +1 Хитрость."},
-  {"id": "A07", "name": "Плетение Крови", "owner": "P01", "bonuses": [{"stat": "will", "value": 2, "tags": []}], "soften_physical": true, "text": "+2 Воля; физические травмы смягчаются."}
+ {
+  "id": "A01",
+  "name": "Контроль Теней",
+  "owner": "P01",
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 3,
+    "tags": []
+   }
+  ],
+  "reveal": 1,
+  "text": "+3 Хитрость; раскрывает последствия одного варианта.",
+  "memory": {
+   "name": "Тень-разведчик",
+   "cond": "Первый раунд, а вокруг тьма, ночь, туман или затмение",
+   "text": "Тень заглядывает за спину врагу: намерение гаснет, следующий раунд виден",
+   "phase": "round",
+   "when": {
+    "round": [
+     1
+    ],
+    "env_any": [
+     "Тьма",
+     "Ночь",
+     "Затмение",
+     "Туман"
+    ]
+   },
+   "effect": {
+    "cancel_intent": true,
+    "reveal_next": true
+   }
+  }
+ },
+ {
+  "id": "A02",
+  "name": "Теневое усиление",
+  "owner": "P01",
+  "bonuses": [],
+  "modes": [
+   {
+    "stat": "power",
+    "value": 3
+   },
+   {
+    "stat": "cunning",
+    "value": 2
+   }
+  ],
+  "text": "Перед проверкой: +3 Сила или +2 Хитрость.",
+  "memory": {
+   "name": "Тень крепнет",
+   "cond": "Вокруг тьма, ночь или затмение",
+   "text": "Тень и Скрытность вдвое сильнее — каждый раунд (при Свете — нет)",
+   "phase": "round",
+   "when": {
+    "env_any": [
+     "Тьма",
+     "Ночь",
+     "Затмение"
+    ]
+   },
+   "effect": {
+    "double_tags": [
+     "Тень",
+     "Скрытность",
+     "Контроль теней"
+    ],
+    "blocked_by_env": [
+     "Свет"
+    ]
+   },
+   "once": false
+  }
+ },
+ {
+  "id": "A03",
+  "name": "Бессмертное Пламя",
+  "owner": "P02",
+  "bonuses": [],
+  "modes": [
+   {
+    "stat": "power",
+    "value": 4
+   }
+  ],
+  "text": "Раз за событие: +4 Сила или снять физическую травму; цена — Боль.",
+  "memory": {
+   "name": "Вспышка пламени",
+   "cond": "Прошлый раунд проигран — или шанс ниже 40%",
+   "text": "Белое пламя вспыхивает: +40%, но до конца боя — Боль",
+   "phase": "round",
+   "when": {
+    "any_of": [
+     {
+      "after_loss": true
+     },
+     {
+      "chance_below": 40
+     }
+    ]
+   },
+   "effect": {
+    "bonus": 0.4,
+    "self_tags": [
+     "Боль"
+    ]
+   }
+  }
+ },
+ {
+  "id": "A04",
+  "name": "Пророческое Видение",
+  "owner": "P03",
+  "bonuses": [
+   {
+    "stat": "cunning",
+    "value": 3,
+    "tags": []
+   }
+  ],
+  "reveal": 1,
+  "text": "+3 Хитрость; раскрывает награду и штраф.",
+  "memory": {
+   "name": "Видение",
+   "cond": "Первый раунд (работает и из поддержки)",
+   "text": "Касси видит, что будет: следующий раунд раскрыт, +10%",
+   "phase": "round",
+   "when": {
+    "round": [
+     1
+    ]
+   },
+   "effect": {
+    "reveal_next": true,
+    "bonus": 0.1
+   },
+   "support": true
+  }
+ },
+ {
+  "id": "A05",
+  "name": "Вспышка Скорости",
+  "owner": "P04",
+  "bonuses": [
+   {
+    "stat": "power",
+    "value": 4,
+    "tags": [
+     "chase",
+     "first_strike"
+    ]
+   },
+   {
+    "stat": "cunning",
+    "value": 2,
+    "tags": [
+     "chase",
+     "first_strike"
+    ]
+   }
+  ],
+  "text": "+4 Сила и +2 Хитрость в погоне и первом ударе.",
+  "memory": {
+   "name": "Рывок",
+   "cond": "Первый раунд",
+   "text": "Кастер бьёт раньше, чем враг понял: Первый удар, +10%",
+   "phase": "round",
+   "when": {
+    "round": [
+     1
+    ]
+   },
+   "effect": {
+    "add_tags": [
+     "Первый удар"
+    ],
+    "bonus": 0.1
+   }
+  }
+ },
+ {
+  "id": "A06",
+  "name": "Благословение Теней",
+  "owner": "P01",
+  "bonuses": [
+   {
+    "stat": "will",
+    "value": 1,
+    "tags": []
+   },
+   {
+    "stat": "cunning",
+    "value": 1,
+    "tags": []
+   }
+  ],
+  "text": "+1 Воля, +1 Хитрость.",
+  "memory": {
+   "name": "Тени не оставят",
+   "cond": "Герой в панике или изранен (2 травмы и больше)",
+   "text": "Тени заслоняют хозяина: +25%",
+   "phase": "round",
+   "when": {
+    "any_of": [
+     {
+      "psyche": "panic"
+     },
+     {
+      "traumas_min": 2
+     }
+    ]
+   },
+   "effect": {
+    "bonus": 0.25
+   }
+  }
+ },
+ {
+  "id": "A07",
+  "name": "Плетение Крови",
+  "owner": "P01",
+  "bonuses": [
+   {
+    "stat": "will",
+    "value": 2,
+    "tags": []
+   }
+  ],
+  "soften_physical": true,
+  "text": "+2 Воля; физические травмы смягчаются.",
+  "memory": {
+   "name": "Кровь зовёт",
+   "cond": "Прошлый раунд проигран, а на герое есть травма",
+   "text": "Кровь Ткача откликается на боль: +30%",
+   "phase": "round",
+   "when": {
+    "after_loss": true,
+    "traumas_min": 1
+   },
+   "effect": {
+    "bonus": 0.3
+   }
+  }
+ }
 ]

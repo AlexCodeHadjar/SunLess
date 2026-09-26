@@ -31,10 +31,12 @@ func test_trust_basics() -> void:
 func test_low_trust_refuses() -> void:
 	var c := content()
 	var s := _run()
+	s.missions["SM02"] = {"status": "open", "attempts": 0}
 	s.missions["MS03"] = {"status": "open", "attempts": 0}
 	TrustRules.change(c, s, "P01", "P10", -3, "тест")
-	check(MissionFlow.can_launch(c, s, "MS03", ["P01", "P10"]).contains("не пойдёт"), "при доверии −3 вместе не идут")
-	check(MissionFlow.can_launch(c, s, "MS03", ["P01", "P09"]) == "", "с другим — можно")
+	check(MissionFlow.can_launch(c, s, "SM02", ["P01", "P10"]).contains("не пойдёт"), "при доверии −3 вместе не идут")
+	check(MissionFlow.can_launch(c, s, "SM02", ["P01", "P09"]) == "", "с другим — можно")
+	check(MissionFlow.can_launch(c, s, "MS03", ["P01", "P10"]) == "", "в сюжет идут через силу — глава не встанет")
 
 
 func test_trust_grows_after_success() -> void:

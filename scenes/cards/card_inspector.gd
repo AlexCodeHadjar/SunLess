@@ -724,6 +724,7 @@ func _info_text() -> String:
 				out.append(_h("В бою в поддержке") + "Встаёт рядом с исполнителем и добавляет теги: " + ", ".join(sup))
 		"enhancement":
 			out.append(_h("Эффект") + str(d.get("text", "")))
+			out.append(_memory_text(d))
 			if s and WearRules.wears(c, s, card_id):
 				out.append(_h("Износ") + "Шанс поломки после следующего использования: [b]%d%%[/b]. Растёт с каждым событием; сломанная карта исчезает. Кузнец сбрасывает износ." % WearRules.current(s, card_id))
 			elif bool(d.get("wears", true)):
@@ -747,6 +748,7 @@ func _info_text() -> String:
 			out.append(_h("Добыча") + "✧ %d осколков душ" % int(d.get("shards", 0)))
 		"ability":
 			out.append(_h("Эффект") + str(d.get("text", "")))
+			out.append(_memory_text(d))
 		_:
 			# миссия: описание, угроза, отряд, слухи
 			if not d.is_empty():
@@ -759,6 +761,23 @@ func _info_text() -> String:
 				if not rs.is_empty():
 					out.append(_h("Что говорят") + "\n".join(rs))
 	return "\n\n".join(out)
+
+
+## Особый навык карты (docs/16 §9д): срабатывает в бою сам, когда выполнено условие.
+func _memory_text(d: Dictionary) -> String:
+	var m: Dictionary = d.get("memory", {})
+	if m.is_empty():
+		return ""
+	var when := "когда раунд проигран" if str(m.get("phase", "round")) == "lose" else "перед раундом"
+	var rules: Array = [when, "раз за бой" if bool(m.get("once", true)) else "каждый раз"]
+	if int(m.get("wear", 0)) > 0:
+		rules.append("износ +%d%%" % int(m["wear"]))
+	if bool(m.get("support", false)):
+		rules.append("и из поддержки")
+	return _h("Особый навык · %s" % m.get("name", "")) + "[color=#E3C98E]Условие:[/color] %s
+[color=#E3C98E]Что делает:[/color] %s
+%s" % [
+		m.get("cond", ""), m.get("text", ""), _dim("Срабатывает сам в бою: %s." % ", ".join(rules))]
 
 
 func _story_text() -> String:

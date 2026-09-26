@@ -88,7 +88,7 @@ static func combat_setup(content: Content, state: RunState, m: Dictionary, a: Di
 		if not reveal:
 			s.hidden_enemy_tags = Array(m.get("hidden_tags", [])).duplicate()
 		s.round_no = 1
-		var led := s.ledger({})
+		var led := s.ledger(MemoryRules.fire(s, "round", false)["effect"])
 		if int(led["chance"]) > int(best["round"]):
 			best = {"hero": cid, "round": int(led["chance"]), "fight": CombatSession.fight_chance(int(led["chance"])), "links": led["links"]}
 	return best

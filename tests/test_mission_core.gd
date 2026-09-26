@@ -279,9 +279,11 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 					team.append(need)
 			for h: String in free:
 				# не берёт в отряд тех, кто не пойдёт вместе (доверие −3)
-				if team.size() < mx and not team.has(h) and TrustRules.refusal(c, s, team + [h]) == "":
+				if team.size() < mx and not team.has(h) and (str(c.missions[mid]["type"]) == "story" or TrustRules.refusal(c, s, team + [h]) == ""):
 					team.append(h)
 			if MissionFlow.can_launch(c, s, mid, team) == "":
+				# как игрок: раскладывает свободные усиления по кармашкам отряда (навыки карт — docs/16 §9д)
+				_equip(c, s, team)
 				# как осторожный игрок: на несюжетное — только с хорошим прогнозом
 				if str(c.missions[mid]["type"]) != "story" and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < 50:
 					continue
@@ -339,6 +341,31 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 		"heroes": MissionFlow.heroes(c, s).size()}
 
 
+## Усиления, не занятые героями на миссии, — по три в кармашек каждому из отряда (сначала первому).
+func _equip(c: Content, s: RunState, team: Array) -> void:
+	var spare: Array = []
+	for card: String in s.collection:
+		if c.card_kind(card) != "enhancement":
+			continue
+		var owner := MissionFlow.pocket_owner(s, card)
+		if owner != "" and MissionFlow.on_mission(s, owner):
+			continue
+		spare.append(card)
+	for cid: String in team:
+		s.character(cid)["pocket"] = []
+	for cid: String in s.characters:
+		if not MissionFlow.on_mission(s, cid):
+			var keep: Array = Array(s.character(cid).get("pocket", [])).filter(func(x: String) -> bool: return not spare.has(x))
+			s.character(cid)["pocket"] = keep
+	var i := 0
+	for cid: String in team:
+		var pocket: Array = []
+		while pocket.size() < 3 and i < spare.size():
+			pocket.append(spare[i])
+			i += 1
+		s.character(cid)["pocket"] = pocket
+
+
 func _count(stats: Dictionary, mid: String, rep: Dictionary) -> void:
 	# психика: кризисы по главам (баланс docs/16 §9г)
 	var ps: Dictionary = stats.get("_psy", {})
@@ -354,6 +381,11 @@ func _count(stats: Dictionary, mid: String, rep: Dictionary) -> void:
 	for e2: Dictionary in rep.get("entries", []):
 		if str(e2.get("kind", "")) == "psy_act":
 			row["acts"] += 1
+		if str(e2.get("kind", "")) == "memory":
+			var mk := "memory:" + str(e2.get("card", ""))
+			var mr: Dictionary = ps.get(mk, {"missions": 0, "panic": 0, "uplift": 0, "acts": 0})
+			mr["acts"] += 1
+			ps[mk] = mr
 	ps[ch] = row
 	stats["_psy"] = ps
 	var st: Dictionary = stats.get(mid, {"tries": 0, "ok": 0, "retreat": 0, "deaths": 0})
@@ -396,7 +428,9 @@ func test_mission_simulation() -> void:
 	var ps: Dictionary = stats.get("_psy", {})
 	for ch: String in ps:
 		var row: Dictionary = ps[ch]
-		if int(row["panic"]) + int(row["uplift"]) > 0:
+		if ch.begins_with("memory:"):
+			print("   [навык] %s: срабатываний %d" % [ch.substr(7), row["acts"]])
+		elif int(row["panic"]) + int(row["uplift"]) > 0:
 			print("   [психика] %s: миссий %d, паник %d (%.1f%%), подъёмов %d, поступков %d" % [ch, row["missions"], row["panic"],
 				100.0 * row["panic"] / maxf(1, row["missions"]), row["uplift"], row["acts"]])
 	stats.erase("_psy")

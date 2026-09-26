@@ -251,14 +251,14 @@ A(mission("SH24", "hunting_grounds", "Охота в багровом лабир�
 	[rum("Ходят [парами]", "Стая"), rum("Бей [в сочленения]", "Сочленения"), rum("Отвлечённый [подставляет спину]", "Отвлечение")],
 	3, 10, 25, (2, 3),
 	[act("SH24_ambush", "Засада", "Один выманивает, двое бьют.",
-		[chk("Приманка", {"cunning": 8}, ["lure", "stealth"], "Оба бросаются за приманкой.", "Приманку раскусили."),
+		[chk("Приманка", {"cunning": 7}, ["lure", "stealth"], "Оба бросаются за приманкой.", "Приманку раскусили."),
 		 fight("Удар из засады", ["M03"], "F_01", "Второй бросился за приманкой — первый лёг в узости. Два обеда.", "Хитин оказался быстрее засады.")],
 		[shards(4)]),
 	 act("SH24_direct", "Прямой бой", "Встать строем.",
 		[fight("Строем", ["M03", "M03"], "F_08", "Строй выдержал.", "Клешни пробивают строй.")],
 		[shards(3)]),
 	 act("SH24_study", "Изучать слабые места", "Смотреть, как они двигаются, — и понять.",
-		[chk("Наблюдение", {"cunning": 9}, ["knowledge", "stealth"], "Каждый сустав, каждая щель в броне — теперь известны.", "Слишком близко — они замечают."),
+		[chk("Наблюдение", {"cunning": 8}, ["knowledge", "stealth"], "Каждый сустав, каждая щель в броне — теперь известны.", "Слишком близко — они замечают."),
 		 fight("Проверка знаний", ["M03"], "F_08", "Знание работает.", "Знание не спасло.")],
 		[card("K07")]),
 	 retreat("SH24_retreat")],
@@ -521,6 +521,10 @@ dump(P("missions", "ch3_shore.json"), M)
 dump(P("regions.json"), upsert(load(P("regions.json")), [REGION]))
 dump(P("locations.json"), upsert(load(P("locations.json")),
 	[dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": p, "text": t}, **({"random": r} if r else {})) for i, n, p, t, r in LOC]))
+_old = {x["id"]: x for x in load(P("enhancements.json"))}
+for _e in ENH:   # навыки карт (memory) правятся отдельно — сохраняем
+	if "memory" in _old.get(_e["id"], {}):
+		_e["memory"] = _old[_e["id"]]["memory"]
 dump(P("enhancements.json"), upsert(load(P("enhancements.json")), ENH))
 dump(P("shops.json"), upsert(load(P("shops.json")), [SHOP]))
 dump(P("onslaught.json"), upsert(load(P("onslaught.json")), [ONSLAUGHT]))

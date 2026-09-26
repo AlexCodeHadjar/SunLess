@@ -852,7 +852,7 @@
      {
       "name": "Приманка",
       "req": {
-       "cunning": 8
+       "cunning": 7
       },
       "tags": [
        "lure",
@@ -923,7 +923,7 @@
      {
       "name": "Наблюдение",
       "req": {
-       "cunning": 9
+       "cunning": 8
       },
       "tags": [
        "knowledge",

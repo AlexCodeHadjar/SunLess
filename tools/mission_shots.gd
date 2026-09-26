@@ -280,6 +280,19 @@ func _run() -> void:
 	for cid: String in ["P10", "P02"]:
 		sa.character(cid).erase("psy")
 	await _wait(0.3)
+	# навыки карт в бою (docs/16 §9д): Лазурный Клинок и Знание Карапакса против Падальщика, Касси в поддержке
+	for card: String in ["U07", "K07"]:
+		EffectApplier.add_card(ContentDB.data, sa, card)
+	sa.character("P01")["pocket"] = ["U07", "K07"]
+	var setup := {"state": sa.to_dict(), "key": "SHOT", "spec": {"enemies": ["M03"], "field": "F_08"}, "hero": "P01",
+		"enh": ["U07", "K07"], "support": ["P03"], "ctx_event": {"id": "SHOT", "tags": ["combat"]}, "ctx_option": {"id": "SHOT_a", "tags": []}}
+	get_tree().current_scene.call("_watch_combat", setup)
+	await _wait(2.2)
+	await _shot("m26_memory_fire")
+	await _wait(1.6)
+	await _shot("m27_memory_after")
+	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is CombatScreen).map(func(n: Node) -> void: n.queue_free())
+	await _wait(0.4)
 	# планшеты разных карт: текст и рисунки не должны налезать друг на друга
 	for id: String in ["P02", "P03", "U07", "U12", "K07", "A03", "T03", "M04", "M03", "SH28"]:
 		var insp := CardInspector.open_for(get_tree().current_scene, id)

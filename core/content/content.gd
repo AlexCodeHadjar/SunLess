@@ -15,7 +15,6 @@ var conflicts: Dictionary = {}
 var fields: Dictionary = {}
 var round_cards: Dictionary = {}
 var enemies: Dictionary = {}
-var tactics: Dictionary = {}
 var enemy_abilities: Dictionary = {}
 var lore: Dictionary = {}          # сюжетные описания «По книге» (tools/gen_lore.py)
 # миссии и отряды (docs/15)
@@ -44,7 +43,6 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.fields = c._load_map(dir + "/combat/fields.json")
 	c.round_cards = c._load_map(dir + "/combat/round_cards.json")
 	c.enemies = c._load_map(dir + "/combat/enemies.json")
-	c.tactics = c._load_map(dir + "/combat/tactics.json")
 	c.enemy_abilities = c._load_map(dir + "/combat/enemy_abilities.json")
 	c.lore = c._load_map(dir + "/lore.json")
 	if FileAccess.file_exists(dir + "/locations.json"):
