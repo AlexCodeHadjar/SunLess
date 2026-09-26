@@ -4,8 +4,6 @@ extends RefCounted
 ## последствия, износ, отдых, открытие следующих миссий. Транзакция: работает на копии состояния
 ## и возвращает {ok, error, state, report}.
 
-const REST_PER_FAIL := 10.0      # +с отдыха за проваленный этап
-const REST_PER_TRAUMA := 15.0    # +с отдыха за каждую полученную травму
 
 
 static func resolve(content: Content, state_in: RunState, squad_id: int, action_id: String) -> Dictionary:
@@ -37,13 +35,24 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
 		return _finish(content, state, m, sq, run, report, rng)
 	_pay_cost(content, state, a, heroes, run, report, rng)
-	# угроза пугает с порога (docs/16 §7)
-	var threat_gain := PanicRules.GAIN_THREAT * maxi(0, int(m.get("threat", 1)) - 2)
-	for cid: String in heroes:
-		var g := 0 if GrowthRules.has(content, state, cid, "panic_threat_immune") else threat_gain
-		g += int(GrowthRules.total(content, state, cid, "panic_mission"))
-		report["entries"].append_array(PanicRules.add(content, state, cid, g, "угроза"))
+	# психика с порога: угроза, место, небо, травмы, отношения в отряде (docs/16 §9г)
+	report["entries"].append_array(_psy(report, run, PsycheRules.arrival(content, state, m, heroes, rng)))
 	return _advance(content, state, m, sq, run, report, rng)
+
+
+## Записи психики: кризисы — в report["crises"] (для эффекта в отчёте), подъём духа — в run (рост тегов ×2).
+static func _psy(report: Dictionary, run: Dictionary, entries: Array) -> Array:
+	for e: Dictionary in entries:
+		if str(e.get("kind", "")) == "crisis":
+			var list: Array = report.get("crises", [])
+			list.append(e)
+			report["crises"] = list
+			if str(e.get("state", "")) == "uplift":
+				var up: Array = run.get("uplifted", [])
+				if not up.has(e["card"]):
+					up.append(e["card"])
+				run["uplifted"] = up
+	return entries
 
 
 ## Действие целиком: на развилках — первый вариант (продолжить). Для бота, тестов и прогноза.
@@ -80,7 +89,7 @@ static func resume(content: Content, state_in: RunState, squad_id: int, option_i
 	rng.state = state.rng_state
 	report["forks"].append({"text": str(fork.get("text", "")), "choice": str(opt.get("label", ""))})
 	if str(opt.get("then", "continue")) == "retreat":
-		var proud := PanicRules.refuses_retreat(content, state, Array(sq["heroes"]))
+		var proud := PsycheRules.refuses_retreat(content, state, Array(sq["heroes"]))
 		if proud != "":
 			return {"ok": false, "error": "%s в панике и не отступит" % proud}
 		report["outcome"] = "retreat"
@@ -111,7 +120,9 @@ static func _pay_cost(content: Content, state: RunState, a: Dictionary, heroes: 
 		state.wear.erase(victim)
 		entries.append({"kind": "broken", "text": "Отдано ради успеха: %s" % content.card_name(victim), "card": victim})
 	if cost.has("rest"):
-		run["extra_rest"] = float(cost["rest"])
+		# «цена усталости»: отдыха между событиями нет — платят психикой (docs/16 §9г)
+		for cid: String in heroes:
+			entries.append_array(PsycheRules.change(content, state, cid, -int(cost["rest"]), "цена действия", heroes, rng))
 	if int(cost.get("trauma", 0)) > 0:
 		var who := _executor(state, heroes)
 		if who != "":
@@ -133,9 +144,13 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 	var fled: Array = run.get("fled", [])
 	while int(run["done"]) < stages.size():
 		var st: Dictionary = stages[int(run["done"])]
-		# Трус в панике сбегает перед этапом (docs/16 §7)
+		# герои в кризисе психики действуют сами: срывы, упрёки, поддержка (docs/16 §9г)
+		var here: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c) and not fled.has(c))
+		for cid: String in here:
+			report["entries"].append_array(_psy(report, run, PsycheRules.act(content, state, cid, here, rng)))
+		# Трус в панике сбегает перед этапом
 		for cid: String in heroes:
-			if state.is_alive(cid) and not fled.has(cid) and PanicRules.flees(content, state, cid):
+			if state.is_alive(cid) and not fled.has(cid) and PsycheRules.flees(content, state, cid):
 				fled.append(cid)
 				report["entries"].append({"kind": "panic", "card": cid, "text": "%s сбегает, не выдержав страха" % content.card_name(cid)})
 				for other: String in heroes:
@@ -156,6 +171,7 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 			_copy_into(state, after)
 			sq = MissionFlow.squad(state, int(sq["id"]))
 			GrowthRules.mark_combat(content, state, run, alive, Array(report["combats"]).back()["rounds"], rec["outcome"] == "ok")
+			_psy(report, run, Array(report["combats"]).back().get("crises", []))
 		else:
 			_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used)
 		if rec["text"] == "":
@@ -175,16 +191,19 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 		for cid: String in alive:
 			if state.is_alive(cid):
 				GrowthRules.mark_panic(content, state, run, cid)
-		# паника от этапа: провал и частичный успех пугают всех, травма — раненого, гибель — остальных
-		var gain: int = {"fail": PanicRules.GAIN_FAIL, "partial": PanicRules.GAIN_PARTIAL}.get(rec["outcome"], 0)
+		# психика после этапа: исход, новые травмы, гибель товарищей
+		var got := {}
+		var dead: Array = []
 		for cid: String in alive:
 			if not state.is_alive(cid):
-				for other: String in alive:
-					if other != cid:
-						report["entries"].append_array(PanicRules.add(content, state, other, PanicRules.GAIN_DEATH, "гибель товарища"))
-				continue
-			var got := Array(report["traumas"].get(cid, [])).size() - int(trauma_before.get(cid, 0))
-			report["entries"].append_array(PanicRules.add(content, state, cid, int(gain) + PanicRules.GAIN_TRAUMA * got, "этап «%s»" % rec["name"]))
+				dead.append(cid)
+			else:
+				got[cid] = Array(report["traumas"].get(cid, [])).size() - int(trauma_before.get(cid, 0))
+		if not st.has("combat"):
+			report["entries"].append_array(_psy(report, run, PsycheRules.after_stage(content, state, alive, str(rec["hero"]),
+				str(rec["outcome"]), got, dead, rng, str(rec["name"]))))
+		elif not dead.is_empty():
+			report["entries"].append_array(_psy(report, run, PsycheRules.after_stage(content, state, alive, "", "", {}, dead, rng, str(rec["name"]))))
 		run["outcomes"].append(rec["outcome"])
 		report["stages"].append(rec)
 		run["done"] = int(run["done"]) + 1
@@ -283,6 +302,8 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 		entries.append_array(TrustRules.after_mission(content, state, heroes.filter(func(c: String) -> bool: return not Array(run.get("fled", [])).has(c)),
 			str(report["outcome"]), str(m.get("title", mid)), rng))
 		entries.append_array(BondRules.quarrels(content, state, heroes, rng))
+	# психика: итог миссии, кризисы события заканчиваются (docs/16 §9г)
+	entries.append_array(PsycheRules.end_mission(content, state, heroes, str(report["outcome"]), rng))
 	# рост тегов и эффекты развитий (docs/16 §8)
 	entries.append_array(GrowthRules.apply(content, state, run, heroes, str(report["outcome"]), rng))
 	entries.append_array(GrowthRules.after_mission(content, state, heroes, str(report["outcome"]), rng))
@@ -290,18 +311,10 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	entries.append_array(OnslaughtRules.reward(content, state, m, heroes, str(report["outcome"])))
 	entries.append_array(JournalRules.after_mission(content, state, m, report, heroes))
 
-	# отдых выживших
-	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST)) + float(run.get("extra_rest", 0.0))
+	# погибшие — в отчёт; отдыха между событиями нет (решение владельца): выжившие свободны сразу
 	for cid: String in heroes:
-		if not state.is_alive(cid):
-			if not report["deaths"].has(cid):
-				report["deaths"].append(cid)
-			continue
-		var rest := maxf(5.0, base_rest + GrowthRules.total(content, state, cid, "rest_add"))
-		if report["outcome"] != "retreat":
-			rest += REST_PER_FAIL * int(run["fails"]) + REST_PER_TRAUMA * Array(report["traumas"].get(cid, [])).size()
-		state.rest_until[cid] = state.clock + rest
-		report["rest"][cid] = rest
+		if not state.is_alive(cid) and not report["deaths"].has(cid):
+			report["deaths"].append(cid)
 
 	state.squads = state.squads.filter(func(s: Dictionary) -> bool: return int(s["id"]) != squad_id)
 	state.log.append({"clock": state.clock, "mission": mid, "action": str(run["action"]), "outcome": report["outcome"], "heroes": heroes})
@@ -372,7 +385,7 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	rec["combat"] = {"outcome": s.outcome, "hero_wins": s.hero_wins, "enemy_wins": s.enemy_wins, "allies": s.allies}
 	rec["why"] = MissionDebrief.combat_why(s.rounds_log, s.hero_wins, s.enemy_wins)
 	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": s.allies, "rounds": s.rounds_log,
-		"outcome": s.outcome, "discovered": s.discovered, "setup": replay_setup})
+		"outcome": s.outcome, "discovered": s.discovered, "setup": replay_setup, "crises": s.crises})
 	report["entries"].append_array(s.entries)
 	if not Array(s.result["traumas"]).is_empty():
 		var got: Array = report["traumas"].get(hero, [])

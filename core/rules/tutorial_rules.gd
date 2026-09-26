@@ -46,9 +46,7 @@ static func state_events(content: Content, state: RunState) -> Array:
 		var ch := state.character(cid)
 		if not Array(ch.get("traumas", [])).is_empty():
 			out.append("trauma")
-		if float(state.rest_until.get(cid, 0.0)) > state.clock:
-			out.append("rest")
-		if PanicRules.value(state, cid) >= 30:
+		if PsycheRules.psyche(state, cid) <= 60:
 			out.append("panic")
 		for tag: String in ch.get("tag_xp", {}):
 			if GrowthRules.xp(state, cid, tag) >= GrowthRules.VETERAN:

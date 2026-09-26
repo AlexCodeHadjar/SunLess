@@ -12,12 +12,10 @@ func test_beds() -> void:
 	eq(CampRules.put(c, s, "P01"), "", "Санни на койке:")
 	eq(CampRules.put(c, s, "P09"), "", "Шолар на койке:")
 	check(CampRules.put(c, s, "P10").contains("заняты"), "третьему места нет")
-	s.rest_until["P01"] = s.clock + 40.0
 	s.character("P01")["traumas"] = ["T02", "T03"]
 	s.character("P01")["panic"] = 40
 	var out := CampRules.tick(c, s, 10.0)
-	check(float(s.rest_until["P01"]) - s.clock <= 30.0 + 0.01, "отдых на койке идёт вдвое быстрее")
-	check(PanicRules.value(s, "P01") < 40, "паника спадает")
+	check(PsycheRules.value(s, "P01") < 40, "психика восстанавливается")
 	for i in 10:
 		out.append_array(CampRules.tick(c, s, 10.0))
 	check(not Array(s.character("P01")["traumas"]).has("T02"), "лёгкая рана прошла")

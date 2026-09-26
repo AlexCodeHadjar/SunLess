@@ -1006,6 +1006,14 @@ func _play() -> void:
 	tw.tween_property(_banner, "modulate:a", 0.0, 0.5)
 	_show_ledger(cs, led, false)
 	_update_pips()
+	if rec.has("crisis"):
+		var fx := CrisisFX.play(self, [rec["crisis"]])
+		await fx.finished
+		if is_instance_valid(_hero_card) and str(rec["crisis"].get("card", "")) == cs.hero:
+			_hero_card.psy_override = str(rec["crisis"].get("state", ""))
+			_hero_card.set_process(true)
+	if cs.finished and is_instance_valid(_hero_card):
+		_hero_card.psy_override = ""
 	if is_instance_valid(_hero_card):
 		_hero_card.queue_redraw()
 	var fresh := ProfileService.discover(_link_ids(led))

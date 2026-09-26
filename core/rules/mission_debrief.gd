@@ -14,9 +14,12 @@ static func check_why(content: Content, state: RunState, m: Dictionary, a: Dicti
 	var totals: Dictionary = r["totals"].duplicate()
 	var parts: Array = Array(r["parts"]).duplicate()
 	var tags: Array = Array(m.get("context", [])) + Array(st.get("tags", []))
-	for p: Dictionary in BondRules.check_parts(content, state, heroes, cid, tags) + PanicRules.check_parts(content, state, cid):
+	for p: Dictionary in BondRules.check_parts(content, state, heroes, cid, tags):
 		totals[p["stat"]] = int(totals.get(p["stat"], 0)) + int(p["value"])
 		parts.append(p)
+	for p2: Dictionary in PsycheRules.check_parts(content, state, cid, totals):
+		totals[p2["stat"]] = int(totals.get(p2["stat"], 0)) + int(p2["value"])
+		parts.append(p2)
 	var req: Dictionary = st.get("req", {})
 	var worst := ""
 	var margin := 999

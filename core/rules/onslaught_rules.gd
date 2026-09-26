@@ -74,7 +74,7 @@ static func expire(content: Content, state: RunState, mid: String) -> Array:
 	var p := int(m.get("expire_panic", 0))
 	if p > 0:
 		for cid: String in heroes:
-			out.append_array(PanicRules.add(content, state, cid, p, "натиск не отбит"))
+			out.append_array(PsycheRules.change(content, state, cid, -p, "натиск не отбит", [], null, "mission", false))
 	state.rng_state = rng.state
 	return out
 

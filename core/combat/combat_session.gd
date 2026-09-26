@@ -53,6 +53,7 @@ var outcome := ""                 # win | loss | retreat | death
 var rounds_log: Array = []
 var entries: Array = []
 var discovered: Array = []        # id связей, сработавших в сыгранных раундах
+var crises: Array = []            # кризисы психики в этом бою (PsycheRules): записи kind "crisis"
 var result: Dictionary = {"traumas": [], "death": {}, "wear": [], "loot": {}, "progressed": false}
 # бой из миссии (docs/15): вместо события — описание боя и теги проверки миссии/этапа
 var ctx_event: Dictionary = {}
@@ -307,6 +308,13 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	if bool(tactic.get("reveal_next", false)):
 		next_round_card = _draw_round_card()
 		rec["revealed_next"] = next_round_card
+	# психика: раунд, перевес врага; кризис здесь длится до конца боя
+	if state.is_alive(hero):
+		for e: Dictionary in PsycheRules.combat_round(content, state, hero, allies, won, float(led["hero"]), float(led["enemy"]), rng):
+			entries.append(e)
+			if str(e.get("kind", "")) == "crisis":
+				crises.append(e)
+				rec["crisis"] = e
 	rounds_log.append(rec)
 	if state.game_over:
 		finished = true
@@ -314,6 +322,9 @@ func play_round(tactic_id: String = "") -> Dictionary:
 	elif hero_wins >= WINS_NEEDED or enemy_wins >= WINS_NEEDED or round_no >= 3:
 		finished = true
 		outcome = "win" if hero_wins > enemy_wins else "loss"
+	if finished:
+		for c: String in [hero] + allies:
+			PsycheRules.reset(state, c, "combat")
 	return rec
 
 
@@ -581,10 +592,11 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 	for g: Dictionary in GrowthRules.combat_steps(content, state, hero, round_no):
 		H *= 1.0 + float(g["pct"])
 		hs.append({"label": str(g["label"]), "kind": "state", "pct": float(g["pct"]), "value": H})
-	var rage := PanicRules.combat_bonus(content, state, hero)
-	if rage > 0.0:
-		H *= 1.0 + rage
-		hs.append({"label": "Ярость в панике", "kind": "state", "pct": rage, "value": H})
+	# психика (docs/16 §9г): паника −30% (Ярость −10%, Решимость −15%), подъём духа +50%
+	var pk := PsycheRules.mult(content, state, hero, true)
+	if not is_equal_approx(pk, 1.0):
+		H *= pk
+		hs.append({"label": PsycheRules.NAMES[PsycheRules.crisis(state, hero)], "kind": "state", "pct": pk - 1.0, "value": H})
 
 	# 8. Состояния
 	var tr := TraumaRules.counted(state.character(hero).get("traumas", []))

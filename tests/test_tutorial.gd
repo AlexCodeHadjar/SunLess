@@ -8,8 +8,8 @@ func test_unlock_by_chapter() -> void:
 	eq(s.chapter, "nightmare", "начинаем в Кошмаре:")
 	for mech: String in ["trust", "bonds", "panic", "growth", "camp"]:
 		check(not TutorialRules.enabled(s, mech), "в Кошмаре нет: %s" % mech)
-	PanicRules.add(c, s, "P01", 50, "тест")
-	eq(PanicRules.value(s, "P01"), 0, "паники в Кошмаре нет:")
+	PsycheRules.change(c, s, "P01", -50, "тест")
+	eq(PsycheRules.psyche(s, "P01"), PsycheRules.MAX, "психика в Кошмаре не тратится:")
 	s.chapter = "academy"
 	for mech: String in ["trust", "bonds", "panic", "growth", "camp"]:
 		check(TutorialRules.enabled(s, mech), "в Академии есть: %s" % mech)
@@ -45,6 +45,6 @@ func test_state_events() -> void:
 func test_hint_events_exist() -> void:
 	var c := content()
 	var known := ["map", "brief", "launch", "arrival", "report", "trauma", "rest", "shop", "fork", "cost", "expires", "exclusive",
-		"boss", "sky_eclipse", "sky_blood_moon", "academy_start", "trust", "bond", "panic", "growth", "camp", "journal", "onslaught"]
+		"boss", "sky_eclipse", "sky_blood_moon", "academy_start", "trust", "bond", "panic", "growth", "camp", "journal", "onslaught", "psyche"]
 	for hid: String in c.tutorial:
 		check(known.has(str(c.tutorial[hid]["event"])), "событие подсказки %s известно" % hid)

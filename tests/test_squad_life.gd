@@ -90,17 +90,17 @@ func test_bonds() -> void:
 func test_panic() -> void:
 	var c := content()
 	var s := _run()
-	PanicRules.add(c, s, "P01", 40, "тест")
-	eq(PanicRules.value(s, "P01"), 20, "Хладнокровие: паника вдвое меньше:")
-	PanicRules.add(c, s, "P09", 90, "тест")
-	check(PanicRules.check_parts(c, s, "P09").size() == 3, "на грани: −1 ко всем проверкам")
+	PsycheRules.change(c, s, "P01", -40, "тест")
+	eq(PsycheRules.psyche(s, "P01"), 74, "Хладнокровие: психика теряется медленнее (×0,65):")
+	PsycheRules.change(c, s, "P09", -40, "тест")
+	var before := PsycheRules.value(s, "P09")
 	MissionFlow.tick(c, s, 40.0)
-	check(PanicRules.value(s, "P09") < 90, "на отдыхе паника спадает")
+	check(PsycheRules.value(s, "P09") < before, "на отдыхе психика восстанавливается")
 	# Гордыня в панике не отступает
 	s.missions["MS03"] = {"status": "open", "attempts": 0}
 	var r := MissionFlow.launch(c, s, "MS03", ["P04"])
 	MissionFlow.tick(c, s, 20.0)
-	PanicRules.add(c, s, "P04", 70, "тест")
+	s.character("P04")["psy"] = {"state": "panic", "origin": "mission"}
 	var ret: Dictionary = MissionFlow.actions_for(c, s, "MS03", ["P04"]).filter(func(e: Dictionary) -> bool: return e["action"]["id"] == "MS03_retreat")[0]
 	check(not ret["available"] and str(ret["reason"]).contains("не отступит"), "Кастер в панике не отступает")
 	# Трус в панике сбегает
@@ -108,7 +108,7 @@ func test_panic() -> void:
 	s3.missions["MS03"] = {"status": "open", "attempts": 0}
 	var r3 := MissionFlow.launch(c, s3, "MS03", ["P01", "P10"])
 	MissionFlow.tick(c, s3, 20.0)
-	PanicRules.add(c, s3, "P10", 70, "тест")
+	s3.character("P10")["psy"] = {"state": "panic", "origin": "mission"}
 	var res := MissionResolver.resolve_through(c, s3, int(r3["squad"]["id"]), "MS03_wait")
 	check(str(res["report"]["entries"]).contains("сбегает"), "Шифти сбежал")
 	check(TrustRules.value(res["state"], "P01", "P10") < 0, "бегство бьёт по доверию")

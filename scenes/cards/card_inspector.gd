@@ -294,8 +294,10 @@ func _build_stats(y: float) -> float:
 		dl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(dl)
 	if GameState.state.is_alive(card_id) and TutorialRules.enabled(GameState.state, "panic"):
-		_life_box(row, "panic", str(PanicRules.value(GameState.state, card_id)), PanicRules.word(PanicRules.value(GameState.state, card_id)),
-			SquadLifeUI.panic_color(PanicRules.value(GameState.state, card_id)), SquadLifeUI.panic_hint(card_id))
+		var psy := PsycheRules.psyche(GameState.state, card_id)
+		var cst := PsycheRules.crisis(GameState.state, card_id)
+		_life_box(row, "panic", str(psy), PsycheRules.NAMES[cst].to_lower() if cst != "" else "психика · " + PsycheRules.word(psy),
+			SquadLifeUI.hero_psyche_color(card_id), SquadLifeUI.panic_hint(card_id))
 	if GameState.state.is_alive(card_id) and TutorialRules.enabled(GameState.state, "trust"):
 		var top := TrustRules.top(ContentDB.data, GameState.state, card_id)
 		var ends: Array = []

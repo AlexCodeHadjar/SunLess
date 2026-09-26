@@ -100,9 +100,6 @@ static func busy_reason(content: Content, state: RunState, cid: String) -> Strin
 	for sq: Dictionary in state.squads:
 		if Array(sq.get("heroes", [])).has(cid):
 			return "на миссии"
-	var until := float(state.rest_until.get(cid, 0.0))
-	if until > state.clock:
-		return "отдыхает %d с" % int(ceil(until - state.clock))
 	return ""
 
 
@@ -250,14 +247,13 @@ static func squad(state: RunState, squad_id: int) -> Dictionary:
 ## Возвращает события для интерфейса: [{kind: "arrived"|"rested"|"mission", ...}].
 static func tick(content: Content, state: RunState, dt: float) -> Array:
 	var out: Array = []
-	var before := state.clock
 	state.clock += maxf(0.0, dt)
 	for sq: Dictionary in state.squads:
 		if sq["phase"] == "travel" and float(sq["arrive_at"]) <= state.clock:
 			sq["phase"] = "arrived"
 			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
-	PanicRules.decay(state, dt, content)
+	PsycheRules.decay(state, dt, content)
 	out.append_array(CampRules.tick(content, state, dt))
 	out.append_array(OnslaughtRules.tick(content, state))
 	# устаревающие миссии (docs/16 §4): не успели — ушла
@@ -269,10 +265,6 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			out.append({"kind": "expired", "card": mid, "text": "Упущено: %s" % content.missions[mid].get("title", mid)})
 			if str(content.missions[mid].get("type", "")) == "onslaught":
 				out.append_array(OnslaughtRules.expire(content, state, mid))
-	for cid: String in state.rest_until.keys():
-		var until := float(state.rest_until[cid])
-		if until > before and until <= state.clock:
-			out.append({"kind": "rested", "card": cid, "text": "%s отдохнул" % content.card_name(cid)})
 	for lid: String in _sorted(state.loc_timers):
 		var at := float(state.loc_timers[lid])
 		if at <= state.clock:
@@ -319,7 +311,7 @@ static func after_completion(content: Content, state: RunState) -> Array:
 			out.append_array(open(content, state, mid))
 		# «после всех»: миссия открывается, когда выполнены все перечисленные
 		var all: Array = m.get("unlock", {}).get("after_all", [])
-		if not all.is_empty() and not state.missions.has(mid) \
+		if not all.is_empty() and not state.missions.has(mid) and chapter_of(content, mid) == state.chapter \
 				and all.all(func(x: String) -> bool: return str(state.missions.get(x, {}).get("status", "")) == "done"):
 			out.append_array(open(content, state, mid))
 	for lid: String in _sorted(content.locations):
@@ -413,7 +405,7 @@ static func actions_for(content: Content, state: RunState, mission_id: String, h
 				(" между %s и %s" % [content.card_name(tneed["pair"][0]), content.card_name(tneed["pair"][1])]) if Array(tneed.get("pair", [])).size() == 2 else " в отряде"]
 		# Гордыня в панике не даёт отступить (docs/16 §7)
 		if ok and bool(a.get("retreat", false)):
-			var proud := PanicRules.refuses_retreat(content, state, heroes_ids)
+			var proud := PsycheRules.refuses_retreat(content, state, heroes_ids)
 			if proud != "":
 				ok = false
 				reason = "%s в панике и не отступит" % proud

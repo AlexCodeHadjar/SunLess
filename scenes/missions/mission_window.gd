@@ -488,7 +488,7 @@ func _cost_text(a: Dictionary, sq: Dictionary) -> String:
 	if cost.has("shards"):
 		parts.append("✧ %d" % int(cost["shards"]))
 	if cost.has("rest"):
-		parts.append("+%d с отдыха" % int(cost["rest"]))
+		parts.append("психика −%d" % int(cost["rest"]))
 	if int(cost.get("trauma", 0)) > 0:
 		parts.append("травма")
 	var out := ("Цена: " + " · ".join(parts)) if not parts.is_empty() else ""
@@ -527,6 +527,10 @@ func show_report(rep: Dictionary) -> void:
 	mode = "report"
 	report = rep
 	GameState.tutorial("report")
+	# кризисы психики — сначала момент на весь экран, потом отчёт (docs/16 §9г)
+	if not Array(rep.get("crises", [])).is_empty():
+		CrisisFX.play(get_parent() if get_parent() else self, rep["crises"])
+		GameState.tutorial("psyche")
 	var c := _content()
 	var m: Dictionary = c.missions.get(rep["mission"], {})
 	_clear()
@@ -559,6 +563,11 @@ func show_report(rep: Dictionary) -> void:
 		_body.add_child(wp)
 		HintTargets.put("report_why", [wp])
 	_body.add_child(_caption("Итог"))
+	# кризисы психики — картами героев в облике паники или подъёма духа
+	var cr := _crisis_cards(rep)
+	if cr != null:
+		_body.add_child(cr)
+		HintTargets.put("report_crises", [cr])
 	# полученные карты (и травмы) — самими картами, а не строками
 	var got := _reward_cards(rep["entries"])
 	if got != null:
@@ -576,6 +585,10 @@ func show_report(rep: Dictionary) -> void:
 			col = Palette.STAT_UP if int(e.get("delta", 0)) > 0 else Palette.STAT_DOWN
 		elif kind == "panic":
 			col = Color("#D07A3A")
+		elif kind in ["crisis", "psy_act"]:
+			col = SquadLifeUI.PANIC_COLOR if str(e.get("state", "")) == "panic" else SquadLifeUI.UPLIFT_COLOR
+			if kind == "psy_act":
+				col = col.darkened(0.15)
 		elif kind == "growth":
 			col = Color("#C07BD8") if bool(e.get("mutation", false)) else Color("#E3C98E")
 		res.add_child(UITheme.label("• " + str(e.get("text", "")), "sans", 18, col))
@@ -595,6 +608,33 @@ func show_report(rep: Dictionary) -> void:
 	ok.add_theme_font_size_override("font_size", 28)
 	ok.pressed.connect(close)
 	_footer.add_child(ok)
+
+
+## Ряд кризисов: карта героя в облике состояния и его реплика.
+func _crisis_cards(rep: Dictionary) -> Control:
+	var list: Array = rep.get("crises", [])
+	if list.is_empty():
+		return null
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 22)
+	for e: Dictionary in list:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 10)
+		var cv := CardView.make(str(e["card"]), Vector2(96, 164), false)
+		cv.psy_override = str(e.get("state", ""))
+		cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
+		h.add_child(cv)
+		var v := VBoxContainer.new()
+		var panic := str(e.get("state", "")) == "panic"
+		v.add_child(UITheme.label("ПАНИКА" if panic else "ПОДЪЁМ ДУХА", "sans_bold", 16, SquadLifeUI.PANIC_COLOR if panic else SquadLifeUI.UPLIFT_COLOR))
+		v.add_child(UITheme.label(_content().card_name(str(e["card"])) + (" · в бою" if str(e.get("origin", "")) == "combat" else ""), "sans", 15, Palette.TEXT_DIM))
+		var q := UITheme.label(str(e.get("quote", "")), "serif_italic", 16, Palette.SILVER)
+		q.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		q.custom_minimum_size.x = 300
+		v.add_child(q)
+		h.add_child(v)
+		row.add_child(h)
+	return row
 
 
 ## Запись отчёта, которую показываем картой: получена карта, способность или травма.

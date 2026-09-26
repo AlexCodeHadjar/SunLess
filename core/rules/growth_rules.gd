@@ -70,7 +70,7 @@ static func mult(content: Content, state: RunState, cid: String, key: String) ->
 
 ## Наименьший потолок паники (или MAX).
 static func panic_cap(content: Content, state: RunState, cid: String) -> int:
-	var cap := PanicRules.MAX
+	var cap := PsycheRules.MAX
 	for e: Dictionary in effects(content, state, cid):
 		if e.has("panic_cap"):
 			cap = mini(cap, int(e["panic_cap"]))
@@ -123,7 +123,7 @@ static func check_parts(content: Content, state: RunState, cid: String, tags: Ar
 				var bon: Array = content.enhancements.get(card, {}).get("bonuses", [])
 				if not bon.is_empty() and _match(bon[0].get("tags", []), tags):
 					out.append({"source": "%s: %s" % [name, content.card_name(card)], "stat": str(bon[0]["stat"]), "value": ib})
-		if bool(e.get("brave", false)) and PanicRules.value(state, cid) >= PanicRules.REACT:
+		if bool(e.get("brave", false)) and PsycheRules.crisis(state, cid) == "panic":
 			for s: String in ["power", "will", "cunning"]:
 				out.append({"source": name, "stat": s, "value": BRAVE})
 	return out
@@ -195,7 +195,7 @@ static func mark_combat(content: Content, state: RunState, run: Dictionary, figh
 
 ## Паника: теги характера растут, когда герой прошёл этап в панике.
 static func mark_panic(content: Content, state: RunState, run: Dictionary, cid: String) -> void:
-	if PanicRules.value(state, cid) < PanicRules.REACT:
+	if PsycheRules.crisis(state, cid) == "":
 		return
 	for tag: String in MissionFlow.hero_tags(content, state, cid):
 		if _grows(content, tag, "panic"):
@@ -220,9 +220,10 @@ static func apply(content: Content, state: RunState, run: Dictionary, heroes: Ar
 		var ch := state.character(cid)
 		var bag: Dictionary = ch.get("tag_xp", {})
 		var growth: Dictionary = ch.get("growth", {})
+		var boost := 2.0 if Array(run.get("uplifted", [])).has(cid) else 1.0   # подъём духа — рост вдвое
 		for tag: String in MissionFlow._sorted(per[cid]):
 			var before := float(bag.get(tag, 0.0))
-			var after := before + float(per[cid][tag])
+			var after := before + float(per[cid][tag]) * boost
 			bag[tag] = after
 			if before < VETERAN and after >= VETERAN:
 				entries.append({"kind": "growth", "card": cid, "text": "%s: опытный — «%s»" % [content.card_name(cid), tag]})

@@ -45,7 +45,7 @@ func _ready() -> void:
 	x.pressed.connect(close)
 	head.add_child(x)
 	body.add_child(head)
-	var intro := UITheme.label("Угли, пара драных плащей и тишина. На койке герой отдыхает и успокаивается вдвое быстрее, а лёгкие травмы понемногу проходят (одна за %d с). Уход на миссию освобождает койку." % int(CampRules.HEAL_EVERY),
+	var intro := UITheme.label("Угли, пара драных плащей и тишина. На койке психика восстанавливается вдвое быстрее, а лёгкие травмы понемногу проходят (одна за %d с). Уход на миссию освобождает койку." % int(CampRules.HEAL_EVERY),
 		"serif_italic", 19, Palette.SILVER)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.custom_minimum_size.x = PANEL.size.x - 56
@@ -142,9 +142,9 @@ func _bed(cid: String) -> Control:
 	v.add_child(UITheme.label(c.card_name(cid), "sans_bold", 20, Palette.TEXT))
 	var rest := MissionFlow.busy_reason(c, s, cid)
 	v.add_child(UITheme.label(rest if rest != "" else "отдохнул", "sans", 16, Palette.REST if rest != "" else Palette.STAT_UP))
-	var pv := PanicRules.value(s, cid)
-	if pv > 0:
-		v.add_child(UITheme.label("паника %d — %s" % [pv, PanicRules.word(pv)], "sans", 16, SquadLifeUI.panic_color(pv)))
+	var psy := PsycheRules.psyche(s, cid)
+	if psy < PsycheRules.MAX:
+		v.add_child(UITheme.label("психика %d — %s" % [psy, PsycheRules.word(psy)], "sans", 16, SquadLifeUI.psyche_color(psy)))
 	var tid := CampRules.next_heal(c, s, cid)
 	var heal := UITheme.label("пройдёт «%s» через %d с" % [c.card_name(tid), int(ceil(CampRules.heal_left(s, cid)))] if tid != "" else "лёгких травм нет",
 		"sans", 16, Palette.STAT_UP if tid != "" else Palette.TEXT_DIM)

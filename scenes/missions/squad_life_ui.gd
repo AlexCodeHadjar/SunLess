@@ -1,9 +1,12 @@
 class_name SquadLifeUI
 extends Control
-## Интерфейс «живого отряда» (docs/16 §5–7): значок доверия и шкала паники для планшета героя,
-## подсказки при наведении и строка для брифинга. Правила — TrustRules, BondRules, PanicRules.
+## Интерфейс «живого отряда» (docs/16 §5–7, §9г): значок доверия и шкала психики для планшета героя,
+## подсказки при наведении и строка для брифинга. Правила — TrustRules, BondRules, PsycheRules.
 
-var mode := "trust"     # trust | panic
+const PANIC_COLOR := Color("#C0343F")
+const UPLIFT_COLOR := Color("#E8C46A")
+
+var mode := "trust"     # trust | panic (шкала психики)
 var card_id := ""
 
 
@@ -16,14 +19,26 @@ static func make(m: String, cid: String, sz: Vector2 = Vector2(76, 76)) -> Squad
 	return n
 
 
-static func panic_color(v: int) -> Color:
-	if v >= PanicRules.BREAK:
-		return Palette.TRAUMA_BRIGHT
-	if v >= PanicRules.REACT:
-		return Color("#D07A3A")
-	if v >= 30:
+## Цвет психики: крепок — холодное серебро, держится — янтарь, на пределе — рыжий, ломается — кровь.
+static func psyche_color(psy: int) -> Color:
+	if psy >= 70:
+		return Color("#8FB3C9")
+	if psy >= 40:
 		return Palette.REQ_MISS
-	return Palette.STAT_NEUTRAL
+	if psy >= 15:
+		return Color("#D07A3A")
+	return Palette.TRAUMA_BRIGHT
+
+
+## Цвет с учётом кризиса героя.
+static func hero_psyche_color(cid: String) -> Color:
+	var s := GameState.state
+	match PsycheRules.crisis(s, cid):
+		"panic":
+			return PANIC_COLOR
+		"uplift":
+			return UPLIFT_COLOR
+	return psyche_color(PsycheRules.psyche(s, cid))
 
 
 static func portrait(cid: String) -> String:
@@ -43,21 +58,23 @@ func _draw() -> void:
 	var rad := minf(size.x, size.y) * 0.42
 	var s := GameState.state
 	if mode == "panic":
-		var v := PanicRules.value(s, card_id) if s else 0
+		var psy := PsycheRules.psyche(s, card_id) if s else PsycheRules.MAX
+		var col := hero_psyche_color(card_id) if s else psyche_color(psy)
 		draw_arc(c, rad, 0, TAU, 48, Palette.LINE, 5.0, true)
-		if v > 0:
-			draw_arc(c, rad, -PI / 2, -PI / 2 + TAU * v / float(PanicRules.MAX), 48, panic_color(v), 5.0, true)
-		# отметки порогов реакции
-		for th: int in [PanicRules.REACT, PanicRules.BREAK]:
-			var a := -PI / 2 + TAU * th / float(PanicRules.MAX)
+		if psy > 0:
+			draw_arc(c, rad, -PI / 2, -PI / 2 + TAU * psy / float(PsycheRules.MAX), 48, col, 5.0, true)
+		# отметки: «на пределе» и «ломается»
+		for th: int in [40, 15]:
+			var a := -PI / 2 + TAU * th / float(PsycheRules.MAX)
 			draw_line(c + Vector2.from_angle(a) * (rad - 7), c + Vector2.from_angle(a) * (rad + 7), Palette.TEXT_DIM, 2.0)
-		# сердце-пульс в центре
+		# пульс в центре: ровнее, когда психика крепка
+		var amp := 0.2 + 0.4 * (1.0 - psy / float(PsycheRules.MAX))
 		var pts := PackedVector2Array()
 		for i in 7:
 			var x := c.x - rad * 0.55 + rad * 1.1 * i / 6.0
-			var y: float = c.y + [0.0, 0.0, -0.45, 0.4, -0.2, 0.0, 0.0][i] * rad
+			var y: float = c.y + [0.0, 0.0, -1.0, 0.9, -0.45, 0.0, 0.0][i] * rad * amp
 			pts.append(Vector2(x, y))
-		draw_polyline(pts, panic_color(v).lightened(0.2), 3.0, true)
+		draw_polyline(pts, col.lightened(0.2), 3.0, true)
 	else:
 		# две сцепленные серебряные дуги
 		var off := rad * 0.36
@@ -98,13 +115,15 @@ static func _trust_row(rec: Dictionary) -> String:
 		("\n      [color=#9A9CA6][i]%s[/i][/color]" % note) if note != "" else ""]
 
 
-## Подсказка шкалы паники.
+## Подсказка шкалы психики.
 static func panic_hint(cid: String) -> String:
 	var c := ContentDB.data
 	var s := GameState.state
-	var v := PanicRules.value(s, cid)
-	return "[b]Паника: %d / %d[/b] — [color=#%s]%s[/color]\nРастёт от опасных миссий, провалов, травм и гибели товарищей; спадает, пока герой отдыхает.\n\n[b]В панике:[/b] %s" % [
-		v, PanicRules.MAX, panic_color(v).to_html(false), PanicRules.word(v), PanicRules.reaction(c, s, cid)]
+	var psy := PsycheRules.psyche(s, cid)
+	var st := PsycheRules.crisis(s, cid)
+	var head := "[b]Психика: %d / %d[/b] — [color=#%s]%s[/color]" % [psy, PsycheRules.MAX, hero_psyche_color(cid).to_html(false),
+		PsycheRules.NAMES[st].to_upper() if st != "" else PsycheRules.word(psy)]
+	return head + "\nНа нуле — кризис: [color=#C0343F]паника[/color] (−30%%, срывы, упрёки, порча вещей) или [color=#E8C46A]подъём духа[/color] (+50%%, поддержка, доверие, рост тегов вдвое). Кризис длится до конца боя или миссии.\n\n[b]Бьёт по психике:[/b] угроза, тёмные места, травмы, провалы, вражда в отряде, перевес врага.\n[b]Лечит:[/b] удачи, доверие в отряде, светлые места, отдых и лагерь.\n\n[b]Характер:[/b] %s" % PsycheRules.reaction(c, s, cid)
 
 
 ## Строка для брифинга: связки, паника, отказ по доверию. "" — нечего сказать.
@@ -123,7 +142,12 @@ static func squad_text(heroes: Array) -> String:
 			if t >= TrustRules.HIGH:
 				out.append("[color=#6FA47B]♦ %s и %s доверяют друг другу (%+d): +%d%% в бою[/color]" % [c.card_name(heroes[i]), c.card_name(heroes[j]), t, int(TrustRules.COMBAT_HIGH * 100)])
 	for cid: String in heroes:
-		var v := PanicRules.value(s, cid)
-		if v >= 30:
-			out.append("[color=#%s]♥ %s %s (%d)[/color] — %s" % [panic_color(v).to_html(false), c.card_name(cid), PanicRules.word(v), v, PanicRules.reaction(c, s, cid)])
+		var psy := PsycheRules.psyche(s, cid)
+		if psy <= 60 and TutorialRules.enabled(s, "panic"):
+			out.append("[color=#%s]♥ %s: психика %d — %s[/color] · %s" % [psyche_color(psy).to_html(false), c.card_name(cid), psy, PsycheRules.word(psy),
+				PsycheRules.reaction(c, s, cid)])
+	for i in heroes.size():
+		for j in range(i + 1, heroes.size()):
+			if TrustRules.value(s, heroes[i], heroes[j]) <= -2 and TutorialRules.enabled(s, "panic"):
+				out.append("[color=#B65F63]⚡ %s и %s в ссоре — обоим тяжелее держаться (психика −%d)[/color]" % [c.card_name(heroes[i]), c.card_name(heroes[j]), -PsycheRules.FEUD])
 	return "\n".join(out)

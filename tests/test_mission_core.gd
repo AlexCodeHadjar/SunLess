@@ -82,7 +82,7 @@ func test_resolve_updates_state() -> void:
 		check(ns.squads.is_empty(), "отряд вернулся")
 		eq(rep["stages"].size(), 2, "два этапа:")
 		if ns.is_alive("P01"):
-			check(float(ns.rest_until["P01"]) >= clock + 20.0, "Санни отдыхает не меньше 20 с")
+			eq(MissionFlow.busy_reason(c, ns, "P01"), "", "отдыха нет — Санни свободен сразу:")
 		if rep["outcome"] in ["success", "partial"]:
 			saw_success = true
 			eq(ns.missions["MS02"]["status"], "done", "миссия выполнена:")
@@ -106,7 +106,7 @@ func test_retreat() -> void:
 	eq(r["report"]["outcome"], "retreat", "итог:")
 	eq(ns.missions["MS02"]["status"], "open", "после отступления миссия снова открыта:")
 	eq(int(ns.missions["MS02"]["attempts"]), 0, "отступление — не попытка:")
-	eq(float(r["report"]["rest"]["P01"]), 20.0, "отряд устаёт как после миссии:")
+	eq(MissionFlow.busy_reason(c, ns, "P01"), "", "после отступления герой свободен:")
 	check(r["report"]["traumas"].is_empty(), "без ран")
 
 
@@ -138,10 +138,10 @@ func test_rest_and_tick() -> void:
 	var s := _run()
 	var sid := _arrive(c, s, "MS02", ["P01"])
 	s = MissionResolver.resolve(c, s, sid, "MS02_lay_low")["state"]
-	check(MissionFlow.busy_reason(c, s, "P01").begins_with("отдыхает"), "Санни отдыхает")
+	# отдыха между событиями нет (решение владельца): герой свободен сразу, часы его не держат
+	eq(MissionFlow.busy_reason(c, s, "P01"), "", "Санни свободен сразу после миссии:")
 	var ev := MissionFlow.tick(c, s, 25.0)
-	eq(MissionFlow.busy_reason(c, s, "P01"), "", "отдохнул:")
-	check(ev.any(func(e: Dictionary) -> bool: return e["kind"] == "rested"), "событие «отдохнул»")
+	check(not ev.any(func(e: Dictionary) -> bool: return e["kind"] == "rested"), "событий отдыха больше нет")
 
 
 func test_save_roundtrip() -> void:
@@ -254,13 +254,22 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 			for it: Dictionary in ShopRules.ensure(c, s, sid)["items"]:
 				if c.card_kind(it["card"]) == "character" and not it["sold"] and int(s.resources.get("shards", 0)) >= int(it["price"]):
 					ShopRules.buy(c, s, sid, it["card"])
+		# как осторожный игрок: лечит тяжёлые травмы у торговца, укладывает раненых и измотанных в лагерь
+		for sid2: String in ShopRules.shops_of(c, s):
+			for h: String in MissionFlow.free_heroes(c, s):
+				for tid: String in Array(s.character(h).get("traumas", [])).duplicate():
+					if str(c.traumas.get(tid, {}).get("severity", "")) != "light":
+						ServiceRules.perform(c, s, sid2, "heal", h, tid)
+		for h2: String in MissionFlow.free_heroes(c, s):
+			if TraumaRules.counted(s.character(h2).get("traumas", [])) >= 2 or PsycheRules.psyche(s, h2) < 40:
+				CampRules.put(c, s, h2)
 		var open := MissionFlow.open_missions(s)
 		open.sort_custom(func(x: String, y: String) -> bool:
 			var sx := str(c.missions[x]["type"]) == "story"
 			var sy := str(c.missions[y]["type"]) == "story"
 			return sx and not sy if sx != sy else x < y)
 		for mid: String in open:
-			var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h))
+			var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) 				and (str(c.missions[mid]["type"]) == "story" or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= 30)))
 			if free.is_empty():
 				continue
 			var mx := int(c.missions[mid]["squad"]["max"])
@@ -331,6 +340,22 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 
 
 func _count(stats: Dictionary, mid: String, rep: Dictionary) -> void:
+	# психика: кризисы по главам (баланс docs/16 §9г)
+	var ps: Dictionary = stats.get("_psy", {})
+	var ch := str(mid).substr(0, 2)
+	var row: Dictionary = ps.get(ch, {"missions": 0, "panic": 0, "uplift": 0, "acts": 0})
+	row["missions"] += 1
+	for e: Dictionary in rep.get("crises", []):
+		row[str(e.get("state", "panic"))] += 1
+		var hk := "hero:" + str(e.get("card", ""))
+		var hr: Dictionary = ps.get(hk, {"missions": 0, "panic": 0, "uplift": 0, "acts": 0})
+		hr[str(e.get("state", "panic"))] += 1
+		ps[hk] = hr
+	for e2: Dictionary in rep.get("entries", []):
+		if str(e2.get("kind", "")) == "psy_act":
+			row["acts"] += 1
+	ps[ch] = row
+	stats["_psy"] = ps
 	var st: Dictionary = stats.get(mid, {"tries": 0, "ok": 0, "retreat": 0, "deaths": 0})
 	st["tries"] += 1
 	st["ok"] += 1 if rep["outcome"] in ["success", "partial"] else 0
@@ -368,6 +393,13 @@ func test_mission_simulation() -> void:
 	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, Забытый Берег пройден: %d, конец игры: %d" % [n, nightmare, finished, shore, over])
 	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
 	print("   [рост] на прохождение: опытных тегов %.1f, эволюций %.1f, мутаций %.2f" % [float(grown["vet"]) / n, float(grown["evo"]) / n, float(grown["mut"]) / n])
+	var ps: Dictionary = stats.get("_psy", {})
+	for ch: String in ps:
+		var row: Dictionary = ps[ch]
+		if int(row["panic"]) + int(row["uplift"]) > 0:
+			print("   [психика] %s: миссий %d, паник %d (%.1f%%), подъёмов %d, поступков %d" % [ch, row["missions"], row["panic"],
+				100.0 * row["panic"] / maxf(1, row["missions"]), row["uplift"], row["acts"]])
+	stats.erase("_psy")
 	var ids: Array = stats.keys()
 	ids.sort()
 	for mid: String in ids:

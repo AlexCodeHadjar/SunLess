@@ -124,9 +124,7 @@ static func from_dict(d: Dictionary) -> RunState:
 	for sq: Dictionary in s.squads:
 		sq["id"] = int(sq.get("id", 0))
 	s.next_squad = int(d.get("next_squad", 1))
-	s.rest_until = Dictionary(d.get("rest_until", {})).duplicate(true)
-	for cid: String in s.rest_until:
-		s.rest_until[cid] = float(s.rest_until[cid])
+	s.rest_until = {}   # отдыха между событиями больше нет — старые таймеры не держат героев
 	s.completed_missions = int(d.get("completed_missions", 0))
 	s.loc_timers = Dictionary(d.get("loc_timers", {})).duplicate(true)
 	s.trust = _ints(d.get("trust", {}))

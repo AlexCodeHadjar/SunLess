@@ -278,7 +278,7 @@ func _hint_target(name: String) -> Rect2:
 				"hero_rest":
 					ok2 = float(s.rest_until.get(cid, 0.0)) > s.clock
 				"hero_panic":
-					ok2 = PanicRules.value(s, cid) >= 30
+					ok2 = PsycheRules.psyche(s, cid) <= 60
 				"hero_growth":
 					ok2 = Dictionary(ch.get("tag_xp", {})).keys().any(func(t: String) -> bool: return GrowthRules.xp(s, cid, t) >= GrowthRules.VETERAN)
 				"hero_trust":

@@ -34,6 +34,10 @@ var _burning := false
 var _lift := 0.0
 var _tex: Texture2D
 var _art_framed := false
+## Кризис психики (docs/16 §9г): "" — по состоянию героя; "panic" | "uplift" — показать так принудительно
+## (отчёт, эффект срабатывания). Обложка меняется на art/cards/<ID>_panic|_uplift, иначе — живой облик поверх.
+var psy_override := ""
+static var _crisis_art := {}
 
 
 static func make(id: String, size_px: Vector2, can_drag: bool = true) -> CardView:
@@ -106,8 +110,30 @@ func _on_hover(on: bool) -> void:
 
 func _ready() -> void:
 	pivot_offset = size / 2
-	set_process(sway)
+	set_process(sway or kind == "character")   # герой может войти в кризис — облик меняется на лету
 	refresh_aura()
+
+
+## Кризис, который показывает карта: принудительный или текущий у героя.
+func psy_state() -> String:
+	if psy_override != "":
+		return psy_override
+	if kind == "character" and GameState.state != null and GameState.state.characters.has(card_id):
+		return PsycheRules.crisis(GameState.state, card_id)
+	return ""
+
+
+## Обложка кризиса, если художник её нарисовал: art/cards/<ID>_panic.webp / <ID>_uplift.webp.
+func _crisis_texture(st: String) -> Texture2D:
+	var key := "%s_%s" % [card_id, st]
+	if not _crisis_art.has(key):
+		_crisis_art[key] = null
+		for ext: String in ["webp", "png"]:
+			var p := "res://art/cards/%s.%s" % [key, ext]
+			if ResourceLoader.exists(p):
+				_crisis_art[key] = load(p)
+				break
+	return _crisis_art[key]
 
 
 ## Пересобирает живой облик карты по текущим тегам, травмам и ранам.
@@ -131,7 +157,14 @@ func refresh_aura() -> void:
 	add_child(aura)
 
 
+var _last_psy := ""
+
+
 func _process(_delta: float) -> void:
+	var pst := psy_state()
+	if pst != "" or pst != _last_psy:
+		_last_psy = pst
+		queue_redraw()
 	if _burning or Vfx.reduced():
 		rotation = 0.0
 		return
@@ -277,9 +310,11 @@ func describe() -> String:
 				for t: String in traumas:
 					names.append(c.card_name(t))
 				lines.append("[color=#B65F63]Травмы: %s[/color]" % ", ".join(names))
-			var pv := PanicRules.value(s, card_id) if s else 0
-			if pv > 0:
-				lines.append("[color=#%s]♥ Паника: %d — %s[/color]" % [SquadLifeUI.panic_color(pv).to_html(false), pv, PanicRules.word(pv)])
+			var psy := PsycheRules.psyche(s, card_id) if s else PsycheRules.MAX
+			if s and psy < PsycheRules.MAX and TutorialRules.enabled(s, "panic"):
+				var cst := PsycheRules.crisis(s, card_id)
+				lines.append("[color=#%s]♥ Психика: %d — %s[/color]" % [SquadLifeUI.hero_psyche_color(card_id).to_html(false), psy,
+					PsycheRules.NAMES[cst].to_lower() if cst != "" else PsycheRules.word(psy)])
 			var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 			if dc > 0:
 				lines.append("[color=#B65F63]☠ Шанс смерти при следующей травме: %d%%[/color]" % dc)
@@ -338,16 +373,68 @@ func _draw() -> void:
 	var scale_k := size.x / SIZE_PANEL.x
 	# тень
 	draw_rect(Rect2(r.position + Vector2(0, 6 * scale_k), r.size), Color(0, 0, 0, 0.45 if _hover else 0.35))
-	if _tex and _art_framed:
-		draw_texture_rect(_tex, r, false)
+	var pst := psy_state()
+	var ctex := _crisis_texture(pst) if pst != "" else null
+	if pst == "panic" and not Vfx.reduced():
+		# паника: карта мелко дрожит
+		var t := Time.get_ticks_msec() / 1000.0
+		draw_set_transform(Vector2(sin(t * 47.0 + _phase) * 1.6, cos(t * 39.0) * 1.2) * scale_k)
+	if ctex:
+		draw_texture_rect(ctex, r, false)
+	elif _tex and _art_framed:
+		var tint := Color.WHITE
+		if pst == "panic":
+			tint = Color(0.82, 0.62, 0.62)
+		elif pst == "uplift":
+			tint = Color(1.12, 1.04, 0.84)
+		draw_texture_rect(_tex, r, false, tint)
 	else:
 		_draw_procedural(r, d, scale_k)
+	if pst != "" and ctex == null:
+		_draw_crisis(r, pst, scale_k)
+	draw_set_transform(Vector2.ZERO)
 	_draw_overlays(r, d, scale_k)
+	if pst != "":
+		_pill(Vector2(r.get_center().x, r.position.y + r.size.y * 0.60), "ПАНИКА" if pst == "panic" else "ПОДЪЁМ ДУХА", 12 * scale_k,
+			SquadLifeUI.PANIC_COLOR if pst == "panic" else SquadLifeUI.UPLIFT_COLOR, false, true)
 	var border := _border_color(d)
 	var w := 3.0 if (highlight or _hover) else 1.5
 	draw_rect(r, border if (highlight or _hover) else border.darkened(0.25), false, w)
 	if dimmed:
 		draw_rect(r, Color(0.05, 0.05, 0.07, 0.62))
+
+
+## Живой облик кризиса поверх обычной обложки (пока нет отдельных рисунков):
+## паника — трещины, багровая кромка и темнота по краям; подъём — золотые лучи, свет и искры вверх.
+func _draw_crisis(r: Rect2, st: String, k: float) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	var pulse := 0.5 + 0.5 * sin(t * (5.0 if st == "panic" else 2.2))
+	if st == "panic":
+		for i in 6:
+			draw_rect(r.grow(-i * 3.0 * k), Color(0.45, 0.02, 0.04, (0.16 - i * 0.025) * (0.7 + 0.3 * pulse)), false, 3.0 * k)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = card_id.hash()
+		for c in 3:
+			var p := r.position + Vector2(rng.randf_range(0.15, 0.85), rng.randf_range(0.1, 0.55)) * r.size
+			var pts := PackedVector2Array([p])
+			for j in 5:
+				p += Vector2(rng.randf_range(-14, 14), rng.randf_range(8, 22)) * k
+				pts.append(p)
+			draw_polyline(pts, Color(0.05, 0.0, 0.0, 0.75), 2.2 * k)
+			draw_polyline(pts, Color(0.85, 0.15, 0.15, 0.35 * pulse), 1.0 * k)
+	else:
+		var top := r.position + Vector2(r.size.x * 0.5, r.size.y * 0.05)
+		for i in 9:
+			var a := PI * 0.5 + (i - 4) * 0.19 + sin(t * 0.7) * 0.05
+			var far := top + Vector2.from_angle(a) * r.size.y * 0.7
+			draw_colored_polygon(PackedVector2Array([top, far + Vector2(-10, 0) * k, far + Vector2(10, 0) * k]),
+				Color(1.0, 0.86, 0.5, 0.045 + 0.03 * pulse))
+		for i2 in 4:
+			draw_rect(r.grow(-i2 * 3.0 * k), Color(0.95, 0.78, 0.35, (0.22 - i2 * 0.05) * (0.6 + 0.4 * pulse)), false, 3.0 * k)
+		for m in 10:
+			var f := fposmod(t * 0.25 + m * 0.1 + _phase, 1.0)
+			var mp := r.position + Vector2(fposmod(m * 0.37 + _phase, 1.0) * r.size.x, r.size.y * (1.0 - f))
+			draw_circle(mp, (1.2 + m % 3) * k, Color(1.0, 0.9, 0.6, 0.8 * sin(f * PI)))
 
 
 func _border_color(d: Dictionary) -> Color:
@@ -492,13 +579,13 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 			else:
 				draw_rect(tr, Palette.TRAUMA)
 				draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
-		var pv := PanicRules.value(s, card_id)
-		if pv > 0 and s.is_alive(card_id):
-			# паника: полоса снизу вверх у левого края, цвет по порогам
+		var psy := PsycheRules.psyche(s, card_id)
+		if (psy < PsycheRules.MAX or psy_state() != "") and s.is_alive(card_id) and TutorialRules.enabled(s, "panic"):
+			# психика: полоса у левого края — сколько осталось (100 → 0), цвет по порогам и кризису
 			var bar := Rect2(r.position + Vector2(4 * k, r.size.y * 0.22), Vector2(4 * k, r.size.y * 0.5))
 			draw_rect(bar, Color(0, 0, 0, 0.55))
-			var fill := bar.size.y * pv / float(PanicRules.MAX)
-			draw_rect(Rect2(bar.position + Vector2(0, bar.size.y - fill), Vector2(bar.size.x, fill)), SquadLifeUI.panic_color(pv))
+			var fill := bar.size.y * psy / float(PsycheRules.MAX)
+			draw_rect(Rect2(bar.position + Vector2(0, bar.size.y - fill), Vector2(bar.size.x, fill)), SquadLifeUI.hero_psyche_color(card_id))
 		var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 		if dc > 0 and TraumaRules.counted(traumas) >= 2:
 			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "☠ %d%%" % dc, 11 * k, Palette.TRAUMA_BRIGHT, true)

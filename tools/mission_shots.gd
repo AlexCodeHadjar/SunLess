@@ -140,7 +140,7 @@ func _run() -> void:
 	TrustRules.change(ContentDB.data, gs, "P01", "P03", 4, "успех вместе: «Тропа через перевал»")
 	TrustRules.change(ContentDB.data, gs, "P01", "P02", 2, "успех вместе: «Первый бой»")
 	TrustRules.change(ContentDB.data, gs, "P01", "P10", -3, "бегство с этапа")
-	PanicRules.add(ContentDB.data, gs, "P01", 70, "снимок")
+	gs.character("P01")["panic"] = 65   # психика 35 — для снимка
 	gs.character("P01")["tag_xp"] = {"Скрытность": 4.0, "Чутьё": 1.5, "Импровизация": 6.0, "Раб": 6.0}
 	gs.character("P01")["growth"] = {"Импровизация": "evo", "Раб": "mut"}
 	var ins := CardInspector.open_for(game, "P01")
@@ -253,6 +253,33 @@ func _run() -> void:
 	await _shot("m21_brief_sh27")
 	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
 	await _wait(0.4)
+	# психика (docs/16 §9г): карты в кризисе, момент срабатывания, планшет
+	sa.character("P10")["psy"] = {"state": "panic", "origin": "mission"}
+	sa.character("P10")["panic"] = 100
+	sa.character("P02")["psy"] = {"state": "uplift", "origin": "mission"}
+	sa.character("P02")["panic"] = 100
+	sa.character("P03")["panic"] = 55
+	GameState.missions_changed.emit()
+	EventBus.state_changed.emit()
+	await _wait(0.8)
+	await _shot("m22_crisis_cards")
+	var fxp := CrisisFX.play(get_tree().current_scene, [{"card": "P10", "state": "panic", "quote": "«Мы здесь умрём. Все. Слышите?!»"}])
+	await _wait(1.1)
+	await _shot("m23_fx_panic")
+	await fxp.finished
+	var fxu := CrisisFX.play(get_tree().current_scene, [{"card": "P02", "state": "uplift", "quote": "«Держитесь за мной — я проведу.»"}])
+	await _wait(1.1)
+	await _shot("m24_fx_uplift")
+	await fxu.finished
+	var ip := CardInspector.open_for(get_tree().current_scene, "P03")
+	await _wait(0.6)
+	ip.call("_show_hint", SquadLifeUI.panic_hint("P03"))
+	await _wait(0.4)
+	await _shot("m25_psyche_inspector")
+	ip.call("_close")
+	for cid: String in ["P10", "P02"]:
+		sa.character(cid).erase("psy")
+	await _wait(0.3)
 	# планшеты разных карт: текст и рисунки не должны налезать друг на друга
 	for id: String in ["P02", "P03", "U07", "U12", "K07", "A03", "T03", "M04", "M03", "SH28"]:
 		var insp := CardInspector.open_for(get_tree().current_scene, id)

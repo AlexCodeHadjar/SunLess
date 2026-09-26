@@ -40,7 +40,7 @@ func test_expire_and_reward() -> void:
 	MissionFlow.tick(c, s, float(c.missions["NA01"]["expires"]) + 1.0)
 	eq(str(s.missions["NA01"]["status"]), "expired", "не ответили — ушло:")
 	eq(int(s.resources["shards"]), 7, "потеряно 3 осколка:")
-	check(PanicRules.value(s, "P01") > 0, "герои встревожены")
+	check(PsycheRules.psyche(s, "P01") < PsycheRules.MAX, "психика героев задета")
 	# отбили — доверие
 	var s2 := _academy()
 	var m: Dictionary = c.missions["NA01"]

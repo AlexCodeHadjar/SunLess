@@ -1,6 +1,6 @@
 class_name CampRules
 extends RefCounted
-## Лагерь (docs/16 §9): койки и доска слухов. Герой на койке отдыхает и успокаивается вдвое быстрее,
+## Лагерь (docs/16 §9): койки и доска слухов. Герой на койке восстанавливает психику вдвое быстрее,
 ## а раз в HEAL_EVERY секунд с него сходит одна лёгкая травма. Уход на миссию освобождает койку.
 ## Состояние — state.camp {beds: [cid], heal: {cid: накоплено секунд}}.
 
@@ -65,12 +65,9 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			take(state, cid)
 			continue
 		var extra := dt * (SPEED - 1.0)
-		var until := float(state.rest_until.get(cid, 0.0))
-		if until > state.clock:
-			state.rest_until[cid] = maxf(state.clock, until - extra)
 		var ch := state.character(cid)
 		if int(ch.get("panic", 0)) > 0 and not GrowthRules.has(content, state, cid, "panic_no_decay"):
-			ch["panic"] = maxi(0, int(round(float(ch["panic"]) - PanicRules.DECAY * extra)))
+			ch["panic"] = maxi(0, int(round(float(ch["panic"]) - PsycheRules.DECAY * extra)))
 		var tid := next_heal(content, state, cid)
 		if tid == "":
 			h.erase(cid)

@@ -81,14 +81,14 @@ func test_effects() -> void:
 	check(not tags.has("Раб") and tags.has("Свободный"), "тег Раб сменился на Свободный")
 	# Лёд в венах: паника не выше 50
 	_grow(s, "P01", "Хладнокровие", "evo")
-	PanicRules.add(c, s, "P01", 200, "тест")
-	eq(PanicRules.value(s, "P01"), 50, "паника упирается в 50:")
+	PsycheRules.change(c, s, "P01", -200, "тест")
+	eq(PsycheRules.psyche(s, "P01"), 50, "психика не ниже 50:")
 	# Бесчувственный: паники нет, связки не работают
 	_grow(s, "P03", "Слабое тело", "mut")
 	var s2 := _run()
 	_grow(s2, "P01", "Хладнокровие", "mut")
-	PanicRules.add(c, s2, "P01", 50, "тест")
-	eq(PanicRules.value(s2, "P01"), 0, "Бесчувственный не паникует:")
+	PsycheRules.change(c, s2, "P01", -50, "тест")
+	eq(PsycheRules.psyche(s2, "P01"), PsycheRules.MAX, "Бесчувственный не теряет психику:")
 	check(BondRules.active(c, s2, ["P01", "P03"]).is_empty(), "связка с Бесчувственным не работает")
 	# Предвидение раскрывает скрытое
 	var s3 := _run()
@@ -97,8 +97,8 @@ func test_effects() -> void:
 	check(MissionFlow.has_scout(c, s3, ["P03"]), "Предвидение раскрывает скрытое")
 	# Отчаянная храбрость: Трус в панике не сбегает, а +3
 	_grow(s3, "P10", "Трус", "mut")
-	PanicRules.add(c, s3, "P10", 70, "тест")
-	check(not PanicRules.flees(c, s3, "P10"), "храбрый Трус не сбегает")
+	s3.character("P10")["psy"] = {"state": "panic", "origin": "mission"}
+	check(not PsycheRules.flees(c, s3, "P10"), "храбрый Трус не сбегает")
 	check(GrowthRules.check_parts(c, s3, "P10", [], []).filter(func(p: Dictionary) -> bool: return int(p["value"]) == 3).size() == 3, "+3 ко всему в панике")
 
 

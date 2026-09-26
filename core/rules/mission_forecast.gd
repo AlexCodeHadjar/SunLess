@@ -64,8 +64,10 @@ static func stage_actor(content: Content, state: RunState, m: Dictionary, a: Dic
 		var totals: Dictionary = r["totals"].duplicate()
 		# связки отряда и паника (docs/16 §6–7)
 		var tags: Array = Array(m.get("context", [])) + Array(st.get("tags", []))
-		for p: Dictionary in BondRules.check_parts(content, state, heroes, cid, tags) + PanicRules.check_parts(content, state, cid):
+		for p: Dictionary in BondRules.check_parts(content, state, heroes, cid, tags):
 			totals[p["stat"]] = int(totals.get(p["stat"], 0)) + int(p["value"])
+		for p2: Dictionary in PsycheRules.check_parts(content, state, cid, totals):
+			totals[p2["stat"]] = int(totals.get(p2["stat"], 0)) + int(p2["value"])
 		var c := clampi(ChanceCalculator.compute(totals, st.get("req", {})), CHANCE_MIN, CHANCE_MAX)
 		if c > int(best["chance"]):
 			best = {"hero": cid, "chance": c, "temp_used": r["temp_used"]}
