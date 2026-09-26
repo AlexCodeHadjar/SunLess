@@ -29,6 +29,7 @@ var _footer: HBoxContainer     # закреплённый низ окна: пр�
 
 
 func _ready() -> void:
+	add_to_group(HintTargets.LAYER)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()

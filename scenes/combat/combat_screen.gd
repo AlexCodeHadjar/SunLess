@@ -233,6 +233,7 @@ class IntentCard extends Control:
 # --- построение ---------------------------------------------------------------------
 
 func _ready() -> void:
+	add_to_group(HintTargets.LAYER)
 	# отдельный непрозрачный экран поверх всей игры
 	top_level = true
 	z_index = 20

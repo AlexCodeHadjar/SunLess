@@ -10,6 +10,9 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--mshots="):
 			out_dir = a.substr(9)
+		if a == "--nohints":
+			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
+			SettingsService.values["tutorial"] = false
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	_run.call_deferred()
 

@@ -44,6 +44,7 @@ static func open_for(parent: Node, id: String) -> CardInspector:
 
 
 func _ready() -> void:
+	add_to_group(HintTargets.LAYER)
 	top_level = true
 	z_index = 70
 	position = Vector2.ZERO
