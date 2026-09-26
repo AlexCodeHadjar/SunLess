@@ -34,7 +34,7 @@ static func word(v: int) -> String:
 ## Добавить панику (с учётом Хладнокровия). Возвращает запись для отчёта при пересечении порога.
 static func add(content: Content, state: RunState, cid: String, amount: int, reason: String) -> Array:
 	var ch := state.character(cid)
-	if ch.is_empty() or not state.is_alive(cid) or amount == 0:
+	if ch.is_empty() or not state.is_alive(cid) or amount == 0 or not TutorialRules.enabled(state, "panic"):
 		return []
 	var tags := MissionFlow.hero_tags(content, state, cid)
 	if amount > 0 and GrowthRules.has(content, state, cid, "panic_immune"):

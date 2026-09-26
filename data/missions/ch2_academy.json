@@ -697,7 +697,7 @@
   "rest": 10,
   "squad": {
    "min": 1,
-   "max": 1
+   "max": 2
   },
   "requires_heroes": [
    "P01"
@@ -773,6 +773,38 @@
      }
     ],
     "on_success": [
+     {
+      "cmd": "add_perm",
+      "character": "P01",
+      "stat": "will",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "MA17_pair",
+    "label": "Тренироваться вдвоём",
+    "text": "Месяц бок о бок с тем, кому доверяешь: один держит удар, другой учится его пробивать. Открывается, когда в отряде есть пара с доверием 2 и выше.",
+    "story": true,
+    "requires_trust": {
+     "min": 2
+    },
+    "stages": [
+     {
+      "name": "Месяц вдвоём",
+      "auto": true,
+      "ok": "Вдвоём тренироваться тяжелее — и вдвое полезнее. К концу месяца вы понимаете друг друга без слов.",
+      "partial": "",
+      "fail": ""
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "add_perm",
+      "character": "P01",
+      "stat": "power",
+      "value": 1
+     },
      {
       "cmd": "add_perm",
       "character": "P01",

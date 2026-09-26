@@ -291,9 +291,10 @@ func _build_stats(y: float) -> float:
 			Palette.STAT_UP if delta > 0 else (Palette.STAT_DOWN if delta < 0 else Palette.TEXT_DIM))
 		dl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(dl)
-	if GameState.state.is_alive(card_id):
+	if GameState.state.is_alive(card_id) and TutorialRules.enabled(GameState.state, "panic"):
 		_life_box(row, "panic", str(PanicRules.value(GameState.state, card_id)), PanicRules.word(PanicRules.value(GameState.state, card_id)),
 			SquadLifeUI.panic_color(PanicRules.value(GameState.state, card_id)), SquadLifeUI.panic_hint(card_id))
+	if GameState.state.is_alive(card_id) and TutorialRules.enabled(GameState.state, "trust"):
 		var top := TrustRules.top(ContentDB.data, GameState.state, card_id)
 		var ends: Array = []
 		for side: String in ["positive", "negative"]:
@@ -432,7 +433,7 @@ func _build_tags(y: float) -> float:
 			flow.add_child(chip2)
 	var rows := 1 + int((own.size() + extra.size()) / 7)
 	y += rows * 30.0 + 8.0
-	if ContentDB.data.card_kind(card_id) == "character" and GameState.state != null and GameState.state.characters.has(card_id):
+	if ContentDB.data.card_kind(card_id) == "character" and GameState.state != null and GameState.state.characters.has(card_id) and TutorialRules.enabled(GameState.state, "growth"):
 		y = _build_growth(y)
 	return y
 

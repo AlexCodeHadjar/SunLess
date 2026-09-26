@@ -135,6 +135,8 @@ func _build_left() -> void:
 	nav.add_theme_constant_override("separation", 6)
 	col.add_child(nav)
 	for item: Array in [["✦  КАРТА", "map"], ["✚  ЛАГЕРЬ", "camp"], ["✎  ЖУРНАЛ", "journal"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
+		if item[1] == "camp" and not TutorialRules.enabled(GameState.state, "camp"):
+			continue
 		var b := Button.new()
 		b.text = item[0]
 		b.flat = true
@@ -221,6 +223,7 @@ func _build_toast() -> void:
 	_toast.modulate.a = 0.0
 	_toast.z_index = 50
 	add_child(_toast)
+	add_child(HintPopup.new())
 
 
 # --- обновление ---------------------------------------------------------------
@@ -228,6 +231,10 @@ func _build_toast() -> void:
 func _refresh() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
+	# обучение (Ф12): подсказки по первому появлению механики
+	GameState.tutorial("map")
+	for ev: String in TutorialRules.state_events(c, s):
+		GameState.tutorial(ev)
 	_top_labels["chapter"].text = str(c.regions.get(_region(), {}).get("arc_name", "Глава"))
 	var shards := int(s.resources.get("shards", 0))
 	_top_labels["shards"].text = "✧ %d %s душ" % [shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])]
@@ -437,6 +444,7 @@ func _on_events(events: Array) -> void:
 			"onslaught":
 				AudioManager.play("bell", -2.0, 0.7)
 				_show_toast("%s — 60 с на ответ" % e["text"])
+				GameState.tutorial("onslaught")
 			"mission":
 				AudioManager.play("open", -8.0)
 				_show_toast(str(e["text"]))

@@ -179,6 +179,16 @@ func camp_take(cid: String) -> void:
 	EventBus.state_changed.emit()
 
 
+## Подсказка обучения к событию (docs/16 Ф12): один раз за прохождение, если подсказки включены.
+func tutorial(event: String) -> void:
+	if state == null or not bool(SettingsService.get_value("tutorial")):
+		return
+	var h := TutorialRules.take(content(), state, event)
+	if not h.is_empty():
+		SaveService.save_state(state)
+		EventBus.tutorial_hint.emit(h)
+
+
 func shop_seen(shop_id: String) -> void:
 	ShopRules.mark_seen(content(), state, shop_id)
 	SaveService.save_state(state)

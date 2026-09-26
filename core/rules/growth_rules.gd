@@ -205,6 +205,8 @@ static func mark_panic(content: Content, state: RunState, run: Dictionary, cid: 
 ## Итог миссии: «any» за удачу, начисление, «Опытный» и развитие. Возвращает записи отчёта.
 static func apply(content: Content, state: RunState, run: Dictionary, heroes: Array, outcome: String, rng: RandomNumberGenerator) -> Array:
 	var entries: Array = []
+	if not TutorialRules.enabled(state, "growth"):
+		return entries
 	if outcome in ["success", "partial"]:
 		for cid: String in heroes:
 			if state.is_alive(cid):

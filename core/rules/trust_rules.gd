@@ -65,7 +65,7 @@ static func meets(state: RunState, heroes: Array, need: Dictionary) -> bool:
 static func after_mission(content: Content, state: RunState, heroes: Array, outcome: String, title: String,
 		rng: RandomNumberGenerator = null) -> Array:
 	var d := 1 if outcome in ["success", "partial"] else (-1 if outcome == "failure" else 0)
-	if d == 0:
+	if d == 0 or not TutorialRules.enabled(state, "trust"):
 		return []
 	var out: Array = []
 	var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))

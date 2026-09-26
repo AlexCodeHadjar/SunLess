@@ -5,6 +5,8 @@ extends TestCase
 func test_beds() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 21)
+	eq(CampRules.put(c, s, "P01"), "Лагерь откроется в Академии", "в Кошмаре лагеря нет:")
+	s.chapter = "academy"
 	for cid: String in ["P09", "P10"]:
 		EffectApplier.add_card(c, s, cid)
 	eq(CampRules.put(c, s, "P01"), "", "Санни на койке:")

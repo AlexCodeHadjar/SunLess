@@ -108,6 +108,7 @@ func _clear() -> void:
 func show_brief(mid: String, with_hero: String = "") -> void:
 	mode = "brief"
 	mission_id = mid
+	GameState.tutorial("brief")
 	picked = []
 	# обязательные герои миссии — первыми, затем брошенный на карту
 	for need: String in _content().missions[mid].get("requires_heroes", []):
@@ -277,6 +278,8 @@ func _refresh_forecast() -> void:
 	var life := SquadLifeUI.squad_text(picked)
 	if life != "":
 		_forecast_box.add_child(_rich(life, 17))
+	if not BondRules.active(_content(), GameState.state, picked).is_empty():
+		GameState.tutorial("bond")
 
 
 func _launch() -> void:
@@ -284,6 +287,7 @@ func _launch() -> void:
 	if err != "":
 		EventBus.toast.emit(err)
 		return
+	GameState.tutorial("launch")
 	AudioManager.play("shuffle")
 	EventBus.toast.emit("Отряд выступил: %s" % _content().missions[mission_id].get("title", ""))
 	close()
@@ -294,6 +298,10 @@ func _launch() -> void:
 func show_arrival(sid: int) -> void:
 	mode = "arrival"
 	squad_id = sid
+	GameState.tutorial("arrival")
+	var sq0 := MissionFlow.squad(GameState.state, sid)
+	if not sq0.is_empty() and Array(_content().missions.get(str(sq0["mission"]), {}).get("actions", [])).any(func(x: Dictionary) -> bool: return x.has("cost")):
+		GameState.tutorial("cost")
 	var c := _content()
 	var s := GameState.state
 	var sq := MissionFlow.squad(s, sid)
@@ -384,6 +392,7 @@ func _choose(action_id: String) -> void:
 func show_fork(sid: int) -> void:
 	mode = "fork"
 	squad_id = sid
+	GameState.tutorial("fork")
 	var c := _content()
 	var s := GameState.state
 	var sq := MissionFlow.squad(s, sid)
@@ -504,6 +513,7 @@ func _notes(m: Dictionary) -> VBoxContainer:
 func show_report(rep: Dictionary) -> void:
 	mode = "report"
 	report = rep
+	GameState.tutorial("report")
 	var c := _content()
 	var m: Dictionary = c.missions.get(rep["mission"], {})
 	_clear()

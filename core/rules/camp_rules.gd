@@ -31,6 +31,8 @@ static func heal_left(state: RunState, cid: String) -> float:
 
 ## Уложить героя. "" — успех, иначе причина.
 static func put(content: Content, state: RunState, cid: String) -> String:
+	if not TutorialRules.enabled(state, "camp"):
+		return "Лагерь откроется в Академии"
 	if not state.is_alive(cid) or not state.characters.has(cid):
 		return "Некого укладывать"
 	if MissionFlow.on_mission(state, cid):

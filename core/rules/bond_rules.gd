@@ -8,6 +8,8 @@ extends RefCounted
 ## Связки, собранные в этом отряде.
 static func active(content: Content, state: RunState, heroes: Array) -> Array:
 	var out: Array = []
+	if not TutorialRules.enabled(state, "bonds"):
+		return out
 	for bid: String in MissionFlow._sorted(content.bonds):
 		var b: Dictionary = content.bonds[bid]
 		var pair: Array = b.get("heroes", [])

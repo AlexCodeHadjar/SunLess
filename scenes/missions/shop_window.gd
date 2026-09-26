@@ -96,6 +96,7 @@ func _ready() -> void:
 	_svc.visible = false
 	_body.add_child(_svc)
 	GameState.shop_seen(shop_id)
+	GameState.tutorial("shop")
 	_refresh()
 
 

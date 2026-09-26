@@ -5,6 +5,7 @@ extends TestCase
 func _run() -> RunState:
 	var c := content()
 	var s := MissionFlow.new_run(c, 21)
+	s.chapter = "academy"   # живой отряд и рост работают с Академии (TutorialRules.UNLOCK)
 	for cid: String in ["P02", "P03", "P04", "P09", "P10"]:
 		EffectApplier.add_card(c, s, cid)
 	MissionFlow.open(c, s, "MS02")
