@@ -64,6 +64,69 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 	return {"base": base, "totals": totals, "parts": parts, "temp_used": temp_used}
 
 
+## Характеристики на «листе героя» — как их показывают карта и планшет: база стадии, навсегда, черты,
+## способности, кармашек, развития тегов — без условий; травмы. Условные прибавки — отдельно (cond).
+## {stat: {base, total, lines: [[источник, значение]], cond: [[источник, значение]], stage}}
+static func sheet(c: Content, s: RunState, card_id: String, pocket: Array) -> Dictionary:
+	var ch := s.character(card_id)
+	var d: Dictionary = c.characters.get(card_id, {})
+	var base_stats := c.stage_stats(card_id, str(ch.get("stage", "")))
+	var stage_name := c.stage_name(card_id, str(ch.get("stage", "")))
+	var out := {}
+	for st: String in ["power", "will", "cunning"]:
+		out[st] = {"base": int(base_stats.get(st, 0)), "total": int(base_stats.get(st, 0)), "lines": [], "cond": [], "stage": stage_name}
+	for st2: String in ch.get("perm", {}):
+		var v := int(ch["perm"][st2])
+		if v != 0 and out.has(st2):
+			out[st2]["total"] += v
+			out[st2]["lines"].append(["Навсегда (события)", v])
+	var sources: Array = []
+	for tr: Dictionary in d.get("traits", []):
+		sources.append({"name": "черта «%s»" % tr.get("name", ""), "bonuses": tr.get("bonuses", [])})
+	for aid: String in ch.get("abilities", []):
+		var a: Dictionary = c.abilities.get(aid, {})
+		sources.append({"name": "способность «%s»" % a.get("name", aid), "bonuses": a.get("bonuses", [])})
+	for card: String in pocket:
+		var e: Dictionary = c.enhancements.get(card, {})
+		sources.append({"name": "кармашек: %s" % e.get("name", card), "bonuses": e.get("bonuses", [])})
+	# рост тегов: «опытный» (в своих проверках) и развития
+	for tag: String in ch.get("tag_xp", {}):
+		var g: Dictionary = c.tag_growth.get(tag, {})
+		if GrowthRules.xp(s, card_id, tag) >= GrowthRules.VETERAN and not Array(g.get("check_tags", [])).is_empty():
+			sources.append({"name": "опытный: %s" % tag, "bonuses": [{"stat": g.get("stat", "cunning"), "value": 1, "tags": g["check_tags"]}]})
+	for ge: Dictionary in GrowthRules.effects(c, s, card_id):
+		sources.append({"name": "развитие «%s»" % ge.get("name", ""), "bonuses": ge.get("check", [])})
+	for src: Dictionary in sources:
+		for b: Dictionary in src["bonuses"]:
+			var st3 := str(b.get("stat", ""))
+			if not out.has(st3):
+				continue
+			var need: Array = b.get("tags", [])
+			if need.is_empty():
+				out[st3]["total"] += int(b["value"])
+				out[st3]["lines"].append([StatResolver._cap(str(src["name"])), int(b["value"])])
+			else:
+				var names: Array = []
+				for t: String in need:
+					names.append(str(c.tags.get(t, {}).get("name", t)).to_lower())
+				out[st3]["cond"].append(["%s — в событиях: %s" % [StatResolver._cap(str(src["name"])), ", ".join(names)], int(b["value"])])
+	for tid: String in ch.get("traumas", []):
+		var td: Dictionary = c.traumas.get(tid, {})
+		for st4: String in td.get("mods", {}):
+			if out.has(st4):
+				out[st4]["total"] += int(td["mods"][st4])
+				out[st4]["lines"].append(["Травма «%s»" % td.get("name", tid), int(td["mods"][st4])])
+	for te: Dictionary in s.temp_effects:
+		var st5 := str(te.get("stat", ""))
+		if out.has(st5):
+			out[st5]["cond"].append(["Временно: %s — до следующего события" % te.get("label", ""), int(te.get("value", 0))])
+	return out
+
+
+static func _cap(t: String) -> String:
+	return t.substr(0, 1).to_upper() + t.substr(1)
+
+
 static func _tags(event: Dictionary, option: Dictionary) -> Array:
 	var tags: Array = Array(event.get("tags", [])).duplicate()
 	for t: String in option.get("tags", []):

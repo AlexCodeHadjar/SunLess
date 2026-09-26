@@ -386,7 +386,7 @@ func _update_badges() -> void:
 		if not is_instance_valid(cv):
 			continue
 		var why := MissionFlow.busy_reason(c, s, cid)
-		var b := why if why != "" else "свободен"
+		var b := why   # свободного героя не подписываем — метка только у занятых («на миссии»)
 		if cv.badge != b:
 			cv.badge = b
 			cv.draggable = why == ""

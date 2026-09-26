@@ -92,6 +92,10 @@ func _run() -> void:
 	game.call("_open_mission", "MS02")
 	await _wait(0.8)
 	await _shot("m04_brief_ms02")
+	_window().call("_show_rumor_hint", "Холод")
+	await _wait(0.3)
+	await _shot("m04c_rumor_hint")
+	_window().call("_hide_rumor_hint")
 	_window().call("_launch")
 	# второй отряд одновременно: MS03 откроем заранее, туда — купленный герой
 	if hero != "":
@@ -293,6 +297,13 @@ func _run() -> void:
 	await _shot("m27_memory_after")
 	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is CombatScreen).map(func(n: Node) -> void: n.queue_free())
 	await _wait(0.4)
+	for card2: String in ["U11", "K08", "U12"]:
+		EffectApplier.add_card(ContentDB.data, sa, card2)
+	var ipk := CardInspector.open_for(get_tree().current_scene, "P01")
+	await _wait(0.7)
+	await _shot("m28_pocket")
+	ipk.call("_close")
+	await _wait(0.3)
 	# планшеты разных карт: текст и рисунки не должны налезать друг на друга
 	for id: String in ["P02", "P03", "U07", "U12", "K07", "A03", "T03", "M04", "M03", "SH28"]:
 		var insp := CardInspector.open_for(get_tree().current_scene, id)

@@ -774,13 +774,88 @@ func _rumors(m: Dictionary) -> Control:
 		var i := text.find("[")
 		var j := text.find("]")
 		if i >= 0 and j > i:
-			text = text.substr(0, i) + "[color=%s][u]%s[/u][/color]" % [col, text.substr(i + 1, j - i - 1)] + text.substr(j + 1)
+			text = text.substr(0, i) + "[url=%s][color=%s]%s[/color][/url]" % [tag, col, text.substr(i + 1, j - i - 1)] + text.substr(j + 1)
 		# журнал слухов (docs/16 §9): подтверждённое отмечено
 		if JournalRules.confirmed(GameState.state, str(m.get("id", "")), idx):
 			lines.append("[color=#6FA47B]✓[/color] [i]%s[/i] [color=#6FA47B][font_size=15]подтвердилось[/font_size][/color]" % text)
 		else:
 			lines.append("— [i]%s[/i]" % text)
-	return _rich("\n".join(lines), 19)
+	var rt := _rich("\n".join(lines), 19)
+	rt.meta_underlined = false
+	rt.mouse_filter = Control.MOUSE_FILTER_STOP
+	rt.meta_hover_started.connect(func(meta: Variant) -> void: _show_rumor_hint(str(meta)))
+	rt.meta_hover_ended.connect(func(_meta: Variant) -> void: _hide_rumor_hint())
+	return rt
+
+
+var _rumor_panel: PanelContainer
+
+
+## Подсказка к намёку в слухе: на какой тег он указывает, что тег значит и что с ним работает.
+func _show_rumor_hint(tag: String) -> void:
+	var c := _content()
+	var lines: Array[String] = []
+	if c.combat_tags.has(tag):
+		var d: Dictionary = c.combat_tags[tag]
+		var cat := str(d.get("category", ""))
+		lines.append("[color=#9A9CA6]Намёк на тег[/color]  [img=20x20]%s[/img] [b]%s[/b]  [color=#9A9CA6]%s[/color]" % [TagText.icon_path(cat), tag, TagText.CATEGORY_NAMES.get(cat, cat)])
+		lines.append(str(d.get("text", "")))
+		var helps: Array = []
+		var hurts: Array = []
+		for cid: String in c.conflicts:
+			var cf: Dictionary = c.conflicts[cid]
+			var loser := str(cf["a"]) if str(cf.get("loser", "b")) == "a" else str(cf["b"])
+			var winner := str(cf["b"]) if str(cf.get("loser", "b")) == "a" else str(cf["a"])
+			if loser == tag and not helps.has(winner):
+				helps.append(winner)
+			elif winner == tag and not hurts.has(loser):
+				hurts.append(loser)
+		if not helps.is_empty():
+			lines.append("[color=#6FA47B]Против него хороши:[/color] " + ", ".join(helps.slice(0, 6)))
+		if not hurts.is_empty():
+			lines.append("[color=#B65F63]Опасен для:[/color] " + ", ".join(hurts.slice(0, 6)))
+		var mem: Array = []
+		for id: String in c.enhancements.keys() + c.abilities.keys():
+			var m: Dictionary = c.enhancements.get(id, c.abilities.get(id, {})).get("memory", {})
+			var w: Dictionary = m.get("when", {})
+			if Array(w.get("enemy_any", [])).has(tag) or Array(w.get("env_any", [])).has(tag):
+				mem.append("%s («%s»)" % [c.card_name(id), m.get("name", "")])
+		if not mem.is_empty():
+			lines.append("[color=#E3C98E]Сработает навык:[/color] " + ", ".join(mem.slice(0, 4)))
+	else:
+		var tname := str(c.tags.get(tag, {}).get("name", tag))
+		lines.append("[color=#9A9CA6]Намёк на[/color] [b]%s[/b]" % tname)
+		lines.append("Этот тег проверяют в испытаниях миссии — пригодятся герои и карты, которые в нём сильны.")
+	if _rumor_panel == null:
+		_rumor_panel = PanelContainer.new()
+		_rumor_panel.top_level = true
+		_rumor_panel.z_index = 80
+		_rumor_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_rumor_panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.06, 0.06, 0.08, 0.97), Palette.GOLD.darkened(0.3), 1, 6, 14))
+		var l := RichTextLabel.new()
+		l.bbcode_enabled = true
+		l.fit_content = true
+		l.scroll_active = false
+		l.custom_minimum_size = Vector2(440, 0)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.add_theme_font_size_override("normal_font_size", 17)
+		l.add_theme_font_size_override("bold_font_size", 18)
+		_rumor_panel.add_child(l)
+		add_child(_rumor_panel)
+	(_rumor_panel.get_child(0) as RichTextLabel).text = "\n".join(lines)
+	_rumor_panel.visible = true
+	await get_tree().process_frame
+	if not is_instance_valid(_rumor_panel):
+		return
+	_rumor_panel.size = _rumor_panel.get_combined_minimum_size()
+	var at := get_global_mouse_position()
+	var vp := get_viewport_rect().size
+	_rumor_panel.global_position = Vector2(clampf(at.x + 16, 8, vp.x - _rumor_panel.size.x - 8), clampf(at.y + 18, 8, vp.y - _rumor_panel.size.y - 8))
+
+
+func _hide_rumor_hint() -> void:
+	if is_instance_valid(_rumor_panel):
+		_rumor_panel.visible = false
 
 
 func _reasons(links: Array) -> String:

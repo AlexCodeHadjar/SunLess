@@ -38,6 +38,7 @@ var _art_framed := false
 ## (отчёт, эффект срабатывания). Обложка меняется на art/cards/<ID>_panic|_uplift, иначе — живой облик поверх.
 var psy_override := ""
 static var _crisis_art := {}
+var _plate: Control   # плашка читаемости — отдельным слоем поверх живого облика (ауры)
 
 
 static func make(id: String, size_px: Vector2, can_drag: bool = true) -> CardView:
@@ -110,6 +111,18 @@ func _on_hover(on: bool) -> void:
 
 func _ready() -> void:
 	pivot_offset = size / 2
+	if _readable():
+		_plate = Control.new()
+		_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_plate.size = size
+		_plate.z_index = 2
+		_plate.draw.connect(func() -> void:
+			if _readable():
+				var k := size.x / SIZE_PANEL.x
+				_plate.position = Vector2(0, -_lift)
+				_draw_readable_plate_on(_plate, Rect2(Vector2.ZERO, size), _def(), k)
+				_plate_badge(_plate, Rect2(Vector2.ZERO, size), k))
+		add_child(_plate)
 	set_process(sway or kind == "character")   # герой может войти в кризис — облик меняется на лету
 	refresh_aura()
 
@@ -394,6 +407,8 @@ func _draw() -> void:
 		_draw_crisis(r, pst, scale_k)
 	draw_set_transform(Vector2.ZERO)
 	_draw_overlays(r, d, scale_k)
+	if _plate:
+		_plate.queue_redraw()
 	if pst != "":
 		_pill(Vector2(r.get_center().x, r.position.y + r.size.y * 0.60), "ПАНИКА" if pst == "panic" else "ПОДЪЁМ ДУХА", 12 * scale_k,
 			SquadLifeUI.PANIC_COLOR if pst == "panic" else SquadLifeUI.UPLIFT_COLOR, false, true)
@@ -579,13 +594,7 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 			else:
 				draw_rect(tr, Palette.TRAUMA)
 				draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
-		var psy := PsycheRules.psyche(s, card_id)
-		if (psy < PsycheRules.MAX or psy_state() != "") and s.is_alive(card_id) and TutorialRules.enabled(s, "panic"):
-			# психика: полоса у левого края — сколько осталось (100 → 0), цвет по порогам и кризису
-			var bar := Rect2(r.position + Vector2(4 * k, r.size.y * 0.22), Vector2(4 * k, r.size.y * 0.5))
-			draw_rect(bar, Color(0, 0, 0, 0.55))
-			var fill := bar.size.y * psy / float(PsycheRules.MAX)
-			draw_rect(Rect2(bar.position + Vector2(0, bar.size.y - fill), Vector2(bar.size.x, fill)), SquadLifeUI.hero_psyche_color(card_id))
+		# полосы психики на самой карте нет (решение владельца): психика — в планшете героя, подсказке и брифинге
 		var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
 		if dc > 0 and TraumaRules.counted(traumas) >= 2:
 			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "☠ %d%%" % dc, 11 * k, Palette.TRAUMA_BRIGHT, true)
@@ -595,17 +604,67 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 		if WearRules.wears(ContentDB.data, s, card_id):
 			var wv := WearRules.current(s, card_id)
 			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "⚒ %d%%" % wv, 11 * k, Palette.STAT_DOWN if wv >= 30 else Palette.TEXT_DIM, true)
-	if badge != "":
+	if badge != "" and not _readable():
 		_pill(Vector2(r.get_center().x, r.end.y - 10 * k), badge, 11 * k, Palette.REQ_MET, false, true)
 
 
+const READABLE_BELOW := 170.0   # уже этого — имя на рисунке мелкое: рисуем своё, чёткое
+
+
+## Маленькая карта с готовым рисунком: имя в рисунке не прочесть — показываем своё.
+func _readable() -> bool:
+	return (_tex != null or _crisis_texture(psy_state()) != null) and _art_framed and size.x < READABLE_BELOW and kind != ""
+
+
+## Чёткая плашка внизу маленькой карты: имя крупно (в две строки, если длинное), у героя — характеристики.
+func _draw_readable_plate_on(ci: CanvasItem, r: Rect2, d: Dictionary, k: float) -> void:
+	var top := r.position.y + r.size.y * (0.70 if kind == "character" else 0.74)
+	var plate := Rect2(r.position.x + 3 * k, top, r.size.x - 6 * k, r.end.y - top - 3 * k)
+	ci.draw_rect(plate, Color(0.035, 0.035, 0.045, 1.0))
+	ci.draw_line(plate.position, Vector2(plate.end.x, plate.position.y), _border_color(d).darkened(0.1), 1.2)
+	var nm := ContentDB.data.card_name(card_id).to_upper() if kind != "mission" else str(d.get("title", card_id)).to_upper()
+	var font := UITheme.font("caps")
+	var fs := int(clampf(r.size.x * 0.115, 10.0, 17.0))
+	var w := plate.size.x - 6 * k
+	while fs > 9 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > w * 1.9:
+		fs -= 1
+	var name_h := plate.size.y * (0.52 if kind == "character" else 1.0)
+	var lines := 1 if font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= w else 2
+	var y0 := plate.position.y + (name_h - fs * 1.1 * lines) / 2.0 + fs * 0.85
+	ci.draw_multiline_string(font, Vector2(plate.position.x + 3 * k, y0), nm, HORIZONTAL_ALIGNMENT_CENTER, w, fs, 2, Palette.TEXT)
+	if kind == "character" and GameState.state != null and GameState.state.characters.has(card_id):
+		var sheet := StatResolver.sheet(ContentDB.data, GameState.state, card_id, MissionFlow.pocket(GameState.state, card_id))
+		var sy := plate.position.y + name_h + (plate.size.y - name_h) * 0.5
+		var i := 0
+		for st: String in ["power", "will", "cunning"]:
+			var p: Dictionary = sheet[st]
+			var cx := plate.position.x + plate.size.x * (0.2 + 0.3 * i)
+			var em := UITheme.emblem(st)
+			var ic := clampf(r.size.x * 0.13, 11.0, 20.0)
+			if em:
+				ci.draw_texture_rect(em, Rect2(Vector2(cx - ic * 1.05, sy - ic / 2), Vector2(ic, ic)), false)
+			var delta := int(p["total"]) - int(p["base"])
+			var col := Palette.STAT_UP if delta > 0 else (Palette.STAT_DOWN if delta < 0 else Palette.TEXT)
+			var nfs := int(clampf(r.size.x * 0.13, 11.0, 19.0))
+			ci.draw_string(UITheme.font("title_bold"), Vector2(cx + 1, sy + nfs * 0.36), str(int(p["total"])), HORIZONTAL_ALIGNMENT_LEFT, -1, nfs, col)
+			i += 1
+
+
+## Метка поверх плашки читаемости (иначе её закроет плашка).
+func _plate_badge(ci: CanvasItem, r: Rect2, k: float) -> void:
+	if badge != "":
+		_pill(Vector2(r.get_center().x, r.end.y - 10 * k), badge, maxf(10.0, 11 * k), Palette.REQ_MET, false, true, ci)
+
+
 func _draw_framed_stats(r: Rect2, ch: Dictionary, k: float) -> void:
+	if _readable():
+		return   # у маленькой карты характеристики — на плашке читаемости
 	var content := ContentDB.data
-	var base := content.stage_stats(card_id, str(ch.get("stage", "")))
-	var perm: Dictionary = ch.get("perm", {})
+	# те же числа, что в планшете: база, навсегда, черты, способности, кармашек, развития, травмы
+	var sheet := StatResolver.sheet(content, GameState.state, card_id, MissionFlow.pocket(GameState.state, card_id)) if GameState.state else {}
 	var xs := {"power": 0.224, "will": 0.501, "cunning": 0.775}
 	for st: String in xs:
-		var v := int(base.get(st, 0)) + int(perm.get(st, 0))
+		var v := int(sheet[st]["total"]) if sheet.has(st) else int(content.stage_stats(card_id, str(ch.get("stage", ""))).get(st, 0))
 		var c := Vector2(r.position.x + r.size.x * xs[st], r.position.y + r.size.y * 0.935)
 		var rad := 9.0 * k
 		var em := UITheme.emblem(st)
@@ -624,11 +683,10 @@ func _draw_framed_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 
 func _draw_plain_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 	var content := ContentDB.data
-	var base := content.stage_stats(card_id, str(ch.get("stage", "")))
-	var perm: Dictionary = ch.get("perm", {})
+	var sheet := StatResolver.sheet(content, GameState.state, card_id, MissionFlow.pocket(GameState.state, card_id)) if GameState.state else {}
 	var i := 0
 	for st: String in ["power", "will", "cunning"]:
-		var v := int(base.get(st, 0)) + int(perm.get(st, 0))
+		var v := int(sheet[st]["total"]) if sheet.has(st) else int(content.stage_stats(card_id, str(ch.get("stage", ""))).get(st, 0))
 		var c := Vector2(r.position.x + r.size.x * (0.25 + 0.25 * i), r.position.y + r.size.y * 0.63)
 		var rad := 10.0 * k
 		draw_circle(c, rad, Color(0.05, 0.05, 0.07, 0.9))
@@ -642,7 +700,9 @@ func _draw_plain_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 		i += 1
 
 
-func _pill(anchor: Vector2, text: String, fs: float, color: Color, right_align: bool, centered: bool = false) -> void:
+func _pill(anchor: Vector2, text: String, fs: float, color: Color, right_align: bool, centered: bool = false, ci: CanvasItem = null) -> void:
+	if ci == null:
+		ci = self
 	var f := UITheme.font("sans_bold")
 	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(fs)).x + 8
 	var pos := anchor
@@ -651,9 +711,9 @@ func _pill(anchor: Vector2, text: String, fs: float, color: Color, right_align: 
 	elif centered:
 		pos.x -= w / 2
 	var rect := Rect2(pos - Vector2(0, fs * 0.2), Vector2(w, fs + 6))
-	draw_rect(rect, Color(0.04, 0.04, 0.06, 0.9))
-	draw_rect(rect, color.darkened(0.2), false, 1.0)
-	draw_string(f, Vector2(rect.position.x + 4, rect.position.y + fs + 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(fs), color)
+	ci.draw_rect(rect, Color(0.04, 0.04, 0.06, 0.9))
+	ci.draw_rect(rect, color.darkened(0.2), false, 1.0)
+	ci.draw_string(f, Vector2(rect.position.x + 4, rect.position.y + fs + 1), text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(fs), color)
 
 
 func _text(f: Font, pos: Vector2, text: String, fs: float, color: Color, width: float) -> void:

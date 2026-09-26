@@ -235,7 +235,7 @@ func _build_info() -> void:
 	if is_hero:
 		y = _build_stats(y)
 	y = _build_tags(y)
-	var pocket_h := 250.0 if is_hero and GameState.state.is_alive(card_id) else 0.0
+	var pocket_h := 300.0 if is_hero and GameState.state.is_alive(card_id) else 0.0
 	_add_text(_info_text(), y + 6.0, _content.size.y - y - 6.0 - pocket_h)
 	if pocket_h > 0.0:
 		_build_pocket(_content.size.y - pocket_h + 8.0)
@@ -332,61 +332,7 @@ func _life_box(row: HBoxContainer, m: String, big: String, small: String, col: C
 
 ## Разбор характеристик персонажа вне события: база стадии, навсегда, кармашек, травмы; условные — отдельно.
 func _stat_parts() -> Dictionary:
-	var c := ContentDB.data
-	var s := GameState.state
-	var ch := s.character(card_id)
-	var d: Dictionary = c.characters.get(card_id, {})
-	var base_stats := c.stage_stats(card_id, str(ch.get("stage", "")))
-	var stage_name := c.stage_name(card_id, str(ch.get("stage", "")))
-	var out := {}
-	for st: String in ["power", "will", "cunning"]:
-		out[st] = {"base": int(base_stats.get(st, 0)), "total": int(base_stats.get(st, 0)), "lines": [], "cond": [], "stage": stage_name}
-	for st2: String in ch.get("perm", {}):
-		var v := int(ch["perm"][st2])
-		if v != 0 and out.has(st2):
-			out[st2]["total"] += v
-			out[st2]["lines"].append(["Навсегда (события)", v])
-	var sources: Array = []
-	for tr: Dictionary in d.get("traits", []):
-		sources.append({"name": "черта «%s»" % tr.get("name", ""), "bonuses": tr.get("bonuses", [])})
-	for aid: String in ch.get("abilities", []):
-		var a: Dictionary = c.abilities.get(aid, {})
-		sources.append({"name": "способность «%s»" % a.get("name", aid), "bonuses": a.get("bonuses", [])})
-	for card: String in _pocket():
-		var e: Dictionary = c.enhancements.get(card, {})
-		sources.append({"name": "кармашек: %s" % e.get("name", card), "bonuses": e.get("bonuses", [])})
-	# рост тегов: «опытный» (в своих проверках) и развития
-	for tag: String in ch.get("tag_xp", {}):
-		var g: Dictionary = c.tag_growth.get(tag, {})
-		if GrowthRules.xp(s, card_id, tag) >= GrowthRules.VETERAN and not Array(g.get("check_tags", [])).is_empty():
-			sources.append({"name": "опытный: %s" % tag, "bonuses": [{"stat": g.get("stat", "cunning"), "value": 1, "tags": g["check_tags"]}]})
-	for ge: Dictionary in GrowthRules.effects(c, s, card_id):
-		sources.append({"name": "развитие «%s»" % ge.get("name", ""), "bonuses": ge.get("check", [])})
-	for src: Dictionary in sources:
-		for b: Dictionary in src["bonuses"]:
-			var st3 := str(b.get("stat", ""))
-			if not out.has(st3):
-				continue
-			var need: Array = b.get("tags", [])
-			if need.is_empty():
-				out[st3]["total"] += int(b["value"])
-				out[st3]["lines"].append([_cap(str(src["name"])), int(b["value"])])
-			else:
-				var names: Array = []
-				for t: String in need:
-					names.append(str(c.tags.get(t, {}).get("name", t)).to_lower())
-				out[st3]["cond"].append(["%s — в событиях: %s" % [_cap(str(src["name"])), ", ".join(names)], int(b["value"])])
-	for tid: String in ch.get("traumas", []):
-		var td: Dictionary = c.traumas.get(tid, {})
-		for st4: String in td.get("mods", {}):
-			if out.has(st4):
-				out[st4]["total"] += int(td["mods"][st4])
-				out[st4]["lines"].append(["Травма «%s»" % td.get("name", tid), int(td["mods"][st4])])
-	for te: Dictionary in s.temp_effects:
-		var st5 := str(te.get("stat", ""))
-		if out.has(st5):
-			out[st5]["cond"].append(["Временно: %s — до следующего события" % te.get("label", ""), int(te.get("value", 0))])
-	return out
+	return StatResolver.sheet(ContentDB.data, GameState.state, card_id, _pocket())
 
 
 static func _cap(t: String) -> String:
@@ -559,7 +505,7 @@ func _build_pocket(y: float) -> void:
 	row.add_theme_constant_override("separation", 12)
 	_content.add_child(row)
 	var pocket := _pocket()
-	var slot := Vector2(104, 178)
+	var slot := Vector2(128, 219)
 	for i in POCKET_MAX:
 		if i < pocket.size():
 			var cv := CardView.make(pocket[i], slot, false)
@@ -578,14 +524,14 @@ func _build_pocket(y: float) -> void:
 	# доступные усиления
 	var sep := ColorRect.new()
 	sep.color = Palette.LINE
-	sep.custom_minimum_size = Vector2(1, 170)
+	sep.custom_minimum_size = Vector2(1, 222)
 	row.add_child(sep)
 	var avail_col := VBoxContainer.new()
 	avail_col.add_theme_constant_override("separation", 4)
 	row.add_child(avail_col)
 	avail_col.add_child(UITheme.label("Можно положить:", "sans", 16, Palette.TEXT_DIM))
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(700, 156)
+	sc.custom_minimum_size = Vector2(640, 228)
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	avail_col.add_child(sc)
 	var avail := HBoxContainer.new()
@@ -596,7 +542,7 @@ func _build_pocket(y: float) -> void:
 		if c.card_kind(card) != "enhancement" or pocket.has(card):
 			continue
 		any = true
-		var small := CardView.make(card, Vector2(86, 147), false)
+		var small := CardView.make(card, Vector2(128, 219), false)
 		small.tooltip_text = ""
 		var owner := _pocket_owner(card)
 		if owner != "":
