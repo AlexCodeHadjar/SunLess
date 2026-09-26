@@ -147,6 +147,8 @@ func _build_left() -> void:
 		b.add_theme_color_override("font_color", Palette.TEXT if item[1] == "map" else Palette.TEXT_DIM)
 		b.pressed.connect(_on_nav.bind(item[1]))
 		nav.add_child(b)
+		HintTargets.put("nav_" + str(item[1]), [b])
+	HintTargets.put("nav", [nav])
 
 
 func _build_top() -> void:
@@ -224,6 +226,66 @@ func _build_toast() -> void:
 	_toast.z_index = 50
 	add_child(_toast)
 	add_child(HintPopup.new())
+	HintTargets.resolver = _hint_target
+
+
+## Цели подсказок, которые вычисляются на лету (HintTargets.resolver): метки миссий, карты героев, луна.
+func _hint_target(name: String) -> Rect2:
+	var c := ContentDB.data
+	var s := GameState.state
+	if s == null:
+		return Rect2()
+	# цель на карте под открытым окном не подсвечиваем — подсказка подождёт у края
+	for n in get_children():
+		if (n is MissionWindow or n is ShopWindow or n is CampWindow or n is JournalWindow or n is CardInspector or n is CombatScreen) 				and (n as CanvasItem).visible:
+			return Rect2()
+	if name == "sky_moon":
+		var br := _backdrop.get_global_rect()
+		return Rect2(br.position + br.size * MapBackdrop.MOON_AT - Vector2(46, 46), Vector2(92, 92))
+	if name.begins_with("marker_"):
+		for mid: String in _markers:
+			var m: Dictionary = c.missions.get(mid, {})
+			var ok := false
+			match name:
+				"marker_any":
+					ok = true
+				"marker_squad":
+					ok = s.squads.any(func(q: Dictionary) -> bool: return q["mission"] == mid)
+				"marker_expires":
+					ok = m.has("expires") and str(m.get("type", "")) != "onslaught"
+				"marker_exclusive":
+					ok = not Array(m.get("exclusive", [])).is_empty()
+				"marker_boss":
+					ok = not Dictionary(m.get("boss", {})).is_empty()
+				"marker_onslaught":
+					ok = str(m.get("type", "")) == "onslaught"
+			var mk: Control = _markers[mid]
+			if ok and is_instance_valid(mk) and mk.is_visible_in_tree():
+				return mk.get_global_rect()
+		return Rect2()
+	if name.begins_with("hero_"):
+		for cv in _heroes_row.get_children():
+			if not (cv is CardView):
+				continue
+			var cid := str((cv as CardView).card_id)
+			if not s.characters.has(cid):
+				continue
+			var ch := s.character(cid)
+			var ok2 := false
+			match name:
+				"hero_trauma":
+					ok2 = not Array(ch.get("traumas", [])).is_empty()
+				"hero_rest":
+					ok2 = float(s.rest_until.get(cid, 0.0)) > s.clock
+				"hero_panic":
+					ok2 = PanicRules.value(s, cid) >= 30
+				"hero_growth":
+					ok2 = Dictionary(ch.get("tag_xp", {})).keys().any(func(t: String) -> bool: return GrowthRules.xp(s, cid, t) >= GrowthRules.VETERAN)
+				"hero_trust":
+					ok2 = s.trust.keys().any(func(k: String) -> bool: return k.split("|").has(cid))
+			if ok2:
+				return (cv as Control).get_global_rect()
+	return Rect2()
 
 
 # --- обновление ---------------------------------------------------------------

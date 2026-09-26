@@ -56,6 +56,7 @@ func _init_card() -> void:
 	var art: String = def.get("art", "")
 	var auto := false
 	if art == "" or not ResourceLoader.exists(art):
+		art = ""
 		# готовая карта из дизайна (art/cards/<ID>.webp) — с рамкой и названием в рисунке;
 		# миссия без своей — берёт карту события, из которого выросла
 		for base: String in [card_id, str(def.get("from_event", ""))]:

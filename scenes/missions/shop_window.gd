@@ -84,6 +84,7 @@ func _ready() -> void:
 				_refresh())
 			bar.add_child(tb)
 			_tabs.append(tb)
+			HintTargets.add("shop_tabs", tb)
 	_center = CenterContainer.new()
 	_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_child(_center)

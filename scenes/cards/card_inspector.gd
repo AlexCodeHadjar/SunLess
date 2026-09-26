@@ -14,6 +14,7 @@ const TYPE_TEXT := {
 	"enhancement": "[b]Усиление[/b]\nПредмет, Воспоминание или знание. Лежит в кармашке героя (до трёх) и добавляет характеристики и теги. Предметы изнашиваются и могут сломаться.",
 	"trauma": "[b]Травма[/b]\nПоследствие провала. Снижает характеристики персонажа, пока её не вылечат. С третьей травмы каждая новая может убить.",
 	"enemy": "[b]Противник[/b]\nКошмарное существо или враг. Сила в бою зависит от ранга, класса и тегов; раны сохраняются между встречами.",
+	"ability": "[b]Способность[/b]\nВрождённый дар или приобретённое умение героя. Работает само — не занимает кармашек и не изнашивается.",
 	"mission": "[b]Миссия[/b]
 Задание на карте главы: прочтите описание и слухи, соберите отряд и отправьте его.",
 }
@@ -624,6 +625,7 @@ func _def() -> Dictionary:
 		"enhancement": return c.enhancements.get(card_id, {})
 		"trauma": return c.traumas.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
+		"ability": return c.abilities.get(card_id, {})
 	return c.missions.get(card_id, {})
 
 
@@ -642,6 +644,13 @@ func _type_line(kind: String) -> String:
 			return "Усиление · " + {"knowledge": "Знание", "memory": "Воспоминание", "improvised": "Подручное"}.get(d.get("origin", ""), "предмет")
 		"trauma":
 			return "Травма"
+		"ability":
+			var owners: Array = []
+			if s:
+				for cid: String in s.characters:
+					if Array(s.characters[cid].get("abilities", [])).has(card_id):
+						owners.append(ContentDB.data.card_name(cid))
+			return "Способность" + (" · " + ", ".join(owners) if not owners.is_empty() else "")
 		"enemy":
 			return "Противник · %s · %s" % [CardView.RANKS[clampi(int(d.get("rank", 0)), 0, 6)], CardView.CLASSES[clampi(int(d.get("class", 1)), 1, 7)]]
 	return "Миссия"
@@ -733,6 +742,19 @@ func _info_text() -> String:
 		"enemy":
 			out.append("%s · %s" % [{"normal": "обычный", "elite": "элита", "boss": "босс"}.get(d.get("kind", "normal"), ""), _type_line(kind)])
 			out.append(_h("Добыча") + "✧ %d осколков душ" % int(d.get("shards", 0)))
+		"ability":
+			out.append(_h("Эффект") + str(d.get("text", "")))
+		_:
+			# миссия: описание, угроза, отряд, слухи
+			if not d.is_empty():
+				out.append(str(d.get("briefing", "")))
+				out.append(_h("Угроза и отряд") + "Угроза %d из 5 · в пути ~%d с · отряд %d–%d" % [int(d.get("threat", 1)), int(d.get("duration", 8)),
+					int(d.get("squad", {}).get("min", 1)), int(d.get("squad", {}).get("max", 1))])
+				var rs: Array = []
+				for r: Dictionary in d.get("rumors", []):
+					rs.append("— [i]%s[/i]" % str(r.get("text", "")).replace("[", "").replace("]", ""))
+				if not rs.is_empty():
+					out.append(_h("Что говорят") + "\n".join(rs))
 	return "\n\n".join(out)
 
 

@@ -248,4 +248,13 @@ func _run() -> void:
 	get_tree().current_scene.call("_open_mission", "SH27")
 	await _wait(0.8)
 	await _shot("m21_brief_sh27")
+	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
+	await _wait(0.4)
+	# планшеты разных карт: текст и рисунки не должны налезать друг на друга
+	for id: String in ["P02", "P03", "U07", "U12", "K07", "A03", "T03", "M04", "M03", "SH28"]:
+		var insp := CardInspector.open_for(get_tree().current_scene, id)
+		await _wait(0.6)
+		await _shot("m30_inspect_" + id)
+		insp.call("_close")
+		await _wait(0.2)
 	get_tree().quit()

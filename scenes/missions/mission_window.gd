@@ -145,6 +145,7 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	_slots.add_theme_constant_override("separation", 14)
 	_body.add_child(_slots)
 	_forecast_box = VBoxContainer.new()
+	HintTargets.put("brief_forecast", [_forecast_box])
 	_forecast_box.add_theme_constant_override("separation", 4)
 	_forecast_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_footer.add_child(_forecast_box)
@@ -277,7 +278,9 @@ func _refresh_forecast() -> void:
 		_forecast_box.add_child(_rich(why, 17))
 	var life := SquadLifeUI.squad_text(picked)
 	if life != "":
-		_forecast_box.add_child(_rich(life, 17))
+		var lr := _rich(life, 17)
+		_forecast_box.add_child(lr)
+		HintTargets.put("brief_life", [lr])
 	if not BondRules.active(_content(), GameState.state, picked).is_empty():
 		GameState.tutorial("bond")
 
@@ -334,8 +337,14 @@ func show_arrival(sid: int) -> void:
 	col.add_child(_caption("Отряд"))
 	col.add_child(team)
 	_body.add_child(_caption("Что делает отряд"))
+	HintTargets.put("arrival_actions", [])
+	HintTargets.put("action_cost", [])
 	for entry: Dictionary in MissionFlow.actions_for(c, s, mission_id, sq["heroes"]):
-		_body.add_child(_action_button(entry, sq))
+		var ab := _action_button(entry, sq)
+		_body.add_child(ab)
+		HintTargets.add("arrival_actions", ab)
+		if Dictionary(entry["action"]).has("cost"):
+			HintTargets.add("action_cost", ab)
 
 
 func _action_button(entry: Dictionary, sq: Dictionary) -> Control:
@@ -423,8 +432,11 @@ func show_fork(sid: int) -> void:
 		team.add_child(CardView.make(cid, Vector2(84, 144), false))
 	_body.add_child(team)
 	_body.add_child(_caption("Что делать дальше"))
+	HintTargets.put("fork_options", [])
 	for opt: Dictionary in fork.get("options", []):
-		_body.add_child(_fork_button(opt, sq, run))
+		var fb := _fork_button(opt, sq, run)
+		_body.add_child(fb)
+		HintTargets.add("fork_options", fb)
 
 
 func _fork_button(opt: Dictionary, sq: Dictionary, run: Dictionary) -> Control:
@@ -544,12 +556,19 @@ func show_report(rep: Dictionary) -> void:
 		for w: Dictionary in why:
 			wv.add_child(UITheme.label(("▲ " if w["good"] else "▼ ") + str(w["text"]), "sans", 18, Palette.STAT_UP if w["good"] else Palette.STAT_DOWN))
 		_body.add_child(wp)
+		HintTargets.put("report_why", [wp])
 	_body.add_child(_caption("Итог"))
+	# полученные карты (и травмы) — самими картами, а не строками
+	var got := _reward_cards(rep["entries"])
+	if got != null:
+		_body.add_child(got)
 	var res := VBoxContainer.new()
 	res.add_theme_constant_override("separation", 4)
 	_body.add_child(res)
 	for e: Dictionary in rep["entries"]:
 		var kind := str(e.get("kind", "info"))
+		if _is_card_entry(e):
+			continue
 		var col: Color = {"card": Palette.STAT_UP, "trauma": Palette.TRAUMA_BRIGHT, "death": Palette.TRAUMA_BRIGHT,
 			"mission": Color("#E3C98E"), "story": Color("#E3C98E"), "resource": Palette.COINS, "broken": Palette.STAT_DOWN}.get(kind, Palette.SILVER)
 		if kind == "trust":
@@ -575,6 +594,38 @@ func show_report(rep: Dictionary) -> void:
 	ok.add_theme_font_size_override("font_size", 28)
 	ok.pressed.connect(close)
 	_footer.add_child(ok)
+
+
+## Запись отчёта, которую показываем картой: получена карта, способность или травма.
+func _is_card_entry(e: Dictionary) -> bool:
+	var card := str(e.get("card", ""))
+	return str(e.get("kind", "")) in ["card", "ability", "trauma"] and card != "" and _content().card_kind(card) != ""
+
+
+## Ряд карт-наград: карта, под ней подпись (кому досталась травма); правый щелчок — планшет.
+func _reward_cards(entries: Array) -> Control:
+	var row := HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 18)
+	row.add_theme_constant_override("v_separation", 10)
+	for e: Dictionary in entries:
+		if not _is_card_entry(e):
+			continue
+		var kind := str(e["kind"])
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 4)
+		var cv := CardView.make(str(e["card"]), Vector2(118, 202), false)
+		cv.highlight = kind != "trauma"
+		cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
+		cv.clicked.connect(func(id: String) -> void: CardInspector.open_for(self, id))
+		v.add_child(cv)
+		var cap := "получено" if kind == "card" else ("способность" if kind == "ability" else str(e.get("text", "")).get_slice(":", 0))
+		var l := UITheme.label(cap, "sans", 15, Palette.TRAUMA_BRIGHT if kind == "trauma" else Palette.STAT_UP)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.custom_minimum_size.x = 118
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(l)
+		row.add_child(v)
+	return row if row.get_child_count() > 0 else null
 
 
 func _stage_card(st: Dictionary, rep: Dictionary, combat_index: int) -> Control:
