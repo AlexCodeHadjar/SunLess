@@ -30,6 +30,7 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 	for eid: String in enhancement_ids:
 		var e: Dictionary = content.enhancements.get(eid, {})
 		_apply_bonuses(parts, str(e.get("name", eid)), e.get("bonuses", []), tags)
+		parts.append_array(ServiceRules.check_parts(content, state, eid, tags))
 
 	var temp_used: Array = []
 	for i in state.temp_effects.size():

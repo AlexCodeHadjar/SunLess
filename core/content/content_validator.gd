@@ -145,6 +145,9 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 static func _validate_shop(c: Content, sid: String, errors: Array[String]) -> void:
 	var sh: Dictionary = c.shops[sid]
 	var w := "Магазин %s" % sid
+	for sv: String in sh.get("services", []):
+		if not ServiceRules.NAMES.has(sv):
+			errors.append("%s: неизвестная услуга %s" % [w, sv])
 	if str(sh.get("name", "")) == "":
 		errors.append("%s: нет названия" % w)
 	if Array(sh.get("pos", [])).size() != 2:

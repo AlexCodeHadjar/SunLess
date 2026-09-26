@@ -42,6 +42,10 @@
    {
     "card": "U14"
    }
+  ],
+  "services": [
+   "heal",
+   "unwear"
   ]
  },
  {
@@ -90,6 +94,11 @@
    {
     "card": "U01"
    }
+  ],
+  "services": [
+   "heal",
+   "sharpen",
+   "unwear"
   ]
  }
 ]

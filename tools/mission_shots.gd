@@ -77,6 +77,13 @@ func _run() -> void:
 		_shop().call("_buy", hero)
 		await _wait(0.8)
 		await _shot("m03b_shop_bought")
+	# услуги торговца (Ф10): травма у Санни — для снимка, потом убираем
+	GameState.state.character("P01")["traumas"] = ["T03", "T01"]
+	_shop().set("_tab", "services")
+	_shop().call("_refresh")
+	await _wait(0.6)
+	await _shot("m03c_services")
+	GameState.state.character("P01")["traumas"] = []
 	_shop().close()
 	await _wait(0.6)
 	game.call("_open_mission", "MS02")
@@ -142,6 +149,18 @@ func _run() -> void:
 	await _wait(0.4)
 	await _shot("m11c_growth")
 	ins.call("_close")
+	await _wait(0.3)
+	# лагерь (Ф10): Санни на койке с лёгкой травмой
+	gs.character("P01")["traumas"] = ["T02"]
+	GameState.camp_put("P01")
+	game.call("_on_nav", "camp")
+	await _wait(0.8)
+	await _shot("m11d_camp")
+	for n in game.get_children():
+		if n is CampWindow:
+			n.close()
+	GameState.camp_take("P01")
+	gs.character("P01")["traumas"] = []
 	await _wait(0.3)
 	var rep: Dictionary = _window().report
 	if not Array(rep.get("combats", [])).is_empty():

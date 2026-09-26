@@ -232,6 +232,8 @@ static func launch(content: Content, state: RunState, mission_id: String, heroes
 		"launched_at": state.clock, "arrive_at": state.clock + float(m.get("duration", 8)), "phase": "travel",
 	}
 	state.next_squad += 1
+	for cid: String in heroes_ids:
+		CampRules.take(state, cid)
 	state.squads.append(sq)
 	state.missions[mission_id]["status"] = "active"
 	return {"ok": true, "error": "", "squad": sq}
@@ -256,6 +258,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
 	PanicRules.decay(state, dt, content)
+	out.append_array(CampRules.tick(content, state, dt))
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]

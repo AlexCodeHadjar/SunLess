@@ -134,7 +134,7 @@ func _build_left() -> void:
 	nav.position = Vector2(22, 150)
 	nav.add_theme_constant_override("separation", 6)
 	col.add_child(nav)
-	for item: Array in [["✦  КАРТА", "map"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
+	for item: Array in [["✦  КАРТА", "map"], ["✚  ЛАГЕРЬ", "camp"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
 		var b := Button.new()
 		b.text = item[0]
 		b.flat = true
@@ -504,6 +504,11 @@ func _watch_combat(setup: Dictionary) -> void:
 
 func _on_nav(what: String) -> void:
 	match what:
+		"camp":
+			var cw := CampWindow.new()
+			add_child(cw)
+			cw.closed.connect(_refresh)
+			move_child(_toast, get_child_count() - 1)
 		"settings":
 			_open_settings()
 		"menu":

@@ -151,6 +151,34 @@ func shop_buy(shop_id: String, card: String) -> String:
 	return ""
 
 
+## Услуга торговца (лечение, заточка, починка). "" — успех.
+func shop_service(shop_id: String, kind: String, target: String, extra: String = "") -> String:
+	var err := ServiceRules.perform(content(), state, shop_id, kind, target, extra)
+	if err != "":
+		return err
+	AudioManager.play("place", -4.0)
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return ""
+
+
+## Лагерь: уложить героя на койку / поднять. "" — успех.
+func camp_put(cid: String) -> String:
+	var err := CampRules.put(content(), state, cid)
+	if err == "":
+		AudioManager.play("place", -4.0)
+		SaveService.save_state(state)
+		EventBus.state_changed.emit()
+	return err
+
+
+func camp_take(cid: String) -> void:
+	CampRules.take(state, cid)
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+
+
 func shop_seen(shop_id: String) -> void:
 	ShopRules.mark_seen(content(), state, shop_id)
 	SaveService.save_state(state)

@@ -43,6 +43,10 @@ var shops: Dictionary = {}
 ## "a|b" (по алфавиту) -> доверие −5…+5 и причина последнего изменения (TrustRules)
 var trust: Dictionary = {}
 var trust_notes: Dictionary = {}
+## card -> глава, в которой усиление заточено у торговца (ServiceRules)
+var sharpened: Dictionary = {}
+## лагерь: {beds: [cid], heal: {cid: секунд}} (CampRules)
+var camp: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -76,6 +80,8 @@ func to_dict() -> Dictionary:
 		"shops": shops.duplicate(true),
 		"trust": trust.duplicate(true),
 		"trust_notes": trust_notes.duplicate(true),
+		"sharpened": sharpened.duplicate(true),
+		"camp": camp.duplicate(true),
 	}
 
 
@@ -122,6 +128,8 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.loc_timers = Dictionary(d.get("loc_timers", {})).duplicate(true)
 	s.trust = _ints(d.get("trust", {}))
 	s.trust_notes = Dictionary(d.get("trust_notes", {})).duplicate(true)
+	s.sharpened = Dictionary(d.get("sharpened", {})).duplicate(true)
+	s.camp = Dictionary(d.get("camp", {})).duplicate(true)
 	s.shops = Dictionary(d.get("shops", {})).duplicate(true)
 	for sid: String in s.shops:
 		s.shops[sid]["gen"] = int(s.shops[sid].get("gen", 0))
