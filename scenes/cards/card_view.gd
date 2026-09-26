@@ -674,10 +674,11 @@ func _draw_framed_stats(r: Rect2, ch: Dictionary, k: float) -> void:
 		if em:
 			# серебряная эмблема характеристики, число — в тёмном кружке справа снизу
 			draw_texture_rect(em, Rect2(c - Vector2(rad, rad) * 1.25, Vector2(rad, rad) * 2.5), false)
-			var nc := c + Vector2(rad * 0.95, rad * 0.55)
-			draw_circle(nc, rad * 0.72, Color(0.04, 0.04, 0.06, 0.95))
-			draw_arc(nc, rad * 0.72, 0, TAU, 16, Palette.SILVER.darkened(0.2), 1.0)
-			_text(UITheme.font("title_bold"), Vector2(nc.x - rad, nc.y + 4 * k), str(v), 11 * k, Palette.TEXT, rad * 2)
+			var nc := c + Vector2(rad * 1.0, rad * 0.5)
+			draw_circle(nc, rad * 0.9, Color(0.04, 0.04, 0.06, 0.97))
+			draw_arc(nc, rad * 0.9, 0, TAU, 20, Palette.SILVER.darkened(0.2), 1.0)
+			# ровные цифры (не «старинные» заголовочного шрифта) — читаются на любой величине карты
+			_text(UITheme.font("sans_bold"), Vector2(nc.x - rad, nc.y + 4.6 * k), str(v), 13 * k, Palette.TEXT, rad * 2)
 			continue
 		draw_circle(c, rad, Color(0.05, 0.05, 0.07, 0.92))
 		draw_arc(c, rad, 0, TAU, 20, Palette.SILVER.darkened(0.2), 1.0)

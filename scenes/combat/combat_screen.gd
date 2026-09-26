@@ -8,19 +8,19 @@ signal closed
 
 enum Phase { PREP, SELECT, RESULT, DONE }
 
-const BOARD := Rect2(40, 60, 1840, 744)
+const BOARD := Rect2(40, 60, 1840, 880)   # приёмов нет — поле почти до низа экрана
 # вертикальная раскладка поля (координаты внутри BOARD)
 const MID_X := 920.0
 const ENEMY_Y := 16.0
-const FIELD_Y := 306.0
-const SCALE_Y := 338.0
-const HERO_Y := 442.0
-const SIDE_Y := 470.0
-const ENEMY_SIZE := Vector2(164, 282)
-const ENEMY_COMPACT := Vector2(120, 206)
-const HERO_SIZE := Vector2(170, 292)
-const SIDE_SIZE := Vector2(136, 234)
-const SIDE_COMPACT := Vector2(112, 192)
+const FIELD_Y := 352.0
+const SCALE_Y := 384.0
+const HERO_Y := 492.0
+const SIDE_Y := 524.0
+const ENEMY_SIZE := Vector2(186, 320)
+const ENEMY_COMPACT := Vector2(136, 234)
+const HERO_SIZE := Vector2(200, 344)
+const SIDE_SIZE := Vector2(156, 268)
+const SIDE_COMPACT := Vector2(126, 216)
 const TAG_COL := 200.0      # ширина столбца тегов справа от карты героя/врага
 const SIDE_COL := 158.0     # то же для союзников и усилений
 const STAGES := ["base", "tags", "synergy", "conflict", "field", "round_no", "state", "memory", "intent", "stat"]
@@ -269,26 +269,26 @@ func _ready() -> void:
 
 	_hand_box = HBoxContainer.new()
 	_hand_box.add_theme_constant_override("separation", 22)
-	_hand_box.position = Vector2(40, 818)
+	_hand_box.position = Vector2(40, 948)
 	add_child(_hand_box)
 	_ledger_btn = Button.new()
 	_ledger_btn.text = "ЛЕТОПИСЬ СИЛЫ"
-	_ledger_btn.position = Vector2(1060, 850)
-	_ledger_btn.custom_minimum_size = Vector2(270, 54)
+	_ledger_btn.position = Vector2(1150, 972)
+	_ledger_btn.custom_minimum_size = Vector2(220, 54)
 	_ledger_btn.add_theme_font_size_override("font_size", 21)
 	_ledger_btn.tooltip_text = "Пошаговый расчёт обеих сторон"
 	_ledger_btn.pressed.connect(_toggle_ledger)
 	add_child(_ledger_btn)
 	_action_btn = Button.new()
-	_action_btn.position = Vector2(1400, 856)
-	_action_btn.custom_minimum_size = Vector2(440, 110)
+	_action_btn.position = Vector2(1400, 950)
+	_action_btn.custom_minimum_size = Vector2(440, 100)
 	_action_btn.add_theme_font_override("font", UITheme.font("caps"))
 	_action_btn.add_theme_font_size_override("font_size", 30)
 	_action_btn.pressed.connect(_on_action)
 	add_child(_action_btn)
 
 	_ledger_panel = PanelContainer.new()
-	_ledger_panel.position = Vector2(960, 290)
+	_ledger_panel.position = Vector2(960, 420)
 	_ledger_panel.custom_minimum_size = Vector2(900, 500)
 	_ledger_panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.05, 0.05, 0.07, 0.97), Palette.LINE, 1, 4, 14))
 	_ledger_panel.z_index = 30
@@ -302,7 +302,7 @@ func _ready() -> void:
 	add_child(_ledger_panel)
 
 	_banner = UITheme.label("", "title_bold", 58, Palette.TEXT)
-	_banner.position = Vector2(0, 270)
+	_banner.position = Vector2(0, 330)
 	_banner.custom_minimum_size = Vector2(1920, 0)
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.add_theme_constant_override("outline_size", 10)
@@ -389,10 +389,10 @@ func _build_board() -> void:
 	# невидимые «стёкла» — наклонные плоскости в средней полосе, от них отражаются лучи
 	var o := BOARD.position
 	_glass = [
-		[o + Vector2(MID_X - 640, 312), o + Vector2(MID_X - 250, 436)],
-		[o + Vector2(MID_X - 160, 300), o + Vector2(MID_X + 100, 440)],
-		[o + Vector2(MID_X + 180, 436), o + Vector2(MID_X + 600, 312)],
-		[o + Vector2(MID_X - 440, 440), o + Vector2(MID_X + 20, 330)],
+		[o + Vector2(MID_X - 640, 358), o + Vector2(MID_X - 250, 482)],
+		[o + Vector2(MID_X - 160, 346), o + Vector2(MID_X + 100, 486)],
+		[o + Vector2(MID_X + 180, 482), o + Vector2(MID_X + 600, 358)],
+		[o + Vector2(MID_X - 440, 486), o + Vector2(MID_X + 20, 376)],
 	]
 
 
@@ -733,26 +733,33 @@ func _build_memories() -> void:
 		return
 	var head := UITheme.label("НАВЫКИ КАРТ\nсрабатывают сами", "sans_bold", 14, Palette.GOLD)
 	_hand_box.add_child(head)
+	var many := list.size() > 4   # много навыков — без условия в строке (оно во всплывающей подсказке)
 	for m: Dictionary in list:
 		var d: Dictionary = m["def"]
-		var box := VBoxContainer.new()
+		var box := HBoxContainer.new()
 		box.set_meta("memory", str(m["card"]))
-		box.add_theme_constant_override("separation", 2)
-		box.custom_minimum_size.x = 150
+		box.add_theme_constant_override("separation", 8)
 		box.mouse_filter = Control.MOUSE_FILTER_STOP
 		box.tooltip_text = "%s\nУсловие: %s\n%s" % [d.get("name", ""), d.get("cond", ""), d.get("text", "")]
-		var cv := CardView.make(str(m["card"]), Vector2(70, 120), false)
+		var cv := CardView.make(str(m["card"]), Vector2(64, 110), false)
 		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cv.dimmed = bool(m["used"])
 		box.add_child(cv)
-		var n := UITheme.label(str(d.get("name", "")), "sans_bold", 13, Palette.TEXT_DIM if bool(m["used"]) else Palette.GOLD)
+		var txt := VBoxContainer.new()
+		txt.add_theme_constant_override("separation", 2)
+		txt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(txt)
+		var n := UITheme.label(str(d.get("name", "")), "sans_bold", 14, Palette.TEXT_DIM if bool(m["used"]) else Palette.GOLD)
 		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		box.add_child(n)
-		var c := UITheme.label("использован" if bool(m["used"]) else str(d.get("cond", "")), "sans", 11, Palette.TEXT_DIM)
+		n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		n.custom_minimum_size.x = 90 if many else 150
+		txt.add_child(n)
+		var c := UITheme.label("использован" if bool(m["used"]) else str(d.get("cond", "")), "sans", 12, Palette.TEXT_DIM)
 		c.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		c.custom_minimum_size.x = 150
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		box.add_child(c)
+		c.visible = not many or bool(m["used"])
+		txt.add_child(c)
 		_hand_box.add_child(box)
 
 
