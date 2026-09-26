@@ -37,27 +37,34 @@ static func add(content: Content, state: RunState, cid: String, amount: int, rea
 	if ch.is_empty() or not state.is_alive(cid) or amount == 0:
 		return []
 	var tags := MissionFlow.hero_tags(content, state, cid)
+	if amount > 0 and GrowthRules.has(content, state, cid, "panic_immune"):
+		return []
 	if amount > 0 and tags.has("Хладнокровие"):
 		amount = int(ceil(amount / 2.0))
 	var before := int(ch.get("panic", 0))
 	var after := clampi(before + amount, 0, MAX)
+	if amount > 0:
+		after = mini(after, maxi(before, GrowthRules.panic_cap(content, state, cid)))
 	ch["panic"] = after
 	if before < REACT and after >= REACT:
 		return [{"kind": "panic", "card": cid, "text": "%s в панике (%s)" % [content.card_name(cid), reason]}]
 	return []
 
 
-## Спад паники по часам — у тех, кто не на миссии.
-static func decay(state: RunState, dt: float) -> void:
+## Спад паники по часам — у тех, кто не на миссии (кроме Фанатика).
+static func decay(state: RunState, dt: float, content: Content = null) -> void:
 	for cid: String in state.characters:
 		var ch: Dictionary = state.characters[cid]
+		if content != null and GrowthRules.has(content, state, cid, "panic_no_decay"):
+			continue
 		if int(ch.get("panic", 0)) > 0 and not MissionFlow.on_mission(state, cid):
 			ch["panic"] = maxi(0, int(round(float(ch["panic"]) - DECAY * dt)))
 
 
 ## Сбежит ли герой перед этапом (Трус в панике).
 static func flees(content: Content, state: RunState, cid: String) -> bool:
-	return value(state, cid) >= REACT and MissionFlow.hero_tags(content, state, cid).has("Трус")
+	return value(state, cid) >= REACT and MissionFlow.hero_tags(content, state, cid).has("Трус") \
+		and not GrowthRules.has(content, state, cid, "brave")
 
 
 ## Откажется ли отряд отступать (Гордыня в панике у кого-то из отряда): "" — нет, иначе имя.

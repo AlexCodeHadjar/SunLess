@@ -118,6 +118,28 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 		var st: Dictionary = b.get("effect", {}).get("stat", {})
 		if not st.is_empty() and not STATS.has(str(st.get("stat", ""))):
 			errors.append("Связка %s: неизвестная характеристика" % bid)
+	# рост тегов (docs/16 §8)
+	var ctx_ids: Array = []
+	for t: String in c.tags:
+		ctx_ids.append(t)
+	for tag: String in c.tag_growth:
+		var g: Dictionary = c.tag_growth[tag]
+		var w := "Рост тега «%s»" % tag
+		for how: String in g.get("grow", []):
+			if not ["check", "combat", "panic", "any"].has(how):
+				errors.append("%s: неизвестный способ роста %s" % [w, how])
+		for ct: String in g.get("check_tags", []):
+			if not ctx_ids.has(ct):
+				errors.append("%s: неизвестный тег проверки %s" % [w, ct])
+		for kind: String in ["evo", "mut"]:
+			var e: Dictionary = g.get(kind, {})
+			if str(e.get("name", "")) == "":
+				errors.append("%s: нет %s" % [w, "эволюции" if kind == "evo" else "мутации"])
+			for b2: Dictionary in Array(e.get("check", [])) + Array(e.get("check_night", [])):
+				if not STATS.has(str(b2.get("stat", ""))):
+					errors.append("%s: неизвестная характеристика" % w)
+			if str(e.get("self_trauma", "")) != "" and not c.traumas.has(str(e["self_trauma"])):
+				errors.append("%s: нет травмы %s" % [w, e["self_trauma"]])
 
 
 static func _validate_shop(c: Content, sid: String, errors: Array[String]) -> void:

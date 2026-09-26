@@ -40,7 +40,9 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	# угроза пугает с порога (docs/16 §7)
 	var threat_gain := PanicRules.GAIN_THREAT * maxi(0, int(m.get("threat", 1)) - 2)
 	for cid: String in heroes:
-		report["entries"].append_array(PanicRules.add(content, state, cid, threat_gain, "угроза"))
+		var g := 0 if GrowthRules.has(content, state, cid, "panic_threat_immune") else threat_gain
+		g += int(GrowthRules.total(content, state, cid, "panic_mission"))
+		report["entries"].append_array(PanicRules.add(content, state, cid, g, "угроза"))
 	return _advance(content, state, m, sq, run, report, rng)
 
 
@@ -153,6 +155,7 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 			var after := _combat_stage(content, state, m, a, MissionFlow.boss_stage(state, m, st), alive, rec, report, rng)
 			_copy_into(state, after)
 			sq = MissionFlow.squad(state, int(sq["id"]))
+			GrowthRules.mark_combat(content, state, run, alive, Array(report["combats"]).back()["rounds"], rec["outcome"] == "ok")
 		else:
 			_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used)
 		if rec["text"] == "":
@@ -161,6 +164,17 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 				rec["text"] = str(st.get("ok", ""))
 		if rec["outcome"] == "fail":
 			run["fails"] = int(run["fails"]) + 1
+			# Вечный беглец уходит после проваленного этапа
+			for cid: String in alive:
+				if state.is_alive(cid) and not fled.has(cid) and GrowthRules.has(content, state, cid, "flees_on_fail"):
+					fled.append(cid)
+					report["entries"].append({"kind": "panic", "card": cid, "text": "%s сбегает после неудачи" % content.card_name(cid)})
+		# опыт тегов (docs/16 §8)
+		if rec["hero"] != "" and not st.has("combat"):
+			GrowthRules.mark_check(content, state, run, str(rec["hero"]), Array(m.get("context", [])) + Array(st.get("tags", [])), str(rec["outcome"]))
+		for cid: String in alive:
+			if state.is_alive(cid):
+				GrowthRules.mark_panic(content, state, run, cid)
 		# паника от этапа: провал и частичный успех пугают всех, травма — раненого, гибель — остальных
 		var gain: int = {"fail": PanicRules.GAIN_FAIL, "partial": PanicRules.GAIN_PARTIAL}.get(rec["outcome"], 0)
 		for cid: String in alive:
@@ -198,6 +212,13 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 	for cid: String in heroes:
 		pockets.append_array(MissionFlow.pocket(state, cid))
 	InjuryRules.apply_wear(content, state, pockets, rng, entries, {"wear": []})
+	# Ломатель и Живая сталь: предметы изнашиваются быстрее
+	for cid: String in heroes:
+		var wm := GrowthRules.mult(content, state, cid, "wear_mult")
+		if wm > 1.0:
+			for card: String in MissionFlow.pocket(state, cid):
+				if state.wear.has(card):
+					state.wear[card] = mini(100, int(state.wear[card]) + int(WearRules.STEP * (wm - 1.0)))
 	return _finish(content, state, m, sq, run, report, rng)
 
 
@@ -260,8 +281,11 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	# доверие и ссоры в связках (docs/16 §5–6)
 	if report["outcome"] != "retreat":
 		entries.append_array(TrustRules.after_mission(content, state, heroes.filter(func(c: String) -> bool: return not Array(run.get("fled", [])).has(c)),
-			str(report["outcome"]), str(m.get("title", mid))))
+			str(report["outcome"]), str(m.get("title", mid)), rng))
 		entries.append_array(BondRules.quarrels(content, state, heroes, rng))
+	# рост тегов и эффекты развитий (docs/16 §8)
+	entries.append_array(GrowthRules.apply(content, state, run, heroes, str(report["outcome"]), rng))
+	entries.append_array(GrowthRules.after_mission(content, state, heroes, str(report["outcome"]), rng))
 
 	# отдых выживших
 	var base_rest := float(m.get("rest", MissionFlow.DEFAULT_REST)) + float(run.get("extra_rest", 0.0))
@@ -270,7 +294,7 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 			if not report["deaths"].has(cid):
 				report["deaths"].append(cid)
 			continue
-		var rest := base_rest
+		var rest := maxf(5.0, base_rest + GrowthRules.total(content, state, cid, "rest_add"))
 		if report["outcome"] != "retreat":
 			rest += REST_PER_FAIL * int(run["fails"]) + REST_PER_TRAUMA * Array(report["traumas"].get(cid, [])).size()
 		state.rest_until[cid] = state.clock + rest

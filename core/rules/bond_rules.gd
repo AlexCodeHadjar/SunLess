@@ -17,6 +17,8 @@ static func active(content: Content, state: RunState, heroes: Array) -> Array:
 			continue
 		if TrustRules.value(state, pair[0], pair[1]) < int(b.get("min_trust", -2)):
 			continue
+		if GrowthRules.has(content, state, pair[0], "no_bonds") or GrowthRules.has(content, state, pair[1], "no_bonds"):
+			continue
 		out.append(b)
 	return out
 

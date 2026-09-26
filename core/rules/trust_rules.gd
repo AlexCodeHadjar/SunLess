@@ -62,7 +62,8 @@ static func meets(state: RunState, heroes: Array, need: Dictionary) -> bool:
 
 
 ## После миссии: успех вместе +1, провал −1 — каждой паре отряда (живым).
-static func after_mission(content: Content, state: RunState, heroes: Array, outcome: String, title: String) -> Array:
+static func after_mission(content: Content, state: RunState, heroes: Array, outcome: String, title: String,
+		rng: RandomNumberGenerator = null) -> Array:
 	var d := 1 if outcome in ["success", "partial"] else (-1 if outcome == "failure" else 0)
 	if d == 0:
 		return []
@@ -70,7 +71,12 @@ static func after_mission(content: Content, state: RunState, heroes: Array, outc
 	var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c))
 	for i in alive.size():
 		for j in range(i + 1, alive.size()):
-			out.append_array(change(content, state, alive[i], alive[j], d, ("успех вместе: «%s»" if d > 0 else "провал вместе: «%s»") % title))
+			var dd := d
+			if d > 0 and rng != null:
+				# Лжец до костей — доверие растёт медленнее, Честь — быстрее (docs/16 §8)
+				var m := GrowthRules.mult(content, state, alive[i], "trust_gain_mult") * GrowthRules.mult(content, state, alive[j], "trust_gain_mult")
+				dd = int(floor(m)) + (1 if rng.randf() < m - floor(m) else 0)
+			out.append_array(change(content, state, alive[i], alive[j], dd, ("успех вместе: «%s»" if d > 0 else "провал вместе: «%s»") % title))
 	return out
 
 

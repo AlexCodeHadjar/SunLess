@@ -578,6 +578,9 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 			H *= 1.0 + TrustRules.COMBAT_HIGH
 			hs.append({"label": "Доверие: %s" % content.card_name(ally), "kind": "state", "pct": TrustRules.COMBAT_HIGH, "value": H})
 			break
+	for g: Dictionary in GrowthRules.combat_steps(content, state, hero, round_no):
+		H *= 1.0 + float(g["pct"])
+		hs.append({"label": str(g["label"]), "kind": "state", "pct": float(g["pct"]), "value": H})
 	var rage := PanicRules.combat_bonus(content, state, hero)
 	if rage > 0.0:
 		H *= 1.0 + rage

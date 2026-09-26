@@ -534,6 +534,8 @@ func show_report(rep: Dictionary) -> void:
 			col = Palette.STAT_UP if int(e.get("delta", 0)) > 0 else Palette.STAT_DOWN
 		elif kind == "panic":
 			col = Color("#D07A3A")
+		elif kind == "growth":
+			col = Color("#C07BD8") if bool(e.get("mutation", false)) else Color("#E3C98E")
 		res.add_child(UITheme.label("• " + str(e.get("text", "")), "sans", 18, col))
 	var rest: Dictionary = rep.get("rest", {})
 	if not rest.is_empty():

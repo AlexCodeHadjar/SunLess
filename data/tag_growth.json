@@ -1,0 +1,707 @@
+[
+ {
+  "id": "Скрытность",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "stealth"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Тень среди теней",
+   "text": "+2 Хитрость в скрытности; ночью +5% в бою",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 2,
+     "tags": [
+      "stealth"
+     ]
+    }
+   ],
+   "combat_night": 0.05
+  },
+  "mut": {
+   "name": "Бесследный",
+   "text": "+3 Хитрость в скрытности, но отряд его теряет: −1 доверие со всеми после миссии",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 3,
+     "tags": [
+      "stealth"
+     ]
+    }
+   ],
+   "trust_after": -1
+  }
+ },
+ {
+  "id": "Чутьё",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "survival",
+   "lure"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Предвидение",
+   "text": "Скрытые теги миссии всегда раскрыты",
+   "reveal": true
+  },
+  "mut": {
+   "name": "Паранойя",
+   "text": "Скрытое раскрыто, +1 Хитрость во всём, но паника +10 на каждой миссии",
+   "reveal": true,
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 1
+    }
+   ],
+   "panic_mission": 10
+  }
+ },
+ {
+  "id": "Импровизация",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "survival",
+   "lie"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Мастер подручного",
+   "text": "Каждое усиление в кармашке даёт ещё +1",
+   "item_bonus": 1
+  },
+  "mut": {
+   "name": "Ломатель",
+   "text": "Усиления дают ещё +2, но изнашиваются вдвое быстрее",
+   "item_bonus": 2,
+   "wear_mult": 2.0
+  }
+ },
+ {
+  "id": "Хладнокровие",
+  "grow": [
+   "panic",
+   "check"
+  ],
+  "check_tags": [
+   "lie",
+   "social"
+  ],
+  "stat": "will",
+  "evo": {
+   "name": "Лёд в венах",
+   "text": "Паника не поднимается выше 50",
+   "panic_cap": 50
+  },
+  "mut": {
+   "name": "Бесчувственный",
+   "text": "Паники нет совсем, но связки с ним не работают",
+   "panic_immune": true,
+   "no_bonds": true
+  }
+ },
+ {
+  "id": "Тень",
+  "grow": [
+   "combat"
+  ],
+  "check_tags": [],
+  "stat": "power",
+  "evo": {
+   "name": "Повелитель теней",
+   "text": "Ночью +10% в бою",
+   "combat_night": 0.1
+  },
+  "mut": {
+   "name": "Поглощённый тенью",
+   "text": "Ночью +20% в бою, днём −10%",
+   "combat_night": 0.2,
+   "combat_day": -0.1
+  }
+ },
+ {
+  "id": "Дуэль",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "duel"
+  ],
+  "stat": "power",
+  "evo": {
+   "name": "Мастер клинка",
+   "text": "+2 Сила в дуэлях",
+   "check": [
+    {
+     "stat": "power",
+     "value": 2,
+     "tags": [
+      "duel"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Одержимый поединком",
+   "text": "+3 Сила в дуэлях, −1 Хитрость во всём",
+   "check": [
+    {
+     "stat": "power",
+     "value": 3,
+     "tags": [
+      "duel"
+     ]
+    },
+    {
+     "stat": "cunning",
+     "value": -1
+    }
+   ]
+  }
+ },
+ {
+  "id": "Сталь",
+  "grow": [
+   "combat"
+  ],
+  "check_tags": [],
+  "stat": "power",
+  "evo": {
+   "name": "Закалённая сталь",
+   "text": "Физическая травма не достаётся с шансом 25%",
+   "trauma_avoid": 0.25
+  },
+  "mut": {
+   "name": "Живая сталь",
+   "text": "Физическая травма не достаётся с шансом 50%, но износ оружия вдвое быстрее",
+   "trauma_avoid": 0.5,
+   "wear_mult": 2.0
+  }
+ },
+ {
+  "id": "Первый удар",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "first_strike"
+  ],
+  "stat": "power",
+  "evo": {
+   "name": "Молниеносный",
+   "text": "Первый раунд боя +15%",
+   "combat_round1": 0.15
+  },
+  "mut": {
+   "name": "Безрассудный",
+   "text": "Первый раунд +25%, третий −15%",
+   "combat_round1": 0.25,
+   "combat_round3": -0.15
+  }
+ },
+ {
+  "id": "Скорость",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "chase"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Вспышка",
+   "text": "+2 Хитрость в погоне, отдых короче на 5 с",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 2,
+     "tags": [
+      "chase"
+     ]
+    }
+   ],
+   "rest_add": -5
+  },
+  "mut": {
+   "name": "Неудержимый",
+   "text": "+2 во всём в погоне, но отдых дольше на 10 с",
+   "check": [
+    {
+     "stat": "power",
+     "value": 2,
+     "tags": [
+      "chase"
+     ]
+    },
+    {
+     "stat": "will",
+     "value": 2,
+     "tags": [
+      "chase"
+     ]
+    },
+    {
+     "stat": "cunning",
+     "value": 2,
+     "tags": [
+      "chase"
+     ]
+    }
+   ],
+   "rest_add": 10
+  }
+ },
+ {
+  "id": "Пророчество",
+  "grow": [
+   "check",
+   "any"
+  ],
+  "check_tags": [
+   "knowledge",
+   "ritual"
+  ],
+  "stat": "will",
+  "evo": {
+   "name": "Ясновидение",
+   "text": "Прогноз не размывается: скрытое раскрыто",
+   "reveal": true
+  },
+  "mut": {
+   "name": "Проклятое знание",
+   "text": "Скрытое раскрыто, +1 во всём, но паника +15 на каждой миссии",
+   "reveal": true,
+   "check": [
+    {
+     "stat": "power",
+     "value": 1
+    },
+    {
+     "stat": "will",
+     "value": 1
+    },
+    {
+     "stat": "cunning",
+     "value": 1
+    }
+   ],
+   "panic_mission": 15
+  }
+ },
+ {
+  "id": "Разумный",
+  "grow": [
+   "check"
+  ],
+  "check_tags": [
+   "knowledge",
+   "social"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Эрудит",
+   "text": "+1 Хитрость в знаниях и общении",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 1,
+     "tags": [
+      "knowledge",
+      "social"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Сломанный разум",
+   "text": "+3 Хитрость в знаниях, −2 Воли",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 3,
+     "tags": [
+      "knowledge"
+     ]
+    },
+    {
+     "stat": "will",
+     "value": -2
+    }
+   ]
+  }
+ },
+ {
+  "id": "Выслеживание",
+  "grow": [
+   "check",
+   "combat"
+  ],
+  "check_tags": [
+   "survival",
+   "chase"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Следопыт",
+   "text": "+1 Хитрость в выживании и погоне",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 1,
+     "tags": [
+      "survival",
+      "chase"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Охотник на Кошмары",
+   "text": "+10% в бою, −1 в общении",
+   "combat": 0.1,
+   "check": [
+    {
+     "stat": "cunning",
+     "value": -1,
+     "tags": [
+      "social"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "Ложь",
+  "grow": [
+   "check"
+  ],
+  "check_tags": [
+   "lie",
+   "social"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Серебряный язык",
+   "text": "+2 Хитрость в общении",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 2,
+     "tags": [
+      "social"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Лжец до костей",
+   "text": "+3 Хитрость во лжи, но доверие к нему растёт вдвое медленнее",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 3,
+     "tags": [
+      "lie"
+     ]
+    }
+   ],
+   "trust_gain_mult": 0.5
+  }
+ },
+ {
+  "id": "Бегство",
+  "grow": [
+   "check",
+   "panic"
+  ],
+  "check_tags": [
+   "chase"
+  ],
+  "stat": "cunning",
+  "evo": {
+   "name": "Неуловимый",
+   "text": "Травма в проверке не достаётся с шансом 25%, +1 Хитрость в погоне",
+   "trauma_avoid": 0.25,
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 1,
+     "tags": [
+      "chase"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Вечный беглец",
+   "text": "Не получает травм в проверках, но после проваленного этапа сбегает",
+   "trauma_avoid_checks": 1.0,
+   "flees_on_fail": true
+  }
+ },
+ {
+  "id": "Трус",
+  "grow": [
+   "panic"
+  ],
+  "check_tags": [],
+  "stat": "will",
+  "evo": {
+   "name": "Осторожный",
+   "text": "Угроза миссии не пугает (паника при прибытии не растёт)",
+   "panic_threat_immune": true
+  },
+  "mut": {
+   "name": "Отчаянная храбрость",
+   "text": "В панике не сбегает, а получает +3 ко всему",
+   "brave": true
+  }
+ },
+ {
+  "id": "Гордыня",
+  "grow": [
+   "panic",
+   "combat"
+  ],
+  "check_tags": [
+   "duel",
+   "tyrant"
+  ],
+  "stat": "will",
+  "evo": {
+   "name": "Честь",
+   "text": "+1 Воля во всём; доверие к нему растёт быстрее",
+   "check": [
+    {
+     "stat": "will",
+     "value": 1
+    }
+   ],
+   "trust_gain_mult": 1.5
+  },
+  "mut": {
+   "name": "Высокомерие",
+   "text": "+2 Сила во всём, −1 доверие со всеми после миссии",
+   "check": [
+    {
+     "stat": "power",
+     "value": 2
+    }
+   ],
+   "trust_after": -1
+  }
+ },
+ {
+  "id": "Решимость",
+  "grow": [
+   "panic",
+   "any"
+  ],
+  "check_tags": [],
+  "stat": "will",
+  "evo": {
+   "name": "Несгибаемый",
+   "text": "Один раз переживает бросок смерти",
+   "death_save": true
+  },
+  "mut": {
+   "name": "Фанатик",
+   "text": "+2 Воля во всём, но паника не спадает на отдыхе",
+   "check": [
+    {
+     "stat": "will",
+     "value": 2
+    }
+   ],
+   "panic_no_decay": true
+  }
+ },
+ {
+  "id": "Белое пламя",
+  "grow": [
+   "combat"
+  ],
+  "check_tags": [
+   "ritual"
+  ],
+  "stat": "will",
+  "evo": {
+   "name": "Исцеляющее пламя",
+   "text": "После миссии с шансом 50% снимает травму у союзника",
+   "heal_ally": 0.5
+  },
+  "mut": {
+   "name": "Всепожирающее пламя",
+   "text": "+20% в бою, но сама получает «Боль»",
+   "combat": 0.2,
+   "self_trauma": "T09"
+  }
+ },
+ {
+  "id": "Слабое тело",
+  "grow": [
+   "any"
+  ],
+  "check_tags": [],
+  "stat": "power",
+  "evo": {
+   "name": "Жилистый",
+   "text": "Тег «Слабое тело» уходит, +1 Сила",
+   "check": [
+    {
+     "stat": "power",
+     "value": 1
+    }
+   ],
+   "remove_tag": "Слабое тело"
+  },
+  "mut": {
+   "name": "Хрупкий гений",
+   "text": "+2 Хитрость во всём, −1 Сила",
+   "check": [
+    {
+     "stat": "cunning",
+     "value": 2
+    },
+    {
+     "stat": "power",
+     "value": -1
+    }
+   ]
+  }
+ },
+ {
+  "id": "Раб",
+  "grow": [
+   "any"
+  ],
+  "check_tags": [],
+  "stat": "will",
+  "evo": {
+   "name": "Сорвавший цепи",
+   "text": "+1 Воля во всём; «Раб» становится «Свободный»",
+   "check": [
+    {
+     "stat": "will",
+     "value": 1
+    }
+   ],
+   "remove_tag": "Раб",
+   "add_tag": "Свободный"
+  },
+  "mut": {
+   "name": "Цепной пёс",
+   "text": "+2 Сила в бою и дуэлях",
+   "check": [
+    {
+     "stat": "power",
+     "value": 2,
+     "tags": [
+      "combat",
+      "duel"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "Наследник",
+  "grow": [
+   "combat",
+   "any"
+  ],
+  "check_tags": [
+   "duel",
+   "social"
+  ],
+  "stat": "will",
+  "evo": {
+   "name": "Кровь Наследия",
+   "text": "+1 ко всему в дуэлях",
+   "check": [
+    {
+     "stat": "power",
+     "value": 1,
+     "tags": [
+      "duel"
+     ]
+    },
+    {
+     "stat": "will",
+     "value": 1,
+     "tags": [
+      "duel"
+     ]
+    },
+    {
+     "stat": "cunning",
+     "value": 1,
+     "tags": [
+      "duel"
+     ]
+    }
+   ]
+  },
+  "mut": {
+   "name": "Бремя рода",
+   "text": "+2 Воля во всём, −1 доверие с теми, кто не Наследник",
+   "check": [
+    {
+     "stat": "will",
+     "value": 2
+    }
+   ],
+   "trust_after": -1,
+   "trust_after_unless": "Наследник"
+  }
+ },
+ {
+  "id": "Слепота",
+  "grow": [
+   "any"
+  ],
+  "check_tags": [],
+  "stat": "will",
+  "evo": {
+   "name": "Внутреннее зрение",
+   "text": "Небо и тьма не мешают: ночью +1 ко всему",
+   "check_night": [
+    {
+     "stat": "power",
+     "value": 1
+    },
+    {
+     "stat": "will",
+     "value": 1
+    },
+    {
+     "stat": "cunning",
+     "value": 1
+    }
+   ]
+  },
+  "mut": {
+   "name": "Взгляд в бездну",
+   "text": "Скрытое раскрыто, +10% в бою, но паника +10 на каждой миссии",
+   "reveal": true,
+   "combat": 0.1,
+   "panic_mission": 10
+  }
+ }
+]

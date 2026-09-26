@@ -160,6 +160,13 @@ static func hero_tags(content: Content, state: RunState, cid: String) -> Array:
 		for t: String in content.enhancements.get(card, {}).get("tags", []):
 			if not out.has(t):
 				out.append(t)
+	# развитие тегов может снять или дать тег (docs/16 §8)
+	var ch := GrowthRules.tag_changes(content, state, cid)
+	for t: String in ch["remove"]:
+		out.erase(t)
+	for t: String in ch["add"]:
+		if not out.has(t):
+			out.append(t)
 	return out
 
 
@@ -173,7 +180,7 @@ static func squad_tags(content: Content, state: RunState, heroes_ids: Array) -> 
 
 
 static func has_scout(content: Content, state: RunState, heroes_ids: Array) -> bool:
-	if BondRules.reveals(content, state, heroes_ids):
+	if BondRules.reveals(content, state, heroes_ids) or GrowthRules.reveals(content, state, heroes_ids):
 		return true
 	var tags := squad_tags(content, state, heroes_ids)
 	for t: String in SCOUT_TAGS:
@@ -248,7 +255,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 			sq["phase"] = "arrived"
 			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
 				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
-	PanicRules.decay(state, dt)
+	PanicRules.decay(state, dt, content)
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]

@@ -350,6 +350,13 @@ func _stat_parts() -> Dictionary:
 	for card: String in _pocket():
 		var e: Dictionary = c.enhancements.get(card, {})
 		sources.append({"name": "кармашек: %s" % e.get("name", card), "bonuses": e.get("bonuses", [])})
+	# рост тегов: «опытный» (в своих проверках) и развития
+	for tag: String in ch.get("tag_xp", {}):
+		var g: Dictionary = c.tag_growth.get(tag, {})
+		if GrowthRules.xp(s, card_id, tag) >= GrowthRules.VETERAN and not Array(g.get("check_tags", [])).is_empty():
+			sources.append({"name": "опытный: %s" % tag, "bonuses": [{"stat": g.get("stat", "cunning"), "value": 1, "tags": g["check_tags"]}]})
+	for ge: Dictionary in GrowthRules.effects(c, s, card_id):
+		sources.append({"name": "развитие «%s»" % ge.get("name", ""), "bonuses": ge.get("check", [])})
 	for src: Dictionary in sources:
 		for b: Dictionary in src["bonuses"]:
 			var st3 := str(b.get("stat", ""))
@@ -424,7 +431,84 @@ func _build_tags(y: float) -> float:
 			chip2.hovered.connect(_on_chip_hover)
 			flow.add_child(chip2)
 	var rows := 1 + int((own.size() + extra.size()) / 7)
-	return y + rows * 30.0 + 8.0
+	y += rows * 30.0 + 8.0
+	if ContentDB.data.card_kind(card_id) == "character" and GameState.state != null and GameState.state.characters.has(card_id):
+		y = _build_growth(y)
+	return y
+
+
+## Рост тегов (docs/16 §8): опыт каждого тега, «опытный», развитие; наведение — что будет дальше.
+func _build_growth(y: float) -> float:
+	var c := ContentDB.data
+	var s := GameState.state
+	var tags: Array = []
+	for t: String in _combat_tags():
+		if c.tag_growth.has(t):
+			tags.append(t)
+	for t: String in s.character(card_id).get("growth", {}):
+		if not tags.has(t):
+			tags.append(t)
+	if tags.is_empty():
+		return y
+	var flow := HFlowContainer.new()
+	flow.position = Vector2(0, y)
+	flow.custom_minimum_size = Vector2(1110, 0)
+	flow.size = Vector2(1110, 0)
+	flow.add_theme_constant_override("h_separation", 18)
+	flow.add_theme_constant_override("v_separation", 2)
+	_content.add_child(flow)
+	flow.add_child(UITheme.label("Рост:", "caps", 16, Palette.TEXT_DIM))
+	for t: String in tags:
+		var st := GrowthRules.stage(s, card_id, t)
+		var xpv := GrowthRules.xp(s, card_id, t)
+		var text := ""
+		var col := Palette.TEXT_DIM
+		match st:
+			"evo":
+				text = "✦ %s" % GrowthRules.grown(c, s, card_id, t).get("name", t)
+				col = Color("#E3C98E")
+			"mut":
+				text = "✺ %s" % GrowthRules.grown(c, s, card_id, t).get("name", t)
+				col = Color("#C07BD8")
+			"vet":
+				text = "%s — опытный %s" % [t, _xp_text(xpv)]
+				col = Palette.SILVER
+			_:
+				text = "%s %s" % [t, _xp_text(xpv)]
+		var l := UITheme.label(text, "sans", 16, col)
+		l.mouse_filter = Control.MOUSE_FILTER_STOP
+		l.mouse_default_cursor_shape = Control.CURSOR_HELP
+		l.mouse_entered.connect(_show_hint.bind(_growth_hint(t)))
+		l.mouse_exited.connect(_hide_hint)
+		flow.add_child(l)
+	return y + 30.0 * (1 + int(tags.size() / 5)) + 4.0
+
+
+static func _xp_text(v: float) -> String:
+	return "%s/%d" % [str(snappedf(v, 0.5)).trim_suffix(".0"), int(GrowthRules.VETERAN if v < GrowthRules.VETERAN else GrowthRules.EVOLVE)]
+
+
+func _growth_hint(tag: String) -> String:
+	var c := ContentDB.data
+	var s := GameState.state
+	var d: Dictionary = c.tag_growth.get(tag, {})
+	var st := GrowthRules.stage(s, card_id, tag)
+	var lines: Array[String] = ["[b]Рост тега «%s»[/b]" % tag]
+	if st in ["evo", "mut"]:
+		var e := GrowthRules.grown(c, s, card_id, tag)
+		lines.append("[color=%s]%s «%s»[/color] — %s" % ["#C07BD8" if st == "mut" else "#E3C98E", "Мутация" if st == "mut" else "Эволюция", e.get("name", ""), e.get("text", "")])
+		return "\n".join(lines)
+	var how: Array = []
+	for g: String in d.get("grow", []):
+		how.append({"check": "проверки с этим тегом", "combat": "бой, где тег сработал", "panic": "этапы, пройденные в панике", "any": "любые удачные миссии (медленнее)"}.get(g, g))
+	lines.append("Опыт %s из %d. Растёт за: %s." % [str(snappedf(GrowthRules.xp(s, card_id, tag), 0.5)).trim_suffix(".0"), int(GrowthRules.EVOLVE), ", ".join(how)])
+	var ct: Array = d.get("check_tags", [])
+	var vet := "+1 %s в проверках: %s" % [Palette.STAT_NAMES.get(str(d.get("stat", "")), ""), ", ".join(ct.map(func(x: String) -> String: return str(c.tags.get(x, {}).get("name", x)).to_lower()))] if not ct.is_empty() else "+%d%% в бою" % int(GrowthRules.VET_COMBAT * 100)
+	lines.append("[b]%d — опытный:[/b] %s%s" % [int(GrowthRules.VETERAN), vet, "  [color=#6FA47B]✓[/color]" if st == "vet" else ""])
+	lines.append("[b]%d — развитие:[/b]" % int(GrowthRules.EVOLVE))
+	lines.append("  [color=#E3C98E]эволюция %d%% «%s»[/color] — %s" % [int(100 - GrowthRules.MUTATION * 100), d["evo"].get("name", ""), d["evo"].get("text", "")])
+	lines.append("  [color=#C07BD8]мутация %d%% «%s»[/color] — %s" % [int(GrowthRules.MUTATION * 100), d["mut"].get("name", ""), d["mut"].get("text", "")])
+	return "\n".join(lines)
 
 
 func _on_chip_hover(tag: String, on: bool) -> void:
@@ -568,7 +652,15 @@ func _combat_tags() -> Array:
 	if kind == "character":
 		var s := GameState.state
 		var stage: String = s.character(card_id).get("stage", "") if s else ""
-		return Array(d.get("stages", {}).get(stage, {}).get("tags", d.get("tags", [])))
+		var out := Array(d.get("stages", {}).get(stage, {}).get("tags", d.get("tags", []))).duplicate()
+		if s:
+			var ch := GrowthRules.tag_changes(ContentDB.data, s, card_id)
+			for t: String in ch["remove"]:
+				out.erase(t)
+			for t: String in ch["add"]:
+				if not out.has(t):
+					out.append(t)
+		return out
 	if kind in ["enhancement", "enemy"]:
 		return Array(d.get("tags", []))
 	return []

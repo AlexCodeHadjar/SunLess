@@ -46,6 +46,8 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 	# небо над картой (docs/16 §4)
 	if state.mode == "missions" and not content.locations.is_empty():
 		parts.append_array(Atmosphere.check_parts(content, state, tags))
+		# рост тегов героя (docs/16 §8)
+		parts.append_array(GrowthRules.check_parts(content, state, character_id, tags, enhancement_ids))
 
 	for tid: String in ch.get("traumas", []):
 		var t: Dictionary = content.traumas.get(tid, {})

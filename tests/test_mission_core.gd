@@ -307,7 +307,13 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 			attempts += 1
 			if not r.has("fork"):
 				_count(stats, sq["mission"], r["report"])
-	return {"stuck": steps >= 12000, "over": s.game_over, "attempts": attempts, "clock": s.clock,
+	var grown := {"vet": 0, "evo": 0, "mut": 0}
+	for cid: String in s.characters:
+		for tag: String in s.characters[cid].get("tag_xp", {}):
+			var gst := GrowthRules.stage(s, cid, tag)
+			if gst != "":
+				grown[gst] += 1
+	return {"stuck": steps >= 12000, "over": s.game_over, "attempts": attempts, "clock": s.clock, "grown": grown,
 		"nightmare_done": nightmare_done, "story_done": s.demo_complete and s.chapter == "academy",
 		"heroes": MissionFlow.heroes(c, s).size()}
 
@@ -330,8 +336,11 @@ func test_mission_simulation() -> void:
 	var total_attempts := 0
 	var total_clock := 0.0
 	var stats := {}
+	var grown := {"vet": 0, "evo": 0, "mut": 0}
 	for i in n:
 		var r := _bot(c, 5000 + i, stats)
+		for k: String in grown:
+			grown[k] += int(r.get("grown", {}).get(k, 0))
 		check(not r.get("stuck", false), "бот застрял (сид %d): %s" % [5000 + i, r.get("error", "")])
 		if r.get("story_done", false):
 			finished += 1
@@ -343,6 +352,7 @@ func test_mission_simulation() -> void:
 		total_clock += float(r.get("clock", 0.0))
 	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, конец игры: %d" % [n, nightmare, finished, over])
 	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
+	print("   [рост] на прохождение: опытных тегов %.1f, эволюций %.1f, мутаций %.2f" % [float(grown["vet"]) / n, float(grown["evo"]) / n, float(grown["mut"]) / n])
 	var ids: Array = stats.keys()
 	ids.sort()
 	for mid: String in ids:

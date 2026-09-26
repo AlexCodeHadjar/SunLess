@@ -131,11 +131,16 @@ func _run() -> void:
 	TrustRules.change(ContentDB.data, gs, "P01", "P02", 2, "успех вместе: «Первый бой»")
 	TrustRules.change(ContentDB.data, gs, "P01", "P10", -3, "бегство с этапа")
 	PanicRules.add(ContentDB.data, gs, "P01", 70, "снимок")
+	gs.character("P01")["tag_xp"] = {"Скрытность": 4.0, "Чутьё": 1.5, "Импровизация": 6.0, "Раб": 6.0}
+	gs.character("P01")["growth"] = {"Импровизация": "evo", "Раб": "mut"}
 	var ins := CardInspector.open_for(game, "P01")
 	await _wait(0.8)
 	ins.call("_show_hint", SquadLifeUI.trust_hint("P01"))
 	await _wait(0.4)
 	await _shot("m11b_trust_panic")
+	ins.call("_show_hint", ins.call("_growth_hint", "Скрытность"))
+	await _wait(0.4)
+	await _shot("m11c_growth")
 	ins.call("_close")
 	await _wait(0.3)
 	var rep: Dictionary = _window().report
