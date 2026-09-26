@@ -347,7 +347,8 @@
     "text": "Обойти стороной.",
     "retreat": true
    }
-  ]
+  ],
+  "sky": "blood_moon"
  },
  {
   "id": "RM03",

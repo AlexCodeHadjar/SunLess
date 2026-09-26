@@ -199,6 +199,8 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 		if not c.characters.has(cid):
 			errors.append("%s: exclude_heroes → нет персонажа %s" % [w, cid])
 	_validate_effects(c, w + " on_complete", m.get("on_complete", []), errors)
+	if m.has("sky") and not ["eclipse", "blood_moon"].has(str(m["sky"])):
+		errors.append("%s: небо «%s» — бывает только eclipse или blood_moon" % [w, m["sky"]])
 	for other: String in m.get("unlock", {}).get("after_all", []):
 		if not c.missions.has(other):
 			errors.append("%s: unlock.after_all → нет миссии %s" % [w, other])

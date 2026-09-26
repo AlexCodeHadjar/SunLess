@@ -54,9 +54,21 @@
    0.1
   ],
   "slots": 4,
-  "min_characters": 0,
+  "min_characters": 1,
   "refresh_every": 7,
   "stock": [
+   {
+    "card": "P03",
+    "price": 16
+   },
+   {
+    "card": "P04",
+    "price": 16
+   },
+   {
+    "card": "P02",
+    "price": 28
+   },
    {
     "card": "K04"
    },

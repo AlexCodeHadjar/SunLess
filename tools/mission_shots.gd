@@ -49,6 +49,13 @@ func _run() -> void:
 	await _wait(1.2)
 	await _shot("m02_map")
 	var game := get_tree().current_scene
+	# небо: ночь → день по часам (перетекание 4 с)
+	GameState.state.clock = Atmosphere.DAY_CYCLE * 0.55
+	await _wait(2.0)
+	await _shot("m02c_sky_dawn_fade")
+	await _wait(3.0)
+	await _shot("m02d_sky_day")
+	GameState.state.clock = 0.0
 	game.call("_open_mission", "MS01")
 	await _wait(0.8)
 	await _shot("m02b_brief_ms01")
@@ -132,8 +139,14 @@ func _run() -> void:
 	for mid: String in ["MS05", "RM01", "SM01", "RM04"]:
 		MissionFlow.open(ContentDB.data, st, mid)
 	GameState.missions_changed.emit()
-	await _wait(1.0)
+	await _wait(5.0)
 	await _shot("m14_mid_chapter")
+	MissionFlow.open(ContentDB.data, st, "MS09")
+	GameState.missions_changed.emit()
+	await _wait(5.0)
+	await _shot("m14b_eclipse")
+	st.missions.erase("MS09")
+	GameState.missions_changed.emit()
 	st.demo_complete = true
 	st.flags["next_chapter"] = "academy"
 	await _wait(1.0)

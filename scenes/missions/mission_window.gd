@@ -466,6 +466,7 @@ func _art(m: Dictionary, sz: Vector2 = Vector2(300, 470)) -> Control:
 		bd.region = str(_content().locations.get(str(m.get("location", "")), {}).get("region", "mountain_pass"))
 		bd.set_anchors_preset(Control.PRESET_FULL_RECT)
 		holder.add_child(bd)
+		bd.set_sky(Atmosphere.sky(_content(), GameState.state), false)
 	return holder
 
 

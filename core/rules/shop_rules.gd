@@ -107,6 +107,9 @@ static func buy(content: Content, state: RunState, sid: String, card: String, ou
 		state.resources["shards"] = shards - int(it["price"])
 		it["sold"] = true
 		out.append_array(EffectApplier.add_card(content, state, card))
+		if content.card_kind(card) == "character":
+			# купленный спутник — свой: конец главы его не уводит (решение владельца)
+			state.characters[card]["bought"] = true
 		state.log.append({"week": 0, "text": "Куплено: %s за %d ✧" % [content.card_name(card), int(it["price"])]})
 		return ""
 	return "Этого нет на прилавке"

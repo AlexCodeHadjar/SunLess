@@ -1,14 +1,21 @@
 class_name MapBackdrop
 extends Control
-## Фон региона. Если есть art/regions/<регион>.png — показывает его;
-## иначе рисует гравюрный горный перевал (небо, луна или солнце, звёзды, хребты, туман, снег).
-## Время суток tod: 0 ночь, 0.25 рассвет, 0.5 день, 0.75 сумерки — меняется по неделям.
+## Фон региона. Если есть рисунки неба art/regions/<регион>_<небо>.webp (ночь, день, затмение, кровавая луна) —
+## показывает их и плавно перетекает между ними (set_sky), с медленным «дыханием» кадра и живыми накладками:
+## ореол луны, кровавый пульс, корона затмения, снег в цвет неба. Иначе рисует гравюрный перевал или город.
+## Время суток tod: 0 ночь, 0.25 рассвет, 0.5 день, 0.75 сумерки — для процедурного фона.
 
 const TOD_NAMES := ["ночь", "рассвет", "день", "сумерки"]
 # ключевые цвета неба и оттенок гор для [ночь, рассвет, день, сумерки]
 const SKY_TOP := [Color("#07080C"), Color("#1C1B2E"), Color("#4E5A70"), Color("#150E1C")]
 const SKY_BOT := [Color("#4A5264"), Color("#B8826E"), Color("#AEB6C2"), Color("#9A5540")]
 const LAND_TINT := [Color(1, 1, 1), Color(1.22, 1.08, 1.08), Color(1.5, 1.5, 1.55), Color(1.18, 0.98, 0.95)]
+const SKIES := ["night", "day", "eclipse", "blood_moon"]
+# где на рисунке луна (солнце) — доли кадра; одинаковая композиция у всех четырёх
+const MOON_AT := Vector2(0.227, 0.105)
+const SNOW_COLORS := {"night": Color(0.85, 0.87, 0.92, 0.35), "day": Color(0.97, 0.98, 1.0, 0.55),
+	"eclipse": Color(0.7, 0.72, 0.8, 0.3), "blood_moon": Color(1.0, 0.72, 0.72, 0.38)}
+const FADE_SEC := 4.0
 
 var region := "mountain_pass"
 var snow := true
@@ -20,13 +27,15 @@ var _tex: Texture2D
 var _layers: Array = []     # [{poly: PackedVector2Array, color: Color}]
 var _flakes: Array = []     # [Vector3(x, y, speed)]
 var _built_for := Vector2.ZERO
+var _sky_tex := {}           # небо -> Texture2D (рисунки региона)
+var sky := ""                # текущее небо (куда перетекаем)
+var _sky_from := ""
+var _mix := 1.0              # 0 — ещё прежнее небо, 1 — уже новое
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var p := "res://art/regions/%s.png" % region
-	if ResourceLoader.exists(p):
-		_tex = load(p)
+	_load_region_art()
 	resized.connect(_rebuild)
 	_rebuild()
 	set_process(not SettingsService.get_value("reduce_motion"))
@@ -116,12 +125,55 @@ func _blend(keys: Array, w: Array) -> Color:
 func set_region(r: String) -> void:
 	region = r
 	snow = r == "mountain_pass"
+	_load_region_art()
+	_built_for = Vector2.ZERO
+	_rebuild()
+
+
+func _load_region_art() -> void:
 	_tex = null
+	_sky_tex.clear()
 	var p := "res://art/regions/%s.png" % region
 	if ResourceLoader.exists(p):
 		_tex = load(p)
-	_built_for = Vector2.ZERO
-	_rebuild()
+	for sk: String in SKIES:
+		var sp := "res://art/regions/%s_%s.webp" % [region, sk]
+		if ResourceLoader.exists(sp):
+			_sky_tex[sk] = load(sp)
+	if not _sky_tex.is_empty() and not _sky_tex.has(sky):
+		sky = "night" if _sky_tex.has("night") else _sky_tex.keys()[0]
+		_sky_from = sky
+		_mix = 1.0
+
+
+func has_sky_art() -> bool:
+	return not _sky_tex.is_empty()
+
+
+## Сменить небо (night | day | eclipse | blood_moon): старое плавно растворяется в новом.
+func set_sky(name: String, animate: bool = true) -> void:
+	if name == sky or not _sky_tex.has(name):
+		return
+	_sky_from = sky if _mix >= 0.5 else _sky_from
+	sky = name
+	if not animate or SettingsService.get_value("reduce_motion") or _sky_from == "":
+		_mix = 1.0
+		_sky_from = name
+		queue_redraw()
+		return
+	_mix = 0.0
+	var tw := create_tween()
+	tw.tween_property(self, "_mix", 1.0, FADE_SEC).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## Вес неба в текущем кадре (для накладок и цветов).
+func sky_weight(name: String) -> float:
+	var w := 0.0
+	if sky == name:
+		w += _mix
+	if _sky_from == name:
+		w += 1.0 - _mix
+	return w
 
 
 func _rebuild() -> void:
@@ -189,18 +241,75 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	if _tex:
+	var blood := 0.0
+	if not _sky_tex.is_empty():
+		_draw_sky()
+		blood = sky_weight("blood_moon")
+	elif _tex:
 		_draw_cover()
 	else:
 		_draw_procedural()
 	if snow:
+		var sc := Color(0.85, 0.87, 0.92, 0.35)
+		if not _sky_tex.is_empty():
+			sc = Color(0, 0, 0, 0)
+			for sk: String in SNOW_COLORS:
+				sc += (SNOW_COLORS[sk] as Color) * sky_weight(sk)
 		for f: Vector3 in _flakes:
-			draw_circle(Vector2(f.x, f.y), 1.0 + f.z / 40.0, Color(0.85, 0.87, 0.92, 0.35))
-	# виньетка
+			draw_circle(Vector2(f.x, f.y), 1.0 + f.z / 40.0, sc)
+	# виньетка; под кровавой луной — багровая
+	var vc := Color(0, 0, 0).lerp(Color(0.3, 0.0, 0.02), blood)
 	var v := 10
 	for i in v:
-		var a := 0.06 * (1.0 - float(i) / v)
-		draw_rect(Rect2(Vector2(i * 14, i * 10), size - Vector2(i * 28, i * 20)), Color(0, 0, 0, a), false, 16.0)
+		var a := (0.06 + 0.03 * blood) * (1.0 - float(i) / v)
+		draw_rect(Rect2(Vector2(i * 14, i * 10), size - Vector2(i * 28, i * 20)), Color(vc, a), false, 16.0)
+
+
+## Рисунки неба: прежнее и новое крест-накрест, кадр медленно «дышит» (едва заметный наезд и сдвиг).
+func _draw_sky() -> void:
+	var rect := _cover_rect(_sky_tex[sky].get_size())
+	if _mix < 1.0 and _sky_tex.has(_sky_from) and _sky_from != sky:
+		draw_texture_rect(_sky_tex[_sky_from], rect, false)
+		draw_texture_rect(_sky_tex[sky], rect, false, Color(1, 1, 1, _mix))
+	else:
+		draw_texture_rect(_sky_tex[sky], rect, false)
+	var moon := rect.position + rect.size * MOON_AT
+	var night := sky_weight("night")
+	var day := sky_weight("day")
+	var blood := sky_weight("blood_moon")
+	var eclipse := sky_weight("eclipse")
+	# ночь: мягкий дышащий ореол луны
+	if night > 0.01:
+		var p := 0.8 + 0.2 * sin(_t * 0.6)
+		for i in 10:
+			draw_circle(moon, 36.0 + i * 12.0, Color(0.8, 0.85, 0.95, 0.012 * night * p))
+	# день: светлая дымка сверху
+	if day > 0.01:
+		for i in 12:
+			draw_rect(Rect2(0, i * size.y * 0.03, size.x, size.y * 0.03), Color(1, 1, 1, 0.02 * day * (1.0 - i / 12.0)))
+	# кровавая луна: медленный пульс, как сердце, и багровая пелена
+	if blood > 0.01:
+		var beat := pow(0.5 + 0.5 * sin(_t * 1.3), 3.0)
+		for i in 16:
+			draw_circle(moon, 30.0 + i * 16.0, Color(0.85, 0.08, 0.06, (0.02 + 0.02 * beat) * blood))
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.35, 0.0, 0.02, (0.06 + 0.05 * beat) * blood))
+	# затмение: мерцающая корона и тьма, сгущающаяся к краям
+	if eclipse > 0.01:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0.02, 0.14 * eclipse))
+		for i in 3:
+			var r := 34.0 + i * 7.0 + 3.0 * sin(_t * (1.1 + i * 0.4) + i)
+			draw_arc(moon, r, 0.0, TAU, 64, Color(0.95, 0.95, 1.0, (0.22 - i * 0.06) * eclipse), 3.0 - i, true)
+		for i in 12:
+			draw_circle(moon, 44.0 + i * 14.0, Color(0.9, 0.92, 1.0, 0.01 * eclipse))
+
+
+func _cover_rect(ts: Vector2) -> Rect2:
+	var k := maxf(size.x / ts.x, size.y / ts.y) * 1.04
+	var ds := ts * k
+	var drift := Vector2.ZERO
+	if not SettingsService.get_value("reduce_motion"):
+		drift = Vector2(sin(_t * 0.017), cos(_t * 0.013)) * size * 0.012
+	return Rect2((size - ds) / 2 + drift, ds)
 
 
 func _draw_cover() -> void:

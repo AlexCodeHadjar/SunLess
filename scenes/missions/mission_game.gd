@@ -8,6 +8,10 @@ const MAP_BOTTOM := 780.0
 const LEFT_W := 250.0
 
 var _backdrop: MapBackdrop
+var _life: MapLife
+var _fog: CPUParticles2D
+var _embers: CPUParticles2D
+var _sky := ""                # небо над картой (Atmosphere): night | day | eclipse | blood_moon
 var _pins_layer: Control
 var _markers := {}            # mission_id -> MissionMarker
 var _shown_missions: Array = []
@@ -55,6 +59,7 @@ func _process(delta: float) -> void:
 	if _badge_timer <= 0.0:
 		_badge_timer = 0.5
 		_update_badges()
+		_update_sky()
 	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open
 	if GameState.state.game_over and quiet:
 		_show_end()
@@ -69,12 +74,15 @@ func _build_map() -> void:
 	_backdrop.region = _region()
 	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_backdrop)
-	var life := MapLife.new()
-	life.size = Vector2(1920, MAP_BOTTOM)
-	add_child(life)
+	_life = MapLife.new()
+	_life.size = Vector2(1920, MAP_BOTTOM)
+	add_child(_life)
 	var area := Rect2(Vector2(LEFT_W - 200, MAP_TOP + 120), Vector2(1920 - LEFT_W + 400, MAP_BOTTOM - MAP_TOP - 120))
-	add_child(Vfx.fog(area, 0.07))
-	add_child(Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP))))
+	_fog = Vfx.fog(area, 0.07)
+	add_child(_fog)
+	_embers = Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP)))
+	add_child(_embers)
+	_update_sky()
 	_pins_layer = Control.new()
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -232,6 +240,34 @@ func _refresh() -> void:
 	if _map_missions() != _shown_missions:
 		_rebuild_markers()
 	_update_pins()
+
+
+## Небо над картой: день и ночь по часам, кровавая луна и затмение — по сюжету (Atmosphere).
+## Смена неба красит и живую карту: туман, искры, облака и стаи.
+func _update_sky() -> void:
+	if not _backdrop.has_sky_art():
+		return
+	var next := Atmosphere.sky(ContentDB.data, GameState.state)
+	if next == _sky:
+		return
+	var first := _sky == ""
+	_sky = next
+	_backdrop.set_sky(next, not first)
+	_life.set_tod(float(Atmosphere.TOD[next]), not first)
+	var tint := {"night": Color(1, 1, 1), "day": Color(1.1, 1.1, 1.15), "eclipse": Color(0.55, 0.58, 0.7),
+		"blood_moon": Color(1.25, 0.45, 0.4)}
+	var fog_tint := {"night": Color(1, 1, 1), "day": Color(1.2, 1.2, 1.25), "eclipse": Color(0.5, 0.52, 0.6),
+		"blood_moon": Color(1.1, 0.6, 0.6)}
+	if first or Vfx.reduced():
+		_embers.modulate = tint[next]
+		_fog.modulate = fog_tint[next]
+	else:
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(_embers, "modulate", tint[next], MapBackdrop.FADE_SEC)
+		tw.tween_property(_fog, "modulate", fog_tint[next], MapBackdrop.FADE_SEC)
+	if not first and Atmosphere.OMENS.has(next):
+		AudioManager.play("bell", -8.0, 0.55)
+		_show_toast(str(Atmosphere.OMENS[next]))
 
 
 func _rebuild_cards() -> void:

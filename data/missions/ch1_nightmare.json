@@ -924,7 +924,8 @@
   ],
   "next": [
    "MS06"
-  ]
+  ],
+  "sky": "blood_moon"
  },
  {
   "id": "MS06",
@@ -1455,7 +1456,8 @@
   ],
   "next": [
    "MS09"
-  ]
+  ],
+  "sky": "blood_moon"
  },
  {
   "id": "MS09",
@@ -1637,7 +1639,8 @@
   ],
   "next": [
    "MS10"
-  ]
+  ],
+  "sky": "eclipse"
  },
  {
   "id": "MS10",
@@ -1794,7 +1797,8 @@
   ],
   "requires_heroes": [
    "P01"
-  ]
+  ],
+  "sky": "eclipse"
  },
  {
   "id": "MS11",
@@ -1937,6 +1941,7 @@
   "requires_heroes": [
    "P01"
   ],
-  "next_chapter": "academy"
+  "next_chapter": "academy",
+  "sky": "eclipse"
  }
 ]

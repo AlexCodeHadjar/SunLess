@@ -168,7 +168,9 @@ const MissionsView = {
         field("Отдых после, с", bindInput(m, "rest", changed, { type: "number" })),
         field("Мест в отряде: от", bindInput(m.squad, "min", changed, { type: "number" })),
         field("Мест в отряде: до", bindInput(m.squad, "max", changed, { type: "number" })),
-        field("Пул травм", bindSelect(m, "trauma_pool", POOLS, changed, { allowEmpty: true }))),
+        field("Пул травм", bindSelect(m, "trauma_pool", POOLS, changed, { allowEmpty: true })),
+        field("Небо над картой", bindSelect(m, "sky", { blood_moon: "Кровавая луна", eclipse: "Затмение" }, changed, { allowEmpty: true, emptyLabel: "как обычно (день и ночь)" }),
+          "Пока миссия открыта или отряд в пути, фон главы меняется на это небо. Затмение сильнее луны. Только атмосфера — на шансы не влияет.")),
       h("div", { class: "cols" },
         field("Противники", EventsView.enemyPicker(enemySpec, enemyChanged)),
         field("Поле боя", bindSelect(m, "field", Object.fromEntries(list(F.fields).map((f) => [f.id, f.name])), changed, { allowEmpty: true }))),
@@ -581,6 +583,7 @@ function validateMissions(add) {
     if (!MISSION_TYPES[m.type]) add(w, `неизвестный тип «${m.type}»`, nav);
     for (const k of ["title", "briefing", "arrival"]) if (!m[k]) add(w, `пустое поле «${{ title: "Название", briefing: "Что происходит", arrival: "Что увидели" }[k]}»`, nav);
     if (!(m.threat >= 1 && m.threat <= 5)) add(w, "угроза должна быть 1–5", nav);
+    if (m.sky !== undefined && !["eclipse", "blood_moon"].includes(m.sky)) add(w, `небо «${m.sky}» — только eclipse или blood_moon`, nav);
     if (!(m.duration >= 5 && m.duration <= 15)) add(w, "время в пути должно быть 5–15 с", nav);
     const sq = m.squad || {};
     if (!(sq.min >= 1 && sq.max <= 5 && sq.min <= sq.max)) add(w, "мест в отряде: нужно 1 ≤ от ≤ до ≤ 5", nav);

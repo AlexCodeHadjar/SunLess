@@ -345,6 +345,8 @@ func _build_board() -> void:
 		bd.region = GameState.state.region
 		bd.snow = GameState.state.region == "mountain_pass"
 	_board.add_child(bd)
+	if GameState.state:
+		bd.set_sky(Atmosphere.sky(ContentDB.data, GameState.state), false)
 	var shade := ColorRect.new()
 	shade.color = Color(0.03, 0.03, 0.05, 0.55)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)

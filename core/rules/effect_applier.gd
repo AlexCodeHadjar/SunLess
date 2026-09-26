@@ -92,13 +92,23 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 				state.codex.append(entry)
 				return [{"kind": "codex", "text": "Кодекс: %s" % str(e.get("text", entry))}]
 		"remove_temporaries":
+			# временные спутники главы уходят; купленные в магазине остаются (решение владельца)
 			var gone: Array = []
+			var stay: Array = []
 			for card2: String in state.collection.duplicate():
-				if content.characters.get(card2, {}).get("status", "") == "temporary":
+				if content.characters.get(card2, {}).get("status", "") != "temporary":
+					continue
+				if bool(state.characters.get(card2, {}).get("bought", false)):
+					stay.append(content.card_name(card2))
+				else:
 					_remove_card(state, card2)
 					gone.append(content.card_name(card2))
+			var out2: Array = []
 			if not gone.is_empty():
-				return [{"kind": "lost", "text": "Уходят: %s" % ", ".join(gone)}]
+				out2.append({"kind": "lost", "text": "Уходят: %s" % ", ".join(gone)})
+			if not stay.is_empty():
+				out2.append({"kind": "card", "text": "Остаются с Санни: %s" % ", ".join(stay)})
+			return out2
 		"reset_wear":
 			# кузнец: самое изношенное усиление — снова как новое
 			var worst := ""
