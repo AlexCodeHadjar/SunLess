@@ -14,8 +14,8 @@ const MID_X := 920.0
 const ENEMY_Y := 16.0
 const FIELD_Y := 352.0
 const SCALE_Y := 384.0
-const HERO_Y := 492.0
-const SIDE_Y := 524.0
+const HERO_Y := 508.0
+const SIDE_Y := 540.0
 const ENEMY_SIZE := Vector2(186, 320)
 const ENEMY_COMPACT := Vector2(136, 234)
 const HERO_SIZE := Vector2(200, 344)
@@ -34,6 +34,7 @@ var _board: Control
 var _board_layer: Control
 var _hero_card: CardView
 var _carriers: Array = []        # [{node, side, tags, chips:{тег: TagChip}, name}]
+var _fighters := {}              # "hero:0" — ведущий, "hero:1…" — союзники, "enemy:j" — враги: карты для ударов
 var _field_row: HFlowContainer
 var _round_box: PanelContainer
 var _round_title: Label
@@ -58,13 +59,16 @@ var _retreat_btn: Button
 
 
 class ScaleBar extends Control:
-	## Весы силы: числа сторон, полоса долей и шанс раунда; указатель броска.
+	## Весы силы: сила раунда сторон и полоса долей; ниже — полосы запаса (удары отнимают его, docs/16 §9е п.7).
 	## Во время набора силы числа досчитываются по шагам, у каждого числа — подпись шага.
 	var hero := 100.0
 	var enemy := 100.0
 	var chance := 50
 	var marker := -1.0
 	var building := false
+	var pool := {"hero": 0.0, "enemy": 0.0}
+	var pool_max := {"hero": 0.0, "enemy": 0.0}
+	var _hit := {"hero": 0.0, "enemy": 0.0}   # вспышка полосы запаса при ударе
 	var _caps := {"hero": "", "enemy": ""}
 	var _cap_cols := {"hero": Color.WHITE, "enemy": Color.WHITE}
 	var _cap_a := {"hero": 0.0, "enemy": 0.0}
@@ -134,12 +138,23 @@ class ScaleBar extends Control:
 		enemy = v
 		_recalc()
 
-	func play_roll(value: int, speed: float) -> void:
-		_kill("roll")
+	## Запас сторон сразу (начало боя, перемотка).
+	func set_pools(p: Dictionary, mx: Dictionary) -> void:
+		pool = p.duplicate()
+		pool_max = mx.duplicate()
+		queue_redraw()
+
+	## Удар по стороне: запас плавно убывает, полоса вспыхивает.
+	func pool_to(side: String, value: float, dur: float) -> void:
+		_kill("pool_" + side)
 		var tw := create_tween()
-		tw.tween_method(_set_marker, 0.0, 100.0, 0.35 * maxf(speed, 0.05))
-		tw.tween_method(_set_marker, 100.0, float(value), 0.55 * maxf(speed, 0.05)).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-		_tws["roll"] = tw
+		tw.tween_method(func(v: float) -> void:
+			pool[side] = v
+			queue_redraw(), float(pool[side]), value, maxf(dur, 0.01)).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_method(func(v: float) -> void:
+			_hit[side] = v
+			queue_redraw(), 1.0, 0.0, maxf(dur, 0.01) + 0.25)
+		_tws["pool_" + side] = tw
 
 	## Размер шрифта подписи, чтобы она влезла в ширину (от 19 до 13).
 	func _fit(f: Font, text: String, width: float) -> int:
@@ -152,11 +167,11 @@ class ScaleBar extends Control:
 		marker = v
 		queue_redraw()
 
-	## Сверху: сила героя — шанс — сила врага; ниже полоса долей; подпись под ней. Всё в 96 px высоты.
+	## Сверху: сила раунда героя и врага; полоса долей; ниже — полосы запаса сторон. Всё в 116 px высоты.
 	func _draw() -> void:
 		var w := size.x
-		var y := 52.0
-		var h := 20.0
+		var y := 50.0
+		var h := 14.0
 		var both := hero >= 1.0 and enemy >= 1.0
 		var share := hero / (hero + enemy) if both else 0.5
 		draw_rect(Rect2(0, y, w, h), Color("#0B0C11"))
@@ -167,9 +182,6 @@ class ScaleBar extends Control:
 		var fb := UITheme.font("title_bold")
 		var f := UITheme.font("sans")
 		var fsb := UITheme.font("sans_bold")
-		if both:
-			var cz := w * chance / 100.0
-			draw_line(Vector2(cz, y - 6), Vector2(cz, y + h + 6), Palette.GOLD, 2.0)
 		# числа сторон с «пульсом» на каждом шаге
 		var hs := 46 + int(10 * _pulse["hero"])
 		var es := 46 + int(10 * _pulse["enemy"])
@@ -177,8 +189,7 @@ class ScaleBar extends Control:
 		var etxt := "%d" % int(round(enemy))
 		draw_string(fb, Vector2(0, 40), htxt, HORIZONTAL_ALIGNMENT_LEFT, -1, hs, Palette.SILVER.lightened(0.3 * _pulse["hero"]))
 		draw_string(fb, Vector2(0, 40), etxt, HORIZONTAL_ALIGNMENT_RIGHT, w, es, Palette.STAT_DOWN.lightened(0.3 * _pulse["enemy"]))
-		draw_string(fb, Vector2(0, 44), ("%d%%" % chance) if both else "…", HORIZONTAL_ALIGNMENT_CENTER, w, 54,
-			Palette.chance_color(chance, SettingsService.get_value("chance_monochrome")))
+		draw_string(f, Vector2(0, 30), "сила раунда" + ("  ·  щелчок — сразу итог" if building else ""), HORIZONTAL_ALIGNMENT_CENTER, w, 17, Palette.TEXT_DIM)
 		# подписи шагов: у героя — справа от числа, у врага — слева
 		var cap_w := w / 2.0 - 110.0
 		if _cap_a["hero"] > 0.01:
@@ -191,12 +202,22 @@ class ScaleBar extends Control:
 			var ef := _fit(fsb, _caps["enemy"], avail)
 			var cw := minf(fsb.get_string_size(_caps["enemy"], HORIZONTAL_ALIGNMENT_LEFT, -1, ef).x, avail)
 			draw_string(fsb, Vector2(x1 - cw, 34), _caps["enemy"], HORIZONTAL_ALIGNMENT_LEFT, cw, ef, Color(_cap_cols["enemy"], _cap_a["enemy"]))
-		var hint := "сила героя · шанс раунда · сила врага" + ("   ·   щелчок — сразу итог" if building else "")
-		draw_string(f, Vector2(0, y + h + 22), hint, HORIZONTAL_ALIGNMENT_CENTER, w, 16, Palette.TEXT_DIM)
-		if marker >= 0:
-			var mx := w * marker / 100.0
-			draw_line(Vector2(mx, y - 10), Vector2(mx, y + h + 10), Palette.TEXT, 3.0)
-			draw_colored_polygon(PackedVector2Array([Vector2(mx - 7, y - 16), Vector2(mx + 7, y - 16), Vector2(mx, y - 8)]), Palette.TEXT)
+		# запас сторон: от середины к краям; число — сколько осталось и доля
+		if float(pool_max["hero"]) > 0.0:
+			var py := y + h + 16.0
+			var ph := 22.0
+			var half := w / 2.0 - 8.0
+			for side: String in ["hero", "enemy"]:
+				var frac := clampf(float(pool[side]) / maxf(0.001, float(pool_max[side])), 0.0, 1.0)
+				var col := (Palette.SILVER if side == "hero" else Palette.STAT_DOWN).lightened(0.5 * float(_hit[side]))
+				var x0 := 0.0 if side == "hero" else w / 2.0 + 8.0
+				draw_rect(Rect2(x0, py, half, ph), Color("#0B0C11"))
+				var fillw := half * frac
+				draw_rect(Rect2(x0 + (half - fillw if side == "hero" else 0.0), py, fillw, ph), col.darkened(0.25))
+				draw_rect(Rect2(x0, py, half, ph), Palette.LINE, false, 1.0)
+				var txt := "%s  %d / %d  ·  %d%%" % ["запас отряда" if side == "hero" else "запас врага", int(round(float(pool[side]))),
+					int(round(float(pool_max[side]))), int(round(frac * 100.0))]
+				draw_string(fsb, Vector2(x0 + 8, py + 16), txt, HORIZONTAL_ALIGNMENT_LEFT if side == "hero" else HORIZONTAL_ALIGNMENT_RIGHT, half - 16, 15, Palette.TEXT)
 
 
 class IntentCard extends Control:
@@ -378,7 +399,7 @@ func _build_board() -> void:
 	rv.add_child(_round_label)
 	_scale = ScaleBar.new()
 	_scale.position = Vector2(MID_X - 520, SCALE_Y)
-	_scale.size = Vector2(1040, 96)
+	_scale.size = Vector2(1040, 116)
 	_board.add_child(_scale)
 	_intent_card = IntentCard.new()
 	_intent_card.size = Vector2(270, 300)
@@ -427,14 +448,17 @@ func _layout(cs: CombatSession) -> void:
 	for ch in _board_layer.get_children():
 		ch.queue_free()
 	_carriers.clear()
+	_fighters.clear()
 	var n := cs.enemies.size()
 	var beside := n <= 3
 	var esz := ENEMY_SIZE if beside else ENEMY_COMPACT
 	var block := esz.x + 16.0 + TAG_COL if beside else esz.x + 50.0
 	var gap := 40.0 if beside else 16.0
 	var x := MID_X - (n * block + (n - 1) * gap) / 2.0
-	for e: Dictionary in cs.enemies:
+	for j in cs.enemies.size():
+		var e: Dictionary = cs.enemies[j]
 		var cv := CardView.make(str(e["id"]), esz, false)
+		_fighters["enemy:%d" % j] = cv
 		cv.aura_wounds = int(cs.state.enemy_wounds.get(cs.event_id, 0)) + cs.session_wounds
 		cv.position = Vector2(x + (0.0 if beside else 25.0), ENEMY_Y)
 		cv.sway = true
@@ -448,9 +472,11 @@ func _layout(cs: CombatSession) -> void:
 	_hero_card = CardView.make(cs.hero, HERO_SIZE, false)
 	_hero_card.position = Vector2(hero_x, HERO_Y)
 	_board_layer.add_child(_hero_card)
+	_fighters["hero:0"] = _hero_card
 	var cdef: Dictionary = ContentDB.data.characters.get(cs.hero, {})
 	var stage: String = cs.state.character(cs.hero).get("stage", "")
 	var htags: Array = Array(cdef.get("stages", {}).get(stage, {}).get("tags", cdef.get("tags", []))).duplicate()
+	htags.push_front(str(Strikes.hero_weapon(ContentDB.data, cs.state, cs.hero).get("id", "Без оружия")))   # оружие — первым
 	for t: String in cs.hero_extra_tags:
 		if not htags.has(t):
 			htags.append(t)
@@ -462,9 +488,11 @@ func _layout(cs: CombatSession) -> void:
 		right += _side_card(e, ContentDB.data.enhancements.get(e, {}).get("tags", []), right, enh_compact) + 20.0
 	var left := hero_x - 24.0
 	var ally_compact := cs.allies.size() > 2
-	for a: String in cs.allies:
+	for ai in cs.allies.size():
+		var a: String = cs.allies[ai]
 		left -= _side_block_width(ally_compact)
-		_side_card(a, ContentDB.data.characters.get(a, {}).get("support_tags", []), left, ally_compact)
+		var atags: Array = [str(Strikes.hero_weapon(ContentDB.data, cs.state, a).get("id", "Без оружия"))] + Array(ContentDB.data.characters.get(a, {}).get("support_tags", []))
+		_side_card(a, atags, left, ally_compact, "hero:%d" % (ai + 1))
 		left -= 20.0
 	_fill_field(cs.field)
 	_fill_round(cs.round_card)
@@ -478,9 +506,11 @@ func _side_block_width(compact: bool) -> float:
 
 
 ## Карта союзника или усиления с тегами; x — левый край блока. Возвращает ширину блока.
-func _side_card(id: String, tags: Array, x: float, compact: bool) -> float:
+func _side_card(id: String, tags: Array, x: float, compact: bool, key: String = "") -> float:
 	var w := _side_block_width(compact)
 	var c := CardView.make(id, SIDE_COMPACT if compact else SIDE_SIZE, false)
+	if key != "":
+		_fighters[key] = c
 	c.position = Vector2(x + (22.0 if compact else 0.0), SIDE_Y + (12.0 if compact else 0.0))
 	_board_layer.add_child(c)
 	_place_tags(c, tags, "hero", not compact, w if compact else SIDE_COL, 15 if compact else 17, BOARD.size.y - 10.0)
@@ -719,8 +749,16 @@ func _next_round() -> void:
 		await _show_memories(pre["fired"])
 		if token != _anim_token or not is_inside_tree():
 			return
-	_replay_later(1.6)
-	_play_links(cs, cs.ledger(pre["effect"]), true)
+	var led := cs.ledger(pre["effect"])
+	# запас сторон: до первого удара — сила первого раунда, дальше — что осталось
+	if float(cs.pool_max["hero"]) > 0.0:
+		_scale.set_pools(cs.pool, cs.pool_max)
+	else:
+		var mx := Strikes.side_power(cs, led)
+		_scale.set_pools(mx, mx)
+	_play_links(cs, led, true)
+	# просмотр идёт сам: после набора силы — удары (метку анимации набор уже сменил — таймер ставим после него)
+	_replay_later(5.2 if not Vfx.reduced() else 1.2)
 
 
 ## Полка навыков: карты кармашка и способности отряда с особым навыком — условие под картой.
@@ -1087,22 +1125,31 @@ func _play() -> void:
 	_anim_token += 1
 	phase = Phase.RESULT
 	_action_btn.disabled = true
-	AudioManager.play("roll_shake", -4.0)
 	var rec := cs.play_round()
 	var led: Dictionary = rec["ledger"]
 	_scale.building = false
 	_scale.set_values(float(led["hero"]), float(led["enemy"]), int(led["chance"]), 0.2)
-	var speed: float = SettingsService.get_value("roll_speed")
-	_scale.play_roll(int(rec["roll"]), speed if speed > 0 else 0.05)
-	await get_tree().create_timer(0.95 * maxf(speed, 0.1)).timeout
-	AudioManager.play("roll", -6.0)
+	if int(rec["round"]) == 1:
+		_scale.set_pools(rec["pool_max"], rec["pool_max"])
+	# удары по очереди: выпад к цели, след удара, урон; запас стороны убывает (docs/16 §9е п.7)
+	var token := _anim_token
+	for st: Dictionary in rec["strikes"]:
+		if token != _anim_token or not is_inside_tree():
+			break
+		await _strike(st)
+	for hz: Dictionary in rec["hazards"]:
+		if token != _anim_token or not is_inside_tree():
+			break
+		await _hazard(hz, rec)
+	_scale.set_pools(rec["pool"], rec["pool_max"])
 	var won: bool = rec["hero_won"]
 	_clash(won)
 	# реакции карт на проигранный раунд (отвести удар, Щит Эха)
 	if not Array(rec.get("memories_lose", [])).is_empty():
 		await _show_memories(rec["memories_lose"])
 	_build_memories()
-	_banner.text = ("РАУНД ВЫИГРАН" if won else "РАУНД ПРОИГРАН") + "  ·  шанс %d%% · выпало %d" % [int(rec["chance"]), int(rec["roll"])]
+	_banner.text = ("РАУНД ВЫИГРАН" if won else "РАУНД ПРОИГРАН") + "  ·  враг −%d%% · отряд −%d%%" % [
+		int(round(100.0 * float(rec["lost"]["enemy"]))), int(round(100.0 * float(rec["lost"]["hero"])))]
 	_banner.add_theme_color_override("font_color", Palette.SILVER if won else Palette.STAT_DOWN)
 	var tw := create_tween()
 	tw.tween_property(_banner, "modulate:a", 1.0, 0.25)
@@ -1128,10 +1175,98 @@ func _play() -> void:
 	if cs.finished:
 		_action_btn.text = "ЗАКРЫТЬ ›"
 		var o := {"win": "ПОБЕДА", "loss": "ПОРАЖЕНИЕ", "death": "ГИБЕЛЬ"}
-		_pips.text = "%s  %d : %d" % [o.get(cs.outcome, ""), cs.hero_wins, cs.enemy_wins]
+		_pips.text = "%s  ·  запас отряда %d%% против %d%% у врага" % [o.get(cs.outcome, ""),
+			int(round(100.0 * cs.share_left("hero"))), int(round(100.0 * cs.share_left("enemy")))]
 	else:
 		_action_btn.text = "СЛЕДУЮЩИЙ РАУНД ›"
 		_replay_later(2.2)
+
+
+## Один удар: карта бьющего делает выпад к цели; попадание — след удара, брызги, урон и убыль запаса;
+## крит — крупно и золотом; промах — серым.
+func _strike(st: Dictionary) -> void:
+	var k := clampf(float(SettingsService.get_value("roll_speed")), 0.2, 1.5)   # скорость показа, как у прежнего броска
+	var side: String = st["side"]
+	var other := "enemy" if side == "hero" else "hero"
+	var att: Control = _fighters.get("%s:%d" % [side, int(st["idx"])], null)
+	var tgt: Control = _fighters.get("%s:%d" % [other, int(st["target_idx"])], _fighters.get("%s:0" % other, null))
+	if att == null or tgt == null or not is_instance_valid(att) or not is_instance_valid(tgt):
+		_scale.pool_to(other, float(st["pool_after"]), 0.2)
+		return
+	var base := att.position
+	var dir := (tgt.get_global_rect().get_center() - att.get_global_rect().get_center())
+	var lunge := dir * 0.28
+	if not Vfx.reduced():
+		var tw := create_tween()
+		tw.tween_property(att, "position", base + lunge, 0.16 * k).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		await tw.finished
+	var at := tgt.get_global_rect().get_center()
+	if bool(st["hit"]):
+		_slash(tgt.get_global_rect(), bool(st["crit"]), side == "enemy")
+		Vfx.blood_splash(self, at, tgt.size.x * (1.2 if bool(st["crit"]) else 0.8), str(st["weapon"]) == "Кислота")
+		if tgt is CardView:
+			(tgt as CardView).shudder()
+		AudioManager.play("trauma" if bool(st["crit"]) else "place", -4.0 if bool(st["crit"]) else -2.0, 0.9 + randf() * 0.3)
+		_float_text(at + Vector2(0, -tgt.size.y * 0.35), ("КРИТ −%d" if bool(st["crit"]) else "−%d") % int(ceil(float(st["dmg"]))),
+			Palette.GOLD if bool(st["crit"]) else (Palette.STAT_DOWN if side == "enemy" else Palette.TEXT), 46 if bool(st["crit"]) else 34)
+		_scale.pool_to(other, float(st["pool_after"]), 0.35)
+	else:
+		AudioManager.play("fan", -8.0, 1.3)
+		_float_text(at + Vector2(0, -tgt.size.y * 0.35), "промах", Palette.TEXT_DIM, 26)
+	if not Vfx.reduced() and is_instance_valid(att):
+		var back := create_tween()
+		back.tween_property(att, "position", base, 0.2 * k).set_ease(Tween.EASE_OUT)
+		await back.finished
+	await get_tree().create_timer(0.15 * k).timeout
+
+
+## Опасность места ранит сторону: дымка над её картами и убыль запаса.
+func _hazard(hz: Dictionary, _rec: Dictionary) -> void:
+	var side: String = hz["side"]
+	var node: Control = _fighters.get("%s:0" % side, null)
+	var at := node.get_global_rect().get_center() if node != null and is_instance_valid(node) else BOARD.position + Vector2(MID_X, SCALE_Y)
+	var smoke := Vfx.burst(at, false)
+	add_child(smoke)
+	Vfx.autofree(smoke)
+	_float_text(at + Vector2(0, 40), "%s −%d" % [hz["text"], int(ceil(float(hz["dmg"])))], Color("#D07A3A"), 26)
+	_scale.pool_to(side, maxf(0.0, float(_scale.pool[side]) - float(hz["dmg"])), 0.3)
+	await get_tree().create_timer(0.45).timeout
+
+
+## След удара: косой росчерк поперёк карты-цели (у крита — золотой и шире).
+func _slash(r: Rect2, crit: bool, on_hero: bool) -> void:
+	var line := Line2D.new()
+	line.top_level = true
+	line.z_index = 50
+	line.width = 10.0 if crit else 6.0
+	line.default_color = Palette.GOLD if crit else (Color(1.0, 0.35, 0.35) if on_hero else Color(0.95, 0.95, 1.0))
+	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.end_cap_mode = Line2D.LINE_CAP_ROUND
+	var a := r.position + Vector2(r.size.x * 0.12, r.size.y * 0.18)
+	var b := r.position + Vector2(r.size.x * 0.88, r.size.y * 0.72)
+	line.points = PackedVector2Array([a, a])
+	add_child(line)
+	var tw := create_tween()
+	tw.tween_method(func(t: float) -> void: line.points = PackedVector2Array([a, a.lerp(b, t)]), 0.0, 1.0, 0.09)
+	tw.tween_property(line, "modulate:a", 0.0, 0.35)
+	tw.tween_callback(line.queue_free)
+
+
+## Всплывающая надпись над картой (урон, промах, опасность).
+func _float_text(at: Vector2, text: String, col: Color, fs: int) -> void:
+	var l := UITheme.label(text, "title_bold", fs, col)
+	l.top_level = true
+	l.z_index = 55
+	l.add_theme_constant_override("outline_size", 8)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.custom_minimum_size = Vector2(320, 0)
+	l.position = at - Vector2(160, fs)
+	add_child(l)
+	var tw := create_tween()
+	tw.tween_property(l, "position:y", l.position.y - 60.0, 0.9).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.9).set_delay(0.35)
+	tw.tween_callback(l.queue_free)
 
 
 func _clash(won: bool) -> void:

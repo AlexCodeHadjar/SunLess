@@ -361,4 +361,4 @@ func test_combat_replay_matches() -> void:
 		eq(replay.outcome, rec["outcome"], "просмотр боя совпадает с итогом (сид %d):" % seed_value)
 		eq(replay.rounds_log.size(), Array(rec["rounds"]).size(), "столько же раундов:")
 		for i in replay.rounds_log.size():
-			eq(int(replay.rounds_log[i]["roll"]), int(rec["rounds"][i]["roll"]), "тот же бросок в раунде %d:" % (i + 1))
+			eq(replay.rounds_log[i]["strikes"], rec["rounds"][i]["strikes"], "те же удары в раунде %d:" % (i + 1))

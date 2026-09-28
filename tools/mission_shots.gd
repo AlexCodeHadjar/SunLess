@@ -322,11 +322,25 @@ func _run() -> void:
 	sa.character("P01")["pocket"] = ["U07", "K07"]
 	var setup := {"state": sa.to_dict(), "key": "SHOT", "spec": {"enemies": ["M03"], "field": "F_08"}, "hero": "P01",
 		"enh": ["U07", "K07"], "support": ["P03"], "ctx_event": {"id": "SHOT", "tags": ["combat"]}, "ctx_option": {"id": "SHOT_a", "tags": []}}
+	SettingsService.values["roll_speed"] = 1.0   # удары — с обычной скоростью, чтобы поймать выпад и урон
 	get_tree().current_scene.call("_watch_combat", setup)
 	await _wait(2.2)
 	await _shot("m26_memory_fire")
 	await _wait(1.6)
 	await _shot("m27_memory_after")
+	# ждём начала ударов (фаза RESULT экрана боя), потом кадры по ходу обмена
+	for i in 80:
+		var scr: Array = get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is CombatScreen)
+		if not scr.is_empty() and scr[0].phase == CombatScreen.Phase.RESULT:
+			break
+		await _wait(0.2)
+	await _wait(0.45)
+	await _shot("m27b_strikes")
+	await _wait(0.7)
+	await _shot("m27c_strikes")
+	await _wait(2.5)
+	await _shot("m27d_round_end")
+	SettingsService.values["roll_speed"] = 0.0
 	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is CombatScreen).map(func(n: Node) -> void: n.queue_free())
 	await _wait(0.4)
 	for card2: String in ["U11", "K08", "U12"]:

@@ -39,9 +39,10 @@ func test_chance_is_clamped() -> void:
 	var cs := _session(c, _state(c), KING)
 	var ch := int(cs.ledger({})["chance"])
 	check(ch >= CombatSession.CHANCE_MIN and ch <= CombatSession.CHANCE_MAX, "шанс в пределах 5–95: %d" % ch)
-	# бой до 2 побед из 3: p²(3 − 2p)
-	var fight := CombatSession.fight_chance(ch)
-	check(fight <= 0.15, "Санни-раб против Тирана почти без шансов: раунд %d%%, бой %.0f%%" % [ch, fight * 100])
+	# удары за три раунда (Strikes.odds)
+	cs.round_no = 1
+	var fight := cs.fight_odds(cs.ledger({}))
+	check(fight <= 0.15, "Санни-раб против Тирана почти без шансов: сила %d%%, бой %.0f%%" % [ch, fight * 100])
 
 
 func test_even_fight_is_reasonable() -> void:
@@ -103,7 +104,7 @@ func test_auto_combat_ends_and_has_both_outcomes() -> void:
 			wins += 1
 		elif cs.outcome == "loss":
 			losses += 1
-			eq(cs.enemy_wins, 2, "проигрыш — две проигранные схватки:")
+			check(cs.share_left("hero") <= cs.share_left("enemy"), "проигрыш — отряд потерял большую долю запаса")
 	check(wins > 0 and losses > 0, "у боя с личинками есть оба исхода (%d/%d)" % [wins, losses])
 
 

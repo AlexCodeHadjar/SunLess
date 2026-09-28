@@ -9,6 +9,7 @@ var regions: Dictionary = {}
 var tags: Dictionary = {}
 # бой
 var combat_tags: Dictionary = {}
+var weapons: Dictionary = {}          # удары в бою: оружие, природное оружие врагов, броня, опасности (Strikes)
 var synergies: Dictionary = {}
 var conflicts: Dictionary = {}
 var fields: Dictionary = {}
@@ -43,6 +44,12 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.round_cards = c._load_map(dir + "/combat/round_cards.json")
 	c.enemies = c._load_map(dir + "/combat/enemies.json")
 	c.enemy_abilities = c._load_map(dir + "/combat/enemy_abilities.json")
+	if FileAccess.file_exists(dir + "/combat/weapons.json"):
+		var wp: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/combat/weapons.json"))
+		if wp is Dictionary:
+			c.weapons = wp
+		else:
+			c.load_errors.append("data/combat/weapons.json: ожидается объект")
 	c.lore = c._load_map(dir + "/lore.json")
 	if FileAccess.file_exists(dir + "/locations.json"):
 		c.locations = c._load_map(dir + "/locations.json")

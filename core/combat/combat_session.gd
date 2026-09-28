@@ -1,7 +1,8 @@
 class_name CombatSession
 extends RefCounted
-## Бой «Столкновение» (docs/12). Без HP: силы сторон сравниваются, раунд решает бросок
-## по доле сил (5–95%). Всё считается пошагово в «летописи силы», чтобы игрок видел каждую цифру.
+## Бой «Столкновение» (docs/12, удары — docs/16 §9е п.7). Сила сторон считается пошагово в «летописи силы»;
+## сила первого раунда — запас сторон, дальше стороны обмениваются ударами (Strikes): урон отнимает запас.
+## Сторона на нуле проигрывает сразу; после трёх раундов побеждает потерявший меньшую долю своего запаса.
 ## Работает на копии состояния; итог применяется через finish() так же транзакционно, как обычный ход.
 
 const RANK_STEP := 1.6
@@ -17,7 +18,6 @@ const MOMENTUM := 0.10
 const WOUND := 0.10
 const STAT_STEP := 0.04
 const STAT_ROTATION := ["power", "will", "cunning"]
-const WINS_NEEDED := 2
 const HAND_SIZE := 3
 
 var content: Content
@@ -33,8 +33,10 @@ var field: Dictionary = {}
 var kind := "normal"
 
 var round_no := 0
-var hero_wins := 0
+var hero_wins := 0                # раунды, где отряд отнял у врага большую долю, чем потерял сам
 var enemy_wins := 0
+var pool := {"hero": 0.0, "enemy": 0.0}       # запас силы сторон (сила первого раунда), урон отнимает его
+var pool_max := {"hero": 0.0, "enemy": 0.0}
 var momentum := ""                # "hero" | "enemy" | ""
 var round_card: Dictionary = {}
 ## Намерение врага на этот раунд (видно игроку до выбора приёма)
@@ -101,24 +103,25 @@ func auto_play() -> void:
 		play_round()
 
 
-## Шанс выиграть бой целиком при шансе раунда p (до 2 побед из 3 раундов).
-static func fight_chance(round_chance: int) -> float:
-	var p := clampf(round_chance / 100.0, 0.0, 1.0)
-	return p * p * (3.0 - 2.0 * p)
+## Шанс выиграть бой целиком по расчёту раунда (прогноз): удары за три раунда (Strikes.odds).
+func fight_odds(led: Dictionary) -> float:
+	return Strikes.odds(self, led)
 
 
 func rounds_total_label() -> String:
-	return "до 2 побед из 3" if kind != "normal" else "2 раунда (при 1:1 — раунд истощения)"
+	return "3 раунда ударов · сила на нуле — поражение сразу"
+
+
+## Доля оставшегося запаса стороны (0–1).
+func share_left(side: String) -> float:
+	return float(pool[side]) / maxf(0.001, float(pool_max[side]))
 
 
 # --- раунды -------------------------------------------------------------------------
 
 func begin_round() -> void:
 	round_no += 1
-	if round_no == 3 and kind == "normal":
-		round_card = {"id": "EXHAUST", "name": "Раунд истощения", "tags": [], "stat": "will",
-			"effects": [{"tag": "*both", "value": -0.2}], "text": "Обе стороны выдохлись: −20% всем."}
-	elif not next_round_card.is_empty():
+	if not next_round_card.is_empty():
 		round_card = next_round_card
 	else:
 		round_card = _draw_round_card()
@@ -209,7 +212,8 @@ func _draw_round_card() -> Dictionary:
 	return content.round_cards[pick].duplicate(true)
 
 
-## Сыграть раунд: сначала срабатывают навыки карт (условия раунда), затем бросок. Возвращает запись раунда.
+## Сыграть раунд: сначала срабатывают навыки карт (условия раунда), затем обмен ударами и опасности места.
+## Возвращает запись раунда: ledger, strikes, hazards, pool, pool_max, hero_won (раунд за тем, кто отнял большую долю).
 func play_round() -> Dictionary:
 	if finished:
 		return {}
@@ -224,13 +228,21 @@ func play_round() -> Dictionary:
 			if WearRules.wears(content, state, card):
 				state.wear[card] = mini(100, WearRules.current(state, card) + int(intent["wear"]))
 		entries.append({"kind": "info", "text": "«%s»: усиления изнашиваются сильнее" % intent.get("name", "")})
-	var roll := rng.randi_range(1, 100)
-	var won: bool = roll <= int(led["chance"])
+	# запас сторон — сила первого раунда (с навыками карт, полем и тегами; у отряда +35% за союзника)
+	if float(pool_max["hero"]) <= 0.0:
+		pool_max = Strikes.side_power(self, led)
+		pool = pool_max.duplicate()
+	var before := {"hero": share_left("hero"), "enemy": share_left("enemy")}
+	var strikes := Strikes.exchange(self, led)
+	var hz := Strikes.hazards(self, led)
+	var won: bool = before["enemy"] - share_left("enemy") > before["hero"] - share_left("hero")
 	for l: Dictionary in led["links"]:
 		if not discovered.has(l["id"]):
 			discovered.append(l["id"])
-	var rec := {"round": round_no, "card": round_card, "memories": fired["fired"], "chance": led["chance"], "roll": roll,
-		"hero_won": won, "ledger": led, "intent": intent, "intent_active": intent_active}
+	var rec := {"round": round_no, "card": round_card, "memories": fired["fired"], "chance": led["chance"],
+		"hero_won": won, "ledger": led, "intent": intent, "intent_active": intent_active, "strikes": strikes, "hazards": hz,
+		"pool": pool.duplicate(), "pool_max": pool_max.duplicate(),
+		"lost": {"hero": before["hero"] - share_left("hero"), "enemy": before["enemy"] - share_left("enemy")}}
 	if won:
 		hero_wins += 1
 		session_wounds += 1
@@ -257,9 +269,10 @@ func play_round() -> Dictionary:
 	if state.game_over:
 		finished = true
 		outcome = "death"
-	elif hero_wins >= WINS_NEEDED or enemy_wins >= WINS_NEEDED or round_no >= 3:
+	elif float(pool["hero"]) <= 0.0 or float(pool["enemy"]) <= 0.0 or round_no >= Strikes.ROUNDS:
 		finished = true
-		outcome = "win" if hero_wins > enemy_wins else "loss"
+		# на нуле — поражение сразу; иначе — кто потерял меньшую долю своего запаса
+		outcome = "win" if float(pool["enemy"]) <= 0.0 or (float(pool["hero"]) > 0.0 and share_left("hero") > share_left("enemy")) else "loss"
 	if finished:
 		if outcome == "loss":
 			_lose_fight(rec)
@@ -313,6 +326,7 @@ func _hero_tags(tactic: Dictionary) -> Array:
 	var base: Array = c.get("stages", {}).get(stage, {}).get("tags", c.get("tags", []))
 	for t: String in base:
 		_add_unique(out, t)
+	_add_unique(out, str(Strikes.hero_weapon(content, state, hero).get("id", "Без оружия")))   # оружие — тоже тег
 	for card: String in enh:
 		for t: String in content.enhancements.get(card, {}).get("tags", []):
 			_add_unique(out, t)

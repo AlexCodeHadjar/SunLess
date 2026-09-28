@@ -114,7 +114,7 @@ LOC = [
 
 ENH = [
 	{"id": "U07", "name": "Лазурный Клинок", "origin": "memory", "rarity": "epic", "wears": True, "art": "res://art/cards/U07.webp",
-	 "art_has_frame": True, "bonuses": [{"stat": "power", "value": 3, "tags": []}],
+	 "art_has_frame": True, "weapon": "Меч", "bonuses": [{"stat": "power", "value": 3, "tags": []}],
 	 "text": "Воспоминание-оружие: +3 Сила.", "canon": "канон", "source": "«Дитя Теней», гл. 33–34, 56", "tags": ["Режущий", "Воспоминание", "Сталь"]},
 	{"id": "U11", "name": "Золотая Верёвка", "origin": "memory", "rarity": "rare", "wears": True, "art": "res://art/cards/U11.webp",
 	 "art_has_frame": True, "bonuses": [{"stat": "cunning", "value": 3, "tags": ["climb"]}, {"stat": "cunning", "value": 1, "tags": ["chase", "weather"]}],
