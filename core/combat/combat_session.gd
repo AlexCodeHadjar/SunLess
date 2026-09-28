@@ -316,7 +316,8 @@ func hero_rank() -> int:
 
 func _enemy_base(e: Dictionary) -> float:
 	var cls := clampi(int(e.get("class", 1)), 1, 7)
-	return 100.0 * pow(RANK_STEP, int(e.get("rank", 0)) - hero_rank()) * CLASS_MULT[cls]
+	# power — ручка баланса противника (редактор, вкладка «Сила»): множитель к силе ранга и класса
+	return 100.0 * pow(RANK_STEP, int(e.get("rank", 0)) - hero_rank()) * CLASS_MULT[cls] * float(e.get("power", 1.0))
 
 
 func _hero_tags(tactic: Dictionary) -> Array:

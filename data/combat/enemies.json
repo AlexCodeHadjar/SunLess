@@ -15,7 +15,8 @@
   ],
   "kind": "normal",
   "shards": 1,
-  "art": "res://art/cards/M01.png"
+  "art": "res://art/cards/M01.png",
+  "power": 0.55
  },
  {
   "id": "M02",
@@ -53,7 +54,8 @@
   "echo": {
    "card": "U12",
    "chance": 0.25
-  }
+  },
+  "power": 1.4
  },
  {
   "id": "M04",
@@ -68,7 +70,8 @@
   ],
   "kind": "elite",
   "shards": 4,
-  "art": "res://art/cards/M04.png"
+  "art": "res://art/cards/M04.png",
+  "power": 1.7
  },
  {
   "id": "M05",
@@ -112,7 +115,8 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M07.png"
+  "art": "res://art/cards/M07.png",
+  "power": 1.9
  },
  {
   "id": "M08",
@@ -142,7 +146,8 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M09.png"
+  "art": "res://art/cards/M09.png",
+  "power": 1.4
  },
  {
   "id": "M10",
@@ -185,7 +190,8 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M12.png"
+  "art": "res://art/cards/M12.png",
+  "power": 1.1
  },
  {
   "id": "M15",
@@ -546,7 +552,8 @@
    "Гордыня",
    "Человек"
   ],
-  "shards": 3
+  "shards": 3,
+  "power": 1.8
  },
  {
   "id": "H_CASTER",
