@@ -13,3 +13,6 @@ desktop.ini
 tools/editor/backups/
 tools/editor/config.json
 __pycache__/
+
+# временные файлы Word/Excel (открытый документ)
+~$*
