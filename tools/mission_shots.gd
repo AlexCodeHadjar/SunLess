@@ -68,12 +68,13 @@ func _run() -> void:
 	MissionFlow.open(ContentDB.data, GameState.state, "MS02")
 	GameState.missions_changed.emit()
 	await _wait(0.4)
-	# магазин: на стартовые осколки — первый попутчик
-	game.call("_open_shop", "nightmare_trader")
+	# магазин (с Академии; в Первом Кошмаре торговца нет): снимок лавки, потом обратно в Кошмар
+	GameState.state.chapter = "academy"
+	game.call("_open_shop", "academy_store")
 	await _wait(0.8)
 	await _shot("m03_shop")
 	var hero := ""
-	for it: Dictionary in ShopRules.ensure(ContentDB.data, GameState.state, "nightmare_trader")["items"]:
+	for it: Dictionary in ShopRules.ensure(ContentDB.data, GameState.state, "academy_store")["items"]:
 		if ContentDB.data.card_kind(it["card"]) == "character" and int(it["price"]) <= int(GameState.state.resources["shards"]):
 			hero = it["card"]
 	if hero != "":
@@ -88,6 +89,7 @@ func _run() -> void:
 	await _shot("m03c_services")
 	GameState.state.character("P01")["traumas"] = []
 	_shop().close()
+	GameState.state.chapter = "nightmare"
 	await _wait(0.6)
 	game.call("_open_mission", "MS02")
 	await _wait(0.8)
@@ -192,13 +194,13 @@ func _run() -> void:
 	await _wait(0.5)
 	if is_instance_valid(_window()):
 		_window().close()
-	# середина главы: несколько мест, побочная и случайная миссии веером
+	# середина главы: сюжет, случайная миссия и миссия-выбор
 	var st := GameState.state
 	st.squads.clear()
 	st.rest_until.clear()
 	for mid: String in ["MS01", "MS02", "MS03", "MS04"]:
 		st.missions[mid] = {"status": "done", "attempts": 0}
-	for mid: String in ["MS05", "RM01", "SM01", "RM04"]:
+	for mid: String in ["MS05", "RM01", "SM02", "SM03"]:
 		MissionFlow.open(ContentDB.data, st, mid)
 	GameState.missions_changed.emit()
 	await _wait(5.0)

@@ -15,11 +15,11 @@ func test_heal() -> void:
 	s.character("P01")["traumas"] = ["T03", "T02"]
 	eq(ServiceRules.heal_price(c, "T03"), 10, "тяжёлая травма — 10:")
 	eq(ServiceRules.heal_price(c, "T02"), 5, "лёгкая — 5:")
-	eq(ServiceRules.perform(c, s, "nightmare_trader", "heal", "P01", "T03"), "", "лечение прошло:")
+	eq(ServiceRules.perform(c, s, "academy_store", "heal", "P01", "T03"), "", "лечение прошло:")
 	check(not Array(s.character("P01")["traumas"]).has("T03"), "перелом снят")
 	eq(int(s.resources["shards"]), 40, "осколки списаны:")
 	s.resources["shards"] = 2
-	check(ServiceRules.perform(c, s, "nightmare_trader", "heal", "P01", "T02").contains("Не хватает"), "без осколков не лечат")
+	check(ServiceRules.perform(c, s, "academy_store", "heal", "P01", "T02").contains("Не хватает"), "без осколков не лечат")
 
 
 func test_sharpen_and_unwear() -> void:
@@ -32,7 +32,7 @@ func test_sharpen_and_unwear() -> void:
 			break
 	check(card != "", "нашлось усиление с бонусом без условий")
 	EffectApplier.add_card(c, s, card)
-	check(ServiceRules.perform(c, s, "nightmare_trader", "sharpen", card).contains("не умеют"), "у менялы Кошмара заточки нет")
+	check(ShopRules.shops_of(c, s).is_empty(), "в Первом Кошмаре торговца нет — глава идёт событие за событием")
 	eq(ServiceRules.perform(c, s, "academy_store", "sharpen", card), "", "в лавке Академии — есть:")
 	var st: String = c.enhancements[card]["bonuses"][0]["stat"]
 	var r := StatResolver.resolve(c, s, "P01", [card], {"tags": []}, {"tags": []})
@@ -40,7 +40,7 @@ func test_sharpen_and_unwear() -> void:
 	s.chapter = "shore"
 	check(not ServiceRules.sharpened(s, card), "в новой главе заточка сходит")
 	s.wear[card] = 31
-	eq(ServiceRules.perform(c, s, "nightmare_trader", "unwear", card), "", "починка:")
+	eq(ServiceRules.perform(c, s, "academy_store", "unwear", card), "", "починка:")
 	eq(WearRules.current(s, card), WearRules.START, "износ сброшен:")
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	eq(s2.sharpened, s.sharpened, "заточка сохраняется:")

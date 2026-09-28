@@ -1,12 +1,14 @@
 extends TestCase
 ## Ф4 миссий (docs/15): много героев, несколько отрядов сразу, магазин раз в 7 миссий, кармашки.
 
-const SHOP := "nightmare_trader"
+const SHOP := "academy_store"
 
 
 func _run(seed_value: int = 7) -> RunState:
 	var s := MissionFlow.new_run(content(), seed_value)
+	check(ShopRules.shops_of(content(), s).is_empty(), "в Первом Кошмаре магазина нет")
 	MissionFlow.open(content(), s, "MS02")
+	s.chapter = "academy"   # торговцы — с Академии; миссии Кошмара остаются для проверок отрядов
 	return s
 
 
@@ -16,7 +18,7 @@ func _items(s: RunState) -> Array:
 
 func test_shop_data() -> void:
 	var c := content()
-	check(c.shops.has(SHOP), "магазин Первого Кошмара загружен")
+	check(c.shops.has(SHOP), "лавка Академии загружена")
 	eq(ShopRules.shops_of(c, _run()), [SHOP], "в главе один магазин:")
 
 

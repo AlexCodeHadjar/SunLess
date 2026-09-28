@@ -51,8 +51,8 @@ func test_bought_companions_stay_after_nightmare() -> void:
 	var s := MissionFlow.new_run(c, 1)
 	EffectApplier.add_card(c, s, "P09")          # Шолар пришёл по сюжету
 	s.resources["shards"] = 99
-	s.shops["nightmare_trader"] = {"gen": 0, "seen": 0, "items": [{"card": "P10", "price": 8, "sold": false}]}
-	eq(ShopRules.buy(c, s, "nightmare_trader", "P10"), "", "Шифти куплен:")
+	s.shops["academy_store"] = {"gen": 0, "seen": 0, "items": [{"card": "P10", "price": 8, "sold": false}]}
+	eq(ShopRules.buy(c, s, "academy_store", "P10"), "", "Шифти куплен:")
 	var rng := RandomNumberGenerator.new()
 	var out := EffectApplier.apply(c, s, {"cmd": "remove_temporaries"}, "P01", rng)
 	check(not s.owns("P09"), "сюжетный спутник остаётся в Кошмаре")
