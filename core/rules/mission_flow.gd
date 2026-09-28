@@ -316,6 +316,7 @@ static func spawn_random(content: Content, state: RunState, lid: String) -> Arra
 static func after_completion(content: Content, state: RunState) -> Array:
 	var out: Array = []
 	state.completed_missions += 1
+	TideRules.count(state)   # прилив считает выполненные миссии
 	var n := state.completed_missions
 	for mid: String in _sorted(content.missions):
 		var m: Dictionary = content.missions[mid]

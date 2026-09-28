@@ -1,17 +1,19 @@
 class_name TideRules
 extends RefCounted
 ## Прилив Забытого Берега (docs/16 §11.1): море возвращается по сюжету — команда `tide` в последствиях миссии.
-## Сначала предупреждение (warn с): видно, какие места уйдут под воду. Потом прилив (flood с):
+## Счёт — по выполненным миссиям, не по часам (решение владельца): думать можно сколько угодно.
+## Сначала предупреждение (warn миссий): видно, какие места уйдут под воду. Потом прилив (flood миссий):
 ##   · места уходят под воду — низины (height: low) всегда, средние (mid) — с шансом, высоты (high) — никогда;
 ##   · отряд, которого вода застала в таком месте (в пути или на месте), бежит: проверка Хитрости —
 ##     удача: только психика, провал: один герой — поражение (грань смерти, на грани — бросок смерти);
 ##   · открытые побочные и случайные миссии там смыты; сюжетные ждут отлива (отправить нельзя).
 ## Отлив: лабиринт перестроен — затопленные места меняются местами на карте (новые проходы), в них — новые встречи.
+## Если делать больше нечего (всё открытое под водой, отрядов нет) — вода уходит сама, глава не встаёт.
 ## Натиск не тонет: угроза приходит сама.
 
 const MID_CHANCE := 0.5
-const WARN := 40.0
-const FLOOD := 80.0
+const WARN := 2               # выполненных миссий до прихода воды
+const FLOOD := 2              # выполненных миссий, пока вода стоит
 const FLEE_REQ := {"cunning": 6}
 const FLEE_TAGS := ["survival", "climb", "chase"]
 const FLEE_PSY := -8          # выбрались — психика
@@ -42,14 +44,23 @@ static func threatened(state: RunState, lid: String) -> bool:
 	return phase(state) == "warn" and places(state).has(lid)
 
 
-## Секунды до прихода воды (warn) или до отлива (flood); -1 — прилива нет.
-static func left(state: RunState) -> float:
-	match phase(state):
-		"warn":
-			return maxf(0.0, float(state.tide.get("at", 0.0)) - state.clock)
-		"flood":
-			return maxf(0.0, float(state.tide.get("until", 0.0)) - state.clock)
-	return -1.0
+## Сколько миссий выполнить до прихода воды (warn) или до отлива (flood); -1 — прилива нет.
+static func left(state: RunState) -> int:
+	if phase(state) == "":
+		return -1
+	return maxi(0, int(state.tide.get("left", 0)))
+
+
+## «через 2 миссии», «через 1 миссию».
+static func left_text(state: RunState) -> String:
+	var n := left(state)
+	return "%d %s" % [n, ["миссию", "миссии", "миссий"][0 if n % 10 == 1 and n % 100 != 11 else (1 if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else 2)]]
+
+
+## Выполнена миссия (MissionFlow.after_completion): счётчик прилива идёт вперёд. Смена фазы — в tick.
+static func count(state: RunState) -> void:
+	if phase(state) != "":
+		state.tide["left"] = maxi(0, int(state.tide.get("left", 0)) - 1)
 
 
 ## Миссия недоступна: её место под водой (натиск не тонет).
@@ -58,12 +69,14 @@ static func mission_flooded(content: Content, state: RunState, mid: String) -> b
 	return str(m.get("type", "")) != "onslaught" and flooded(state, str(m.get("location", "")))
 
 
-## Отряд, отправленный сейчас, не успеет: вода придёт раньше, чем он прибудет и сделает дело.
+## Опасно отправлять: другие отряды в деле могут закончить свои миссии раньше и привести воду,
+## пока этот ещё здесь. Нет других отрядов — не опасно: свою миссию он закончит до воды.
 static func risky(content: Content, state: RunState, mid: String) -> bool:
 	var m: Dictionary = content.missions.get(mid, {})
 	if str(m.get("type", "")) == "onslaught" or not threatened(state, str(m.get("location", ""))):
 		return false
-	return float(m.get("duration", 8)) + 2.0 >= left(state)
+	var others := state.squads.filter(func(sq: Dictionary) -> bool: return str(sq["mission"]) != mid).size()
+	return others > 0 and left(state) <= others
 
 
 ## Точка места на карте с учётом новых проходов после отлива: место стоит в чужой «ячейке» (исходной точке
@@ -87,10 +100,10 @@ static func _rng(state: RunState, salt: int) -> RandomNumberGenerator:
 
 ## Команда `tide`: объявить прилив. Места выбираются сразу — игрок видит, что уйдёт под воду.
 ## Если вода уже стоит — прилив затягивается; если уже объявлен — второй не наслаивается.
-static func schedule(content: Content, state: RunState, warn: float, flood: float, text: String = "") -> Array:
+static func schedule(content: Content, state: RunState, warn: int, flood: int, text: String = "") -> Array:
 	match phase(state):
 		"flood":
-			state.tide["until"] = maxf(float(state.tide.get("until", 0.0)), state.clock + flood)
+			state.tide["left"] = maxi(left(state), flood)
 			return [{"kind": "tide", "text": "Вода не уходит: отлив позже"}]
 		"warn":
 			return []
@@ -107,27 +120,37 @@ static func schedule(content: Content, state: RunState, warn: float, flood: floa
 	if chosen.is_empty():
 		return []
 	state.tide["phase"] = "warn"
-	state.tide["at"] = state.clock + maxf(1.0, warn)
-	state.tide["flood"] = maxf(1.0, flood)
+	state.tide["left"] = maxi(1, warn)
+	state.tide["flood"] = maxi(1, flood)
 	state.tide["places"] = chosen
-	return [{"kind": "tide_warn", "text": (text + " " if text != "" else "") + "Через %d с — прилив" % int(warn)}]
+	return [{"kind": "tide_warn", "text": (text + " " if text != "" else "") + "Прилив — через %s" % left_text(state)}]
 
 
-## Часы прилива: пришла вода, ушла вода. Возвращает события для интерфейса.
+## Пришла вода, ушла вода (по счётчику миссий). Возвращает события для интерфейса.
 static func tick(content: Content, state: RunState) -> Array:
 	match phase(state):
 		"warn":
-			if state.clock >= float(state.tide.get("at", 0.0)):
+			if left(state) <= 0:
 				return _flood(content, state)
 		"flood":
-			if state.clock >= float(state.tide.get("until", 0.0)):
+			if left(state) <= 0 or _stuck(content, state):
 				return _ebb(content, state)
 	return []
 
 
+## Под водой всё, что открыто, и отрядов в деле нет — ждать отлива нечем: вода уходит сама.
+static func _stuck(content: Content, state: RunState) -> bool:
+	if not state.squads.is_empty():
+		return false
+	for mid: String in MissionFlow.open_missions(state):
+		if MissionFlow.chapter_of(content, mid) == state.chapter and not mission_flooded(content, state, mid):
+			return false
+	return true
+
+
 static func _flood(content: Content, state: RunState) -> Array:
 	state.tide["phase"] = "flood"
-	state.tide["until"] = float(state.tide.get("at", state.clock)) + float(state.tide.get("flood", FLOOD))
+	state.tide["left"] = maxi(1, int(state.tide.get("flood", FLOOD)))
 	var here := places(state)
 	var names := ", ".join(here.map(func(l: String) -> String: return str(content.locations.get(l, {}).get("name", l))))
 	var out: Array = [{"kind": "tide_flood", "text": "Прилив! Под водой: %s" % names}]

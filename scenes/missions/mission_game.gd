@@ -267,7 +267,7 @@ func _build_toast() -> void:
 	_tide_banner.add_theme_constant_override("outline_size", 8)
 	_tide_banner.add_theme_color_override("font_outline_color", Color(0, 0.02, 0.05, 0.95))
 	_tide_banner.mouse_filter = Control.MOUSE_FILTER_STOP
-	_tide_banner.tooltip_text = "Прилив Забытого Берега: низины уходят под воду всегда, средние места — как повезёт, высоты — никогда.
+	_tide_banner.tooltip_text = "Прилив Забытого Берега считает выполненные миссии, не секунды. Низины уходят под воду всегда, средние места — как повезёт, высоты — никогда.
 Отряд, которого застанет вода, бежит (проверка Хитрости): провал — один герой падает на грань смерти.
 Незавершённые побочные и случайные миссии в затопленных местах смывает. После отлива лабиринт другой: новые проходы и новые встречи."
 	_tide_banner.visible = false
@@ -370,7 +370,7 @@ func _update_tide() -> void:
 	var left := TideRules.left(s)
 	var urgency := 0.0
 	if ph == "warn":
-		urgency = 1.0 - clampf(left / 45.0, 0.0, 1.0)
+		urgency = 1.0 if left <= 1 else 0.45
 	var titles: Array = TideRules.places(s).map(func(l: String) -> String: return str(c.locations.get(l, {}).get("name", l)))
 	# у места, где ещё лежит карта миссии, подпись уже есть — вода подписывает только опустевшие
 	var shown := {}
@@ -383,9 +383,9 @@ func _update_tide() -> void:
 	var names := ", ".join(titles)
 	match ph:
 		"warn":
-			_tide_banner.text = "≈ Прилив через %d с — под воду уйдут: %s" % [int(ceil(left)), names]
+			_tide_banner.text = "≈ Прилив через %s — под воду уйдут: %s" % [TideRules.left_text(s), names]
 		"flood":
-			_tide_banner.text = "≈ Под водой: %s · отлив через %d с" % [names, int(ceil(left))]
+			_tide_banner.text = "≈ Под водой: %s · отлив через %s" % [names, TideRules.left_text(s)]
 		_:
 			_tide_banner.text = ""
 	_tide_banner.visible = ph != ""
@@ -586,9 +586,9 @@ func _update_pins() -> void:
 		# прилив: место под водой — ждать отлива; вода идёт — успеет ли отряд
 		var under := TideRules.mission_flooded(ContentDB.data, s, mid)
 		if under:
-			badge = "ПОД ВОДОЙ · %d с" % int(ceil(TideRules.left(s)))
+			badge = "ПОД ВОДОЙ"
 		elif progress < 0.0 and not arrived and TideRules.risky(ContentDB.data, s, mid):
-			badge = "≈ ВОДА ЧЕРЕЗ %d с" % int(ceil(TideRules.left(s)))
+			badge = "≈ ВОДА СКОРО"
 		var tint := Color(0.5, 0.64, 0.86, 0.8) if under else Color(1, 1, 1, 1)
 		if mk.modulate != tint:
 			mk.modulate = tint

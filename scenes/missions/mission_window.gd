@@ -528,11 +528,11 @@ func _notes(m: Dictionary) -> VBoxContainer:
 	# прилив (TideRules): место под водой или вода идёт
 	var mid := str(m.get("id", ""))
 	if TideRules.mission_flooded(c, s, mid):
-		v.add_child(UITheme.label("≈ Место под водой — отряд не пройдёт. Отлив через %d с" % int(ceil(TideRules.left(s))), "sans_bold", 17, Color(0.6, 0.82, 1.0)))
+		v.add_child(UITheme.label("≈ Место под водой — отряд не пройдёт. Отлив через %s" % TideRules.left_text(s), "sans_bold", 17, Color(0.6, 0.82, 1.0)))
 	elif TideRules.threatened(s, str(m.get("location", ""))) and str(m.get("type", "")) != "onslaught":
-		var warn := "≈ Прилив через %d с: место уйдёт под воду" % int(ceil(TideRules.left(s)))
+		var warn := "≈ Прилив через %s: место уйдёт под воду" % TideRules.left_text(s)
 		if TideRules.risky(c, s, mid):
-			warn += " — путь %d с, отряд не успеет: вода застанет его (бегство, провал — грань смерти)" % int(m.get("duration", 8))
+			warn += " — если другой отряд закончит миссию раньше, вода застанет этот (бегство, провал — грань смерти)"
 		var wl := UITheme.label(warn, "sans_bold", 17, Palette.REQ_MISS)
 		wl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		v.add_child(wl)

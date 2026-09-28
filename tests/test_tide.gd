@@ -34,7 +34,7 @@ func test_schedule_picks_low_never_high() -> void:
 	for sd in 12:
 		var s := _shore()
 		s.rng_seed = 500 + sd
-		var ev := TideRules.schedule(c, s, 30, 60)
+		var ev := TideRules.schedule(c, s, 2, 2)
 		check(not ev.is_empty() and TideRules.phase(s) == "warn", "прилив объявлен")
 		for lid: String in c.locations:
 			if str(c.locations[lid].get("chapter", "")) != "shore":
@@ -64,17 +64,36 @@ func test_flood_washes_side_blocks_story_and_ebb_reshapes() -> void:
 	check(side != "" and story != "", "в низине %s есть случайная и сюжетная миссии" % low)
 	MissionFlow.open(c, s, side)
 	MissionFlow.open(c, s, story)
-	TideRules.schedule(c, s, 10, 20)
+	TideRules.schedule(c, s, 2, 2)
 	check(TideRules.threatened(s, low), "низина под угрозой")
-	check(TideRules.risky(c, s, story), "отряд не успеет — отмечено")
-	MissionFlow.tick(c, s, 11.0)
-	eq(TideRules.phase(s), "flood", "вода пришла:")
+	check(not TideRules.risky(c, s, story), "до воды две миссии — ещё можно")
+	MissionFlow.tick(c, s, 500.0)
+	eq(TideRules.phase(s), "warn", "время само по себе воду не приводит:")
+	MissionFlow.after_completion(c, s)
+	check(not TideRules.risky(c, s, story), "одна миссия до воды, других отрядов нет — успеет")
+	# другой отряд в деле может закончить раньше и привести воду
+	s.squads.append({"id": 99, "mission": side, "heroes": [], "phase": "travel", "launched_at": 0.0, "arrive_at": 99.0})
+	check(TideRules.risky(c, s, story), "другой отряд в деле — отмечено")
+	s.squads.clear()
+	MissionFlow.after_completion(c, s)
+	MissionFlow.tick(c, s, 0.1)
+	eq(TideRules.phase(s), "flood", "две миссии — вода пришла:")
 	eq(str(s.missions[side]["status"]), "expired", "побочную смыло:")
 	eq(str(s.missions[story]["status"]), "open", "сюжетная ждёт:")
 	eq(MissionFlow.can_launch(c, s, story, ["P01"]), "Под водой — ждите отлива", "под воду не отправить:")
 	var before := TideRules.pos(c, s, low)
-	var ev := MissionFlow.tick(c, s, 25.0)
-	eq(TideRules.phase(s), "", "отлив:")
+	# на высоте есть чем заняться — вода стоит, пока не выполнены две миссии
+	var high: String = _low_high(c)[1]
+	for m3: String in c.missions:
+		if str(c.missions[m3].get("location", "")) == high and str(c.missions[m3].get("type", "")) == "story" and not s.missions.has(m3):
+			MissionFlow.open(c, s, m3)
+			break
+	MissionFlow.tick(c, s, 500.0)
+	eq(TideRules.phase(s), "flood", "время воду не уводит:")
+	MissionFlow.after_completion(c, s)
+	MissionFlow.after_completion(c, s)
+	var ev := MissionFlow.tick(c, s, 0.1)
+	eq(TideRules.phase(s), "", "отлив после двух миссий:")
 	check(ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_ebb"), "событие отлива")
 	check(MissionFlow.can_launch(c, s, story, ["P01"]) != "Под водой — ждите отлива", "после отлива — снова можно")
 	check(before.size() == 2, "у места есть точка")
@@ -102,8 +121,9 @@ func test_caught_squad_flees() -> void:
 		MissionFlow.open(c, s, mid)
 		var r := MissionFlow.launch(c, s, mid, ["P01"])
 		check(bool(r["ok"]), "отряд ушёл: %s" % r.get("error", ""))
-		TideRules.schedule(c, s, 1, 30)
-		var ev := MissionFlow.tick(c, s, 2.0)
+		TideRules.schedule(c, s, 1, 2)
+		MissionFlow.after_completion(c, s)   # другой отряд закончил своё — вода пришла
+		var ev := MissionFlow.tick(c, s, 0.1)
 		var caught: Array = ev.filter(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_caught")
 		eq(caught.size(), 1, "вода застала отряд:")
 		check(s.squads.is_empty(), "отряд вернулся")
@@ -119,7 +139,7 @@ func test_tide_command_and_save() -> void:
 	var c := content()
 	var s := _shore()
 	var rng := RandomNumberGenerator.new()
-	var ev := EffectApplier.apply(c, s, {"cmd": "tide", "warn": 20, "flood": 40, "text": "Вода!"}, "P01", rng)
+	var ev := EffectApplier.apply(c, s, {"cmd": "tide", "warn": 2, "flood": 2, "text": "Вода!"}, "P01", rng)
 	check(not ev.is_empty() and str(ev[0]["text"]).begins_with("Вода!"), "команда tide объявляет прилив")
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	eq(TideRules.phase(s2), "warn", "прилив сохраняется:")
@@ -133,9 +153,22 @@ func test_tide_command_and_save() -> void:
 	check(n >= 4, "приливов по сюжету: %d" % n)
 
 
+func test_stuck_flood_ebbs() -> void:
+	var c := content()
+	var s := _shore()
+	for mid: String in s.missions.keys():
+		s.missions.erase(mid)
+	TideRules.schedule(c, s, 1, 5)
+	MissionFlow.after_completion(c, s)
+	MissionFlow.tick(c, s, 0.1)
+	# открытых миссий нет, отрядов нет — ждать нечем: вода уходит сама
+	MissionFlow.tick(c, s, 0.1)
+	eq(TideRules.phase(s), "", "глава не встаёт — вода ушла:")
+
+
 func test_new_chapter_clears_tide() -> void:
 	var c := content()
 	var s := _shore()
-	TideRules.schedule(c, s, 10, 20)
+	TideRules.schedule(c, s, 2, 2)
 	MissionFlow.start_chapter(c, s, "shore")
 	eq(TideRules.phase(s), "", "новая глава — без прилива:")

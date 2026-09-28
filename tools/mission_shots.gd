@@ -293,17 +293,17 @@ func _run() -> void:
 	MissionFlow.open(ContentDB.data, sa, "RS02")
 	MissionFlow.open(ContentDB.data, sa, "SS01")
 	GameState.missions_changed.emit()
-	GameState.mission_events.emit(TideRules.schedule(ContentDB.data, sa, 30, 40, "Шторм гонит воду в лабиринт."))
+	GameState.mission_events.emit(TideRules.schedule(ContentDB.data, sa, 2, 2, "Шторм гонит воду в лабиринт."))
 	await _wait(3.0)
 	await _shot("m21b_tide_warn")
 	get_tree().current_scene.call("_open_mission", "RS01")
 	await _wait(0.8)
 	await _shot("m21c_brief_tide")
 	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
-	sa.clock = float(sa.tide["at"]) + 0.1
+	sa.tide["left"] = 0
 	await _wait(3.0)
 	await _shot("m21d_tide_flood")
-	sa.clock = float(sa.tide["until"]) + 0.1
+	sa.tide["left"] = 0
 	await _wait(3.0)
 	await _shot("m21e_tide_ebb")
 	# Воспоминание-добыча (LootRules): выбор 1 из 3
