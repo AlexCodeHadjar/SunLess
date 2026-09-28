@@ -17,7 +17,7 @@ const RANKS := ["Спящий", "Пробуждённый", "Падший", "П�
 const CLASSES := ["", "Зверь", "Монстр", "Демон", "Дьявол", "Тиран", "Ужас", "Титан"]
 
 var card_id := ""
-var kind := ""          # character | enhancement | trauma | enemy | mission
+var kind := ""          # character | enhancement | enemy | mission
 var draggable := true
 var hover_lift := true
 var dimmed := false
@@ -25,7 +25,7 @@ var highlight := false
 var badge := ""          # короткая метка снизу: «Черновик: E03»
 var sway := false        # лёгкое покачивание (карты событий на карте мира)
 var smoke_on_hover := true
-var aura_enabled := true   # живой облик по тегам и травмам (CardAura)
+var aura_enabled := true   # живой облик по тегам и грани смерти (CardAura)
 var aura_wounds := 0       # раны врага (бой) — добавляют кровь и трещины
 var _hover := false
 var _smoke: CPUParticles2D
@@ -86,7 +86,6 @@ func _def() -> Dictionary:
 	match kind:
 		"character": return c.characters.get(card_id, {})
 		"enhancement": return c.enhancements.get(card_id, {})
-		"trauma": return c.traumas.get(card_id, {})
 		"mission": return c.missions.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
 	return {}
@@ -148,17 +147,15 @@ func _crisis_texture(st: String) -> Texture2D:
 	return _crisis_art[key]
 
 
-## Пересобирает живой облик карты по текущим тегам, травмам и ранам.
+## Пересобирает живой облик карты по текущим тегам, грани смерти и ранам.
 func refresh_aura() -> void:
 	for ch in get_children():
 		if ch is CardAura:
 			ch.queue_free()
 	if not aura_enabled or size.x < 80 or kind not in ["enemy", "character", "enhancement"]:
 		return
-	var traumas: Array = []
-	if kind == "character" and GameState.state:
-		traumas = GameState.state.character(card_id).get("traumas", [])
-	var motifs := CardAura.motifs_for(_combat_tags(), traumas, aura_wounds)
+	var edge := kind == "character" and GameState.state != null and EdgeRules.on_edge(GameState.state, card_id)
+	var motifs := CardAura.motifs_for(_combat_tags(), edge, aura_wounds)
 	if motifs.is_empty():
 		return
 	var aura := CardAura.new()
@@ -318,20 +315,13 @@ func describe() -> String:
 			for aid: String in ch.get("abilities", []):
 				var a: Dictionary = c.abilities.get(aid, {})
 				lines.append("[color=#C9CED6]✦ %s[/color] — %s" % [a.get("name", aid), a.get("text", "")])
-			var traumas: Array = ch.get("traumas", [])
-			if not traumas.is_empty():
-				var names: Array = []
-				for t: String in traumas:
-					names.append(c.card_name(t))
-				lines.append("[color=#B65F63]Травмы: %s[/color]" % ", ".join(names))
 			var psy := PsycheRules.psyche(s, card_id) if s else PsycheRules.MAX
 			if s and psy < PsycheRules.MAX and TutorialRules.enabled(s, "panic"):
 				var cst := PsycheRules.crisis(s, card_id)
 				lines.append("[color=#%s]♥ Психика: %d — %s[/color]" % [SquadLifeUI.hero_psyche_color(card_id).to_html(false), psy,
 					PsycheRules.NAMES[cst].to_lower() if cst != "" else PsycheRules.word(psy)])
-			var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
-			if dc > 0:
-				lines.append("[color=#B65F63]☠ Шанс смерти при следующей травме: %d%%[/color]" % dc)
+			if s and EdgeRules.on_edge(s, card_id):
+				lines.append("[color=#B65F63]☠ На грани смерти: следующее поражение — смерть с шансом %d%%[/color]" % EdgeRules.death_chance(c, s, card_id))
 		"enhancement":
 			lines.append(str(d.get("text", "")))
 			if s and WearRules.wears(c, s, card_id):
@@ -341,11 +331,6 @@ func describe() -> String:
 			else:
 				lines.append("Не изнашивается")
 			lines.append("[color=#9A9CA6]%s · %s[/color]" % [d.get("canon", ""), d.get("source", "")])
-		"trauma":
-			var mods: Array = []
-			for st: String in d.get("mods", {}):
-				mods.append("%+d %s" % [int(d["mods"][st]), Palette.STAT_NAMES.get(st, st)])
-			lines.append(", ".join(mods))
 		"mission":
 			lines.append(str(d.get("briefing", "")))
 		"enemy":
@@ -457,7 +442,6 @@ func _border_color(d: Dictionary) -> Color:
 	match kind:
 		"character": return Palette.SILVER
 		"enhancement": return Color("#8C6B45") if d.get("origin", "") != "knowledge" else Palette.REQ_MET.darkened(0.2)
-		"trauma": return Palette.TRAUMA_BRIGHT
 		"enemy": return Palette.STAT_DOWN
 		"mission":
 			return Palette.GOLD if d.get("type", "") == "story" else Palette.SILVER.darkened(0.2)
@@ -473,8 +457,6 @@ func _draw_procedural(r: Rect2, d: Dictionary, k: float) -> void:
 	if _blank == null:
 		_blank = load("res://art/ui/card_blank.webp")
 	var tint := Color.WHITE
-	match kind:
-		"trauma": tint = Color(1.0, 0.55, 0.55)
 	if _blank:
 		draw_texture_rect(_blank, r, false, tint)
 	else:
@@ -503,11 +485,6 @@ func _subtitle(d: Dictionary) -> String:
 	match kind:
 		"enhancement":
 			return {"knowledge": "Знание", "memory": "Воспоминание", "improvised": "Подручное"}.get(d.get("origin", ""), "Усиление")
-		"trauma":
-			var mods: Array = []
-			for st: String in d.get("mods", {}):
-				mods.append("%+d %s" % [int(d["mods"][st]), Palette.STAT_SHORT.get(st, st)])
-			return " ".join(mods)
 		"character":
 			var s := GameState.state
 			var st2 := ContentDB.data.stage_name(card_id, str(s.character(card_id).get("stage", ""))) if s else ""
@@ -528,18 +505,10 @@ func _subtitle(d: Dictionary) -> String:
 func _draw_art_placeholder(art: Rect2, d: Dictionary, k: float) -> void:
 	var top := Color("#2A2D3A")
 	var bottom := Color("#101117")
-	if kind == "trauma":
-		top = Color("#3A1418")
 	var steps := 12
 	for i in steps:
 		var y0 := art.position.y + art.size.y * i / steps
 		draw_rect(Rect2(art.position.x, y0, art.size.x, art.size.y / steps + 1), top.lerp(bottom, float(i) / steps))
-	if kind == "trauma":
-		# трещина
-		var c := art.get_center()
-		var pts := PackedVector2Array([c + Vector2(-art.size.x * 0.35, -art.size.y * 0.2), c + Vector2(-8 * k, -4 * k), c + Vector2(6 * k, 10 * k), c + Vector2(art.size.x * 0.3, art.size.y * 0.25)])
-		draw_polyline(pts, Palette.TRAUMA_BRIGHT, 2.0 * k)
-		return
 	var em := ""
 	match kind:
 		"character": em = "character"
@@ -583,22 +552,12 @@ func _draw_overlays(r: Rect2, d: Dictionary, k: float) -> void:
 			_draw_framed_stats(r, ch, k)
 		else:
 			_draw_plain_stats(r, ch, k)
-		var traumas: Array = ch.get("traumas", [])
-		# травмы: серебряная эмблема травмы (Игра/assets/icons) с багровым кольцом
-		var ti := UITheme.emblem("trauma")
-		for i in traumas.size():
-			var ts := 22.0 * k
-			var tr := Rect2(r.position + Vector2(6 * k + i * (ts + 3 * k), 6 * k), Vector2(ts, ts))
-			if ti:
-				draw_texture_rect(ti, tr, false)
-				draw_arc(tr.get_center(), ts / 2.0, 0, TAU, 24, Palette.TRAUMA_BRIGHT, 1.5 * k)
-			else:
-				draw_rect(tr, Palette.TRAUMA)
-				draw_rect(tr, Palette.TRAUMA_BRIGHT, false, 1.0)
+		# грань смерти (docs/16 §9е): багровая рамка и метка «☠ шанс» — следующее поражение может стать последним
 		# полосы психики на самой карте нет (решение владельца): психика — в планшете героя, подсказке и брифинге
-		var dc := TraumaRules.death_chance(TraumaRules.counted(traumas) + 1)
-		if dc > 0 and TraumaRules.counted(traumas) >= 2:
-			_pill(Vector2(r.end.x - 6 * k, r.position.y + 8 * k), "☠ %d%%" % dc, 11 * k, Palette.TRAUMA_BRIGHT, true)
+		if s.is_alive(card_id) and EdgeRules.on_edge(s, card_id):
+			draw_rect(r.grow(-2 * k), Palette.TRAUMA_BRIGHT, false, 2.5 * k)
+			_pill(Vector2(r.position.x + 6 * k, r.position.y + 7 * k), "☠ НА ГРАНИ %d%%" % EdgeRules.death_chance(ContentDB.data, s, card_id),
+				maxf(10.0, 11 * k), Palette.TRAUMA_BRIGHT, false)
 		if not s.is_alive(card_id):
 			draw_rect(r, Color(0, 0, 0, 0.6))
 	elif kind == "enhancement":

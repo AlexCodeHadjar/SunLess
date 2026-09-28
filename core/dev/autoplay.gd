@@ -19,14 +19,9 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		for it: Dictionary in ShopRules.ensure(c, s, sid)["items"]:
 			if c.card_kind(it["card"]) == "character" and not it["sold"] and int(s.resources.get("shards", 0)) >= int(it["price"]):
 				ShopRules.buy(c, s, sid, it["card"])
-	# как осторожный игрок: лечит тяжёлые травмы у торговца, укладывает раненых и измотанных в лагерь
-	for sid2: String in ShopRules.shops_of(c, s):
-		for h: String in MissionFlow.free_heroes(c, s):
-			for tid: String in Array(s.character(h).get("traumas", [])).duplicate():
-				if str(c.traumas.get(tid, {}).get("severity", "")) != "light":
-					ServiceRules.perform(c, s, sid2, "heal", h, tid)
+	# как осторожный игрок: укладывает в лагерь тех, кто на грани смерти или измотан
 	for h2: String in MissionFlow.free_heroes(c, s):
-		if TraumaRules.counted(s.character(h2).get("traumas", [])) >= 2 or PsycheRules.psyche(s, h2) < 40:
+		if EdgeRules.on_edge(s, h2) or PsycheRules.psyche(s, h2) < 40:
 			CampRules.put(c, s, h2)
 	var open := MissionFlow.open_missions(s)
 	open.sort_custom(func(x: String, y: String) -> bool:

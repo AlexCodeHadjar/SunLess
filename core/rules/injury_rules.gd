@@ -1,6 +1,6 @@
 class_name InjuryRules
 extends RefCounted
-## Травмы, износ и гибель героев — общее для этапов миссий и автобоя (docs/15 §14).
+## Износ и гибель героев — общее для этапов миссий и автобоя (docs/15 §14). Грань смерти — EdgeRules.
 
 const LOOT_CHANCE := 50
 
@@ -20,58 +20,6 @@ static func apply_wear(content: Content, state: RunState, enh: Array, rng: Rando
 			entries.append({"kind": "broken", "text": "%s раскалывается и исчезает" % content.card_name(card), "card": card})
 		else:
 			state.wear[card] = w["after"]
-
-
-static func give_traumas(content: Content, state: RunState, executor: String, enh: Array, count: int,
-		pool: String, rng: RandomNumberGenerator, result: Dictionary, entries: Array) -> void:
-	var ch: Dictionary = state.character(executor)
-	var softened_once := false
-	for i in count:
-		var traumas: Array = ch["traumas"]
-		var tid := TraumaRules.pick(content, pool, traumas, rng)
-		if tid != "" and _softens(content, state, executor, enh, softened_once, tid):
-			var soft := TraumaRules.soften(content, tid, traumas, rng)
-			softened_once = true
-			entries.append({"kind": "info", "text": "Травма смягчена: %s → %s" % [content.card_name(tid), content.card_name(soft) if soft != "" else "без травмы"]})
-			tid = soft
-		if tid != "" and content.traumas.get(tid, {}).get("category", "") == "physical":
-			var avoid := GrowthRules.total(content, state, executor, "trauma_avoid")
-			if avoid > 0.0 and rng.randf() < avoid:
-				entries.append({"kind": "info", "text": "%s выдерживает удар: «%s» не достаётся" % [content.card_name(executor), content.card_name(tid)]})
-				tid = ""
-		if tid != "":
-			traumas.append(tid)
-			result["traumas"].append(tid)
-			state.note(executor, "Травма: %s" % content.card_name(tid))
-			entries.append({"kind": "trauma", "text": "%s: %s" % [content.card_name(executor), content.card_name(tid)], "card": tid})
-		var n := TraumaRules.counted(traumas)
-		var dchance := TraumaRules.death_chance(n)
-		if dchance <= 0:
-			continue
-		var droll := rng.randi_range(1, 100)
-		var died := droll <= dchance
-		if died and GrowthRules.has(content, state, executor, "death_save") and not bool(ch.get("death_saved", false)):
-			ch["death_saved"] = true
-			died = false
-			entries.append({"kind": "growth", "card": executor, "text": "%s должен был погибнуть — но выстоял (один раз)" % content.card_name(executor)})
-		result["death"] = {"chance": dchance, "roll": droll, "died": died}
-		if died:
-			kill(content, state, executor, entries)
-			return
-
-
-static func _softens(content: Content, state: RunState, executor: String, enh: Array, softened_once: bool, tid: String) -> bool:
-	if content.traumas.get(tid, {}).get("category", "") != "physical":
-		return false
-	for aid: String in state.character(executor).get("abilities", []):
-		if bool(content.abilities.get(aid, {}).get("soften_physical", false)):
-			return true
-	if softened_once:
-		return false
-	for card: String in enh:
-		if bool(content.enhancements.get(card, {}).get("soften_first_physical", false)):
-			return true
-	return false
 
 
 ## Гибель навсегда. Конец — когда героев не осталось или погиб герой, без которого не пройти сюжет главы.

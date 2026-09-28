@@ -43,7 +43,6 @@
    "social",
    "knowledge"
   ],
-  "trauma_pool": "mental",
   "arrival": "Джет придвигает стул и садится верхом. «Итак, Бессолнечный. Рассказывай, что ты там видел. И не вздумай врать — я пойму».",
   "actions": [
    {
@@ -175,7 +174,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "arrival": "Во дворе толпятся новички. Кто-то хвастается Воспоминаниями, кто-то молча оценивает соперников. На Санни в потёртой одежде смотрят как на пустое место — пока.",
   "actions": [
    {
@@ -312,7 +310,6 @@
    "combat",
    "knowledge"
   ],
-  "trauma_pool": "physical",
   "arrival": "«Ранги существ. Кто назовёт все семь — отдохнёт. Остальные — двадцать кругов», — Рок оглядывает строй и останавливает взгляд на Санни.",
   "actions": [
    {
@@ -446,7 +443,6 @@
    "survival",
    "knowledge"
   ],
-  "trauma_pool": "mental",
   "arrival": "Юлий раскладывает на столе камни, кости и сушёные травы. «Перед вами — завтрак, яд и ловушка. Найдите, где что».",
   "actions": [
    {
@@ -585,7 +581,6 @@
    "knowledge",
    "duel"
   ],
-  "trauma_pool": "mental",
   "arrival": "Бойцы выходят на песок. Кастер улыбается трибунам, Нефис — никому. Удар гонга.",
   "actions": [
    {
@@ -709,7 +704,6 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "physical",
   "arrival": "Общежитие пустеет к рассвету и заполняется к полуночи. Санни раскладывает перед собой расписание: на что потратить последний месяц?",
   "actions": [
    {
@@ -868,7 +862,6 @@
    "ritual",
    "weather"
   ],
-  "trauma_pool": "mental",
   "arrival": "Крышка капсулы закрывается с мягким шипением. Холод, темнота — и знакомый голос Заклинания где-то на краю сознания.",
   "actions": [
    {
@@ -1033,7 +1026,6 @@
    "social",
    "knowledge"
   ],
-  "trauma_pool": "mental",
   "arrival": "Девушка поворачивает голову, когда Санни ещё в десяти шагах. «Ты пахнешь тенью», — говорит она без улыбки.",
   "actions": [
    {
@@ -1137,7 +1129,6 @@
    "knowledge",
    "ritual"
   ],
-  "trauma_pool": "mental",
   "arrival": "«…и тень пойдёт за звездой, а звезда — за тенью…» — Касси обмякает, и Санни едва успевает её подхватить.",
   "actions": [
    {
@@ -1272,7 +1263,6 @@
    "duel",
    "social"
   ],
-  "trauma_pool": "mental",
   "arrival": "«Ну что, Бессолнечный? Один круг — для разминки», — Кастер бросает ему деревянный меч.",
   "actions": [
    {
@@ -1403,7 +1393,6 @@
    "duel",
    "combat"
   ],
-  "trauma_pool": "physical",
   "arrival": "Кастер салютует мечом. «Постараюсь не сломать тебе ничего важного».",
   "actions": [
    {
@@ -1515,7 +1504,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "arrival": "Голем поворачивает каменную голову. Руны на груди загораются.",
   "actions": [
    {
@@ -1611,7 +1599,6 @@
   "context": [
    "knowledge"
   ],
-  "trauma_pool": "mental",
   "arrival": "Пыльные полки уходят под потолок. Библиотекарь не поднимает глаз.",
   "actions": [
    {
@@ -1674,14 +1661,8 @@
     "text": "Иногда отдых — лучшее лекарство.",
     "conditions": [
      {
-      "type": "executor_has_trauma",
-      "categories": [
-       "mental"
-      ],
-      "severity": [
-       "light"
-      ],
-      "text": "Нужна лёгкая ментальная травма"
+      "type": "executor_on_edge",
+      "text": "Нужен герой на грани"
      }
     ],
     "stages": [
@@ -1695,13 +1676,7 @@
     ],
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "categories": [
-       "mental"
-      ],
-      "severities": [
-       "light"
-      ]
+      "cmd": "recover"
      }
     ]
    },
@@ -1744,7 +1719,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "physical",
   "arrival": "Бригадир оглядывает с ног до головы. «Работа есть. Выбирай».",
   "actions": [
    {
@@ -1849,23 +1823,19 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "physical",
   "arrival": "Дежурный врач кивает на кушетку. «Что болит — и сколько у тебя осколков?»",
   "actions": [
    {
     "id": "RA04_light",
-    "label": "Обработать лёгкую рану",
-    "text": "Быстро и недорого.",
+    "label": "Выходить с грани",
+    "text": "Перевязка, сон и тишина медпункта. Недорого.",
     "cost": {
      "shards": 2
     },
     "conditions": [
      {
-      "type": "executor_has_trauma",
-      "severity": [
-       "light"
-      ],
-      "text": "Нет лёгкой травмы"
+      "type": "executor_on_edge",
+      "text": "Нужен герой на грани"
      }
     ],
     "stages": [
@@ -1879,42 +1849,7 @@
     ],
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "severities": [
-       "light"
-      ]
-     }
-    ]
-   },
-   {
-    "id": "RA04_heavy",
-    "label": "Серьёзное лечение",
-    "text": "Дорого, но надёжно.",
-    "cost": {
-     "shards": 5
-    },
-    "conditions": [
-     {
-      "type": "executor_has_trauma",
-      "severity": [
-       "heavy",
-       "critical"
-      ],
-      "text": "Нет тяжёлой травмы"
-     }
-    ],
-    "stages": [
-     {
-      "name": "Лечение",
-      "auto": true,
-      "ok": "Врачи сделали невозможное.",
-      "partial": "",
-      "fail": ""
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "remove_trauma"
+      "cmd": "recover"
      }
     ]
    },
@@ -1953,7 +1888,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "arrival": "За соседним столом спорят шёпотом. Кто-то оглядывается на Санни.",
   "actions": [
    {
@@ -2045,7 +1979,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "arrival": "Кузнец берёт в руки изношенное усиление и долго смотрит на него, как на старого знакомого.",
   "actions": [
    {
@@ -2149,7 +2082,6 @@
    "duel",
    "social"
   ],
-  "trauma_pool": "physical",
   "arrival": "Нефис опускает клинок и молча кивает на стойку с учебными мечами. Слов не будет — только работа.",
   "unlock": {
    "after_all": [
@@ -2264,7 +2196,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "expire_panic": 20,
   "on_expire": [
    {
@@ -2381,7 +2312,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "expire_panic": 20,
   "on_expire": [
    {

@@ -57,12 +57,11 @@ func test_echo_guard() -> void:
 	var c := content()
 	var cs := _session(c, SCAV, ["U12"])
 	check(not _fired(MemoryRules.fire(cs, "lose", false), "U12"), "Эхо ждёт, пока герой цел")
-	cs.state.character("P01")["traumas"] = ["T02", "T03"]
+	cs.state.character("P01")["edge"] = true
 	check(bool(MemoryRules.fire(cs, "lose", false)["effect"].get("echo_guard", false)), "при двух травмах Эхо принимает удар")
-	var rec := {"traumas": []}
-	var before: int = Array(cs.state.character("P01")["traumas"]).size()
-	cs._lose_round({}, rec)
-	check(not cs.enh.has("U12") and Array(cs.state.character("P01")["traumas"]).size() == before, "Эхо рассыпалось, травмы нет")
+	var rec := {}
+	cs._lose_fight(rec)
+	check(not cs.enh.has("U12") and cs.state.is_alive("P01") and not bool(cs.result["defeated"]), "Эхо рассыпалось — броска смерти нет")
 
 
 func test_abilities() -> void:

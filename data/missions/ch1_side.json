@@ -41,7 +41,6 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "physical",
   "arrival": "Повозка завалилась на бок. Тюки, сундук, окоченевший возница — и тихий шорох под днищем.",
   "actions": [
    {
@@ -160,7 +159,6 @@
    "social",
    "survival"
   ],
-  "trauma_pool": "environment",
   "arrival": "Отставшие сидят, прижавшись друг к другу. Увидев отряд, один плачет — от облегчения.",
   "unlock": {
    "after_all": [
@@ -245,7 +243,6 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "physical",
   "arrival": "Обоз завалился набок. В тени под колесом что-то шевелится.",
   "unlock": {
    "after_all": [

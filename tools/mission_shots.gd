@@ -106,13 +106,11 @@ func _run() -> void:
 		_shop().call("_buy", hero)
 		await _wait(0.8)
 		await _shot("m03b_shop_bought")
-	# услуги торговца (Ф10): травма у Санни — для снимка, потом убираем
-	GameState.state.character("P01")["traumas"] = ["T03", "T01"]
+	# услуги торговца (Ф10): заточка и починка
 	_shop().set("_tab", "services")
 	_shop().call("_refresh")
 	await _wait(0.6)
 	await _shot("m03c_services")
-	GameState.state.character("P01")["traumas"] = []
 	_shop().close()
 	GameState.state.chapter = "nightmare"
 	await _wait(0.6)
@@ -184,8 +182,8 @@ func _run() -> void:
 	await _shot("m11c_growth")
 	ins.call("_close")
 	await _wait(0.3)
-	# лагерь (Ф10): Санни на койке с лёгкой травмой
-	gs.character("P01")["traumas"] = ["T02"]
+	# лагерь (Ф10): Санни на койке — на грани смерти (docs/16 §9е)
+	gs.character("P01")["edge"] = true
 	GameState.camp_put("P01")
 	game.call("_on_nav", "camp")
 	await _wait(0.8)
@@ -207,7 +205,10 @@ func _run() -> void:
 		if n is JournalWindow:
 			n.close()
 	GameState.camp_take("P01")
-	gs.character("P01")["traumas"] = []
+	GameState.missions_changed.emit()
+	await _wait(0.6)
+	await _shot("m11g_edge_map")
+	gs.character("P01")["edge"] = false
 	await _wait(0.3)
 	var rep: Dictionary = _window().report
 	if not Array(rep.get("combats", [])).is_empty():

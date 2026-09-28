@@ -289,8 +289,8 @@ func _hint_target(name: String) -> Rect2:
 			var ch := s.character(cid)
 			var ok2 := false
 			match name:
-				"hero_trauma":
-					ok2 = not Array(ch.get("traumas", [])).is_empty()
+				"hero_edge":
+					ok2 = bool(ch.get("edge", false))
 				"hero_rest":
 					ok2 = float(s.rest_until.get(cid, 0.0)) > s.clock
 				"hero_panic":

@@ -2,7 +2,7 @@ class_name ShopWindow
 extends Control
 ## Окно магазина главы (docs/15 §11): витрина карт за осколки душ.
 ## Персонаж после покупки сразу встаёт в ряд героев; усиление — в коллекцию, его можно положить в кармашек.
-## Вкладка «Услуги» (docs/16 §9): лечение травм, заточка и починка усилений — ServiceRules.
+## Вкладка «Услуги» (docs/16 §9): заточка и починка усилений — ServiceRules.
 
 signal closed
 
@@ -182,15 +182,8 @@ func _build_services() -> void:
 	cols.add_theme_constant_override("separation", 30)
 	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_svc.add_child(cols)
-	var heal: Array = []
 	var sharpen: Array = []
 	var unwear: Array = []
-	if ServiceRules.offers(c, shop_id, "heal"):
-		for cid: String in MissionFlow.heroes(c, s):
-			for tid: String in s.character(cid).get("traumas", []):
-				heal.append(_svc_row(cid, "%s — %s" % [c.card_name(cid), c.card_name(tid)],
-					"на миссии" if MissionFlow.on_mission(s, cid) else "", ServiceRules.heal_price(c, tid), "ЛЕЧИТЬ",
-					_service.bind("heal", cid, tid), MissionFlow.on_mission(s, cid)))
 	for card: String in s.collection:
 		if c.card_kind(card) != "enhancement":
 			continue
@@ -202,7 +195,7 @@ func _build_services() -> void:
 		if ServiceRules.offers(c, shop_id, "unwear") and WearRules.wears(c, s, card) and WearRules.current(s, card) > WearRules.START:
 			unwear.append(_svc_row(card, c.card_name(card), "износ %d%% → %d%%" % [WearRules.current(s, card), WearRules.START],
 				ServiceRules.UNWEAR_PRICE, "ПОЧИНИТЬ", _service.bind("unwear", card, ""), false))
-	for col: Array in [["heal", "Лечение травм", heal, "Травм нет — лечить некого."], ["sharpen", "Заточка", sharpen, "Нечего затачивать."],
+	for col: Array in [["sharpen", "Заточка", sharpen, "Нечего затачивать."],
 			["unwear", "Починка", unwear, "Всё цело."]]:
 		if not ServiceRules.offers(c, shop_id, col[0]):
 			continue
@@ -253,7 +246,7 @@ func _service(kind: String, target: String, extra: String) -> void:
 	if err != "":
 		EventBus.toast.emit(err)
 	else:
-		EventBus.toast.emit("%s: %s" % [ServiceRules.NAMES.get(kind, kind), ContentDB.data.card_name(extra if kind == "heal" else target)])
+		EventBus.toast.emit("%s: %s" % [ServiceRules.NAMES.get(kind, kind), ContentDB.data.card_name(target)])
 	_refresh()
 
 

@@ -12,15 +12,14 @@ func test_beds() -> void:
 	eq(CampRules.put(c, s, "P01"), "", "Санни на койке:")
 	eq(CampRules.put(c, s, "P09"), "", "Шолар на койке:")
 	check(CampRules.put(c, s, "P10").contains("заняты"), "третьему места нет")
-	s.character("P01")["traumas"] = ["T02", "T03"]
+	s.character("P01")["edge"] = true
 	s.character("P01")["panic"] = 40
 	var out := CampRules.tick(c, s, 10.0)
 	check(PsycheRules.value(s, "P01") < 40, "психика восстанавливается")
 	for i in 10:
 		out.append_array(CampRules.tick(c, s, 10.0))
-	check(not Array(s.character("P01")["traumas"]).has("T02"), "лёгкая рана прошла")
-	check(Array(s.character("P01")["traumas"]).has("T03"), "перелом койка не лечит")
-	check(out.any(func(e: Dictionary) -> bool: return str(e["text"]).contains("прошло")), "запись о лечении")
+	check(not EdgeRules.on_edge(s, "P01"), "на койке герой отходит от грани")
+	check(out.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "recover"), "запись об этом")
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	check(CampRules.in_bed(s2, "P01"), "лагерь сохраняется")
 	# уход на миссию освобождает койку

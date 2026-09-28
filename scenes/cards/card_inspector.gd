@@ -10,9 +10,8 @@ extends Control
 signal closed
 
 const TYPE_TEXT := {
-	"character": "[b]Персонаж[/b]\nГерой отряда. Его Сила, Воля и Хитрость решают этапы миссий, травмы ложатся на него, в автобое он — ведущий или союзник в поддержке. Смерть навсегда.",
+	"character": "[b]Персонаж[/b]\nГерой отряда. Его Сила, Воля и Хитрость решают этапы миссий, в автобое он — ведущий или союзник в поддержке. Поражение ставит на грань смерти, поражение на грани может убить. Смерть навсегда.",
 	"enhancement": "[b]Усиление[/b]\nПредмет, Воспоминание или знание. Лежит в кармашке героя (до трёх) и добавляет характеристики и теги. Предметы изнашиваются и могут сломаться.",
-	"trauma": "[b]Травма[/b]\nПоследствие провала. Снижает характеристики персонажа, пока её не вылечат. С третьей травмы каждая новая может убить.",
 	"enemy": "[b]Противник[/b]\nКошмарное существо или враг. Сила в бою зависит от ранга, класса и тегов; раны сохраняются между встречами.",
 	"ability": "[b]Способность[/b]\nВрождённый дар или приобретённое умение героя. Работает само — не занимает кармашек и не изнашивается.",
 	"mission": "[b]Миссия[/b]
@@ -330,7 +329,7 @@ func _life_box(row: HBoxContainer, m: String, big: String, small: String, col: C
 	col_box.add_child(dl)
 
 
-## Разбор характеристик персонажа вне события: база стадии, навсегда, кармашек, травмы; условные — отдельно.
+## Разбор характеристик персонажа вне события: база стадии, навсегда, кармашек; условные — отдельно.
 func _stat_parts() -> Dictionary:
 	return StatResolver.sheet(ContentDB.data, GameState.state, card_id, _pocket())
 
@@ -572,14 +571,13 @@ func _def() -> Dictionary:
 	match c.card_kind(card_id):
 		"character": return c.characters.get(card_id, {})
 		"enhancement": return c.enhancements.get(card_id, {})
-		"trauma": return c.traumas.get(card_id, {})
 		"enemy": return c.enemies.get(card_id, {})
 		"ability": return c.abilities.get(card_id, {})
 	return c.missions.get(card_id, {})
 
 
 func _emblem_for(kind: String) -> String:
-	return {"character": "character", "enhancement": "enhancement", "enemy": "monster", "trauma": "trauma"}.get(kind, "story")
+	return {"character": "character", "enhancement": "enhancement", "enemy": "monster"}.get(kind, "story")
 
 
 func _type_line(kind: String) -> String:
@@ -591,8 +589,6 @@ func _type_line(kind: String) -> String:
 			return "Персонаж" + (" · %s" % st if st != "" else "") + (" · погиб" if s and s.characters.has(card_id) and not s.is_alive(card_id) else "")
 		"enhancement":
 			return "Усиление · " + {"knowledge": "Знание", "memory": "Воспоминание", "improvised": "Подручное"}.get(d.get("origin", ""), "предмет")
-		"trauma":
-			return "Травма"
 		"ability":
 			var owners: Array = []
 			if s:
@@ -655,16 +651,9 @@ func _info_text() -> String:
 				abil.append("✦ [b]%s[/b] — %s" % [a.get("name", aid), a.get("text", "")])
 			if not abil.is_empty():
 				out.append(_h("Способности") + "\n".join(abil))
-			var traumas: Array = []
-			for t: String in ch.get("traumas", []):
-				var td: Dictionary = c.traumas.get(t, {})
-				var ms: Array = []
-				for st2: String in td.get("mods", {}):
-					ms.append("%+d %s" % [int(td["mods"][st2]), Palette.STAT_NAMES.get(st2, st2)])
-				traumas.append("[color=#B65F63]✖ %s[/color] — %s" % [td.get("name", t), ", ".join(ms)])
-			if not traumas.is_empty():
-				var dc := TraumaRules.death_chance(TraumaRules.counted(ch.get("traumas", [])) + 1)
-				out.append(_h("Травмы") + "\n".join(traumas) + ("\n[color=#B65F63]☠ Шанс смерти при следующей травме: %d%%[/color]" % dc if dc > 0 else ""))
+			if s and s.is_alive(card_id) and EdgeRules.on_edge(s, card_id):
+				out.append(_h("На грани смерти") + "[color=#B65F63]☠ Следующее поражение — смерть с шансом [b]%d%%[/b].[/color] В бою −%d%%. Грань снимут лагерь или удачная миссия." % [
+					EdgeRules.death_chance(c, s, card_id), int(EdgeRules.COMBAT_PENALTY * 100)])
 			var sup: Array = d.get("support_tags", [])
 			if not sup.is_empty():
 				out.append(_h("В бою в поддержке") + "Встаёт рядом с исполнителем и добавляет теги: " + ", ".join(sup))
@@ -681,14 +670,6 @@ func _info_text() -> String:
 				var owner := _pocket_owner(card_id)
 				if owner != "":
 					out.append(_h("Кармашек") + "Лежит в кармашке персонажа «%s» — идёт с ним на миссии." % c.card_name(owner))
-		"trauma":
-			var lore: Dictionary = c.lore.get(card_id, {})
-			if str(lore.get("text", "")) != "":
-				out.append(str(lore["text"]))
-			var ms2: Array = []
-			for st3: String in d.get("mods", {}):
-				ms2.append("%+d %s" % [int(d["mods"][st3]), Palette.STAT_NAMES.get(st3, st3)])
-			out.append(_h("Эффект") + ", ".join(ms2))
 		"enemy":
 			out.append("%s · %s" % [{"normal": "обычный", "elite": "элита", "boss": "босс"}.get(d.get("kind", "normal"), ""), _type_line(kind)])
 			out.append(_h("Добыча") + "✧ %d осколков душ" % int(d.get("shards", 0)))
@@ -748,7 +729,7 @@ func _story_text() -> String:
 	return "\n\n".join(out)
 
 
-## Журнал карты в текущем прохождении: миссии героя и отметки (получение, травмы, поломка, гибель).
+## Журнал карты в текущем прохождении: миссии героя и отметки (получение, грань, поломка, гибель).
 func _run_story() -> String:
 	var s := GameState.state
 	if s == null:

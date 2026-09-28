@@ -47,7 +47,6 @@
    }
   ],
   "services": [
-   "heal",
    "sharpen",
    "unwear"
   ]
@@ -88,7 +87,6 @@
    }
   ],
   "services": [
-   "heal",
    "sharpen",
    "unwear"
   ]

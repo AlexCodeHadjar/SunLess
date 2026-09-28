@@ -18,7 +18,7 @@ static func blockers(content: Content, state: RunState, option: Dictionary, exec
 	var cost: Dictionary = option.get("cost", {})
 	for r: String in cost:
 		if not RESOURCE_NAMES.has(r):
-			continue   # жертва карты, отдых, травма — проверяются в MissionFlow
+			continue   # жертва карты, психика, грань — проверяются в MissionFlow
 		if int(state.resources.get(r, 0)) < int(cost[r]):
 			out.append("Нужно: %d %s" % [int(cost[r]), RESOURCE_NAMES.get(r, r)])
 	return out
@@ -57,16 +57,9 @@ static func _check(content: Content, state: RunState, c: Dictionary, executor: S
 		"attached":
 			if not attached.has(str(c["card"])):
 				return "Приложите: %s" % content.card_name(str(c["card"]))
-		"executor_has_trauma":
-			if executor == "":
-				return "Нужен исполнитель с травмой"
-			var sev: Array = c.get("severity", [])
-			var cats: Array = c.get("categories", [])
-			for tid: String in state.character(executor).get("traumas", []):
-				var t: Dictionary = content.traumas.get(tid, {})
-				if (sev.is_empty() or sev.has(t.get("severity", ""))) and (cats.is_empty() or cats.has(t.get("category", ""))):
-					return ""
-			return str(c.get("text", "У исполнителя нет подходящей травмы"))
+		"executor_on_edge":
+			if executor == "" or not EdgeRules.on_edge(state, executor):
+				return str(c.get("text", "Нужен герой на грани"))
 		_:
 			return "Неизвестное условие: %s" % str(c.get("type", ""))
 	return ""

@@ -4,14 +4,14 @@ extends RefCounted
 ## героя есть поле `memory`: {name, cond, text, phase, when, effect, once, wear, support}.
 ## Навык срабатывает сам, когда выполнено условие — игрок ничего не выбирает, решение — что положить в кармашек.
 ##
-## phase: "round" — перед броском раунда (меняет расчёт силы), "lose" — когда раунд проигран (защита от травмы).
+## phase: "round" — перед броском раунда (меняет расчёт силы), "lose" — когда бой проигран (защита от грани смерти).
 ## when (все условия должны выполниться; any_of — хотя бы один вариант):
 ##   round [номера], after_loss / after_win (исход прошлого раунда), enemy_any / env_any / hero_any [теги],
-##   traumas_min n, psyche "panic"|"uplift", enemy_count_max n / enemy_count_min n, intent (у врага есть намерение),
+##   on_edge (герой на грани смерти), psyche "panic"|"uplift", enemy_count_max n / enemy_count_min n, intent (у врага есть намерение),
 ##   chance_below n (шанс раунда без навыков ниже n), enemy_stronger (враг сильнее), sky_any [небо].
 ## effect: bonus (доля силы), add_tags, take_field_tag, cancel_enemy_tags, double_tags + blocked_by_env,
-##   enemy_penalty {tags, value}, cancel_intent, reveal_next, best_stat, self_tags, guard (шанс отвести травму, %),
-##   echo_guard (Эхо принимает удар и рассыпается).
+##   enemy_penalty {tags, value}, cancel_intent, reveal_next, best_stat, self_tags,
+##   guard (фаза lose: шанс, что проигранный бой не ставит на грань, %), echo_guard (Эхо принимает удар и рассыпается).
 ## once (по умолчанию true) — раз за бой; wear — износ карты за срабатывание; support — способность работает
 ## и у союзника в поддержке.
 
@@ -63,7 +63,7 @@ static func _ok(s: CombatSession, w: Dictionary, owner: String, base: Dictionary
 		return false
 	if w.has("sky_any") and not Array(w["sky_any"]).has(Atmosphere.sky(s.content, s.state)):
 		return false
-	if w.has("traumas_min") and TraumaRules.counted(s.state.character(owner).get("traumas", [])) < int(w["traumas_min"]):
+	if bool(w.get("on_edge", false)) and not EdgeRules.on_edge(s.state, owner):
 		return false
 	if w.has("psyche") and PsycheRules.crisis(s.state, owner) != str(w["psyche"]):
 		return false

@@ -50,14 +50,6 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 		# рост тегов героя (docs/16 §8)
 		parts.append_array(GrowthRules.check_parts(content, state, character_id, tags, enhancement_ids))
 
-	for tid: String in ch.get("traumas", []):
-		var t: Dictionary = content.traumas.get(tid, {})
-		var ctx: String = t.get("context_tag", "")
-		if ctx != "" and not tags.has(ctx):
-			continue
-		for s: String in t.get("mods", {}):
-			parts.append({"source": str(t.get("name", tid)), "stat": s, "value": int(t["mods"][s])})
-
 	var totals := base.duplicate()
 	for p: Dictionary in parts:
 		totals[p["stat"]] = int(totals.get(p["stat"], 0)) + int(p["value"])
@@ -65,7 +57,7 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 
 
 ## Характеристики на «листе героя» — как их показывают карта и планшет: база стадии, навсегда, черты,
-## способности, кармашек, развития тегов — без условий; травмы. Условные прибавки — отдельно (cond).
+## способности, кармашек, развития тегов — без условий. Условные прибавки — отдельно (cond).
 ## {stat: {base, total, lines: [[источник, значение]], cond: [[источник, значение]], stage}}
 static func sheet(c: Content, s: RunState, card_id: String, pocket: Array) -> Dictionary:
 	var ch := s.character(card_id)
@@ -110,12 +102,6 @@ static func sheet(c: Content, s: RunState, card_id: String, pocket: Array) -> Di
 				for t: String in need:
 					names.append(str(c.tags.get(t, {}).get("name", t)).to_lower())
 				out[st3]["cond"].append(["%s — в событиях: %s" % [StatResolver._cap(str(src["name"])), ", ".join(names)], int(b["value"])])
-	for tid: String in ch.get("traumas", []):
-		var td: Dictionary = c.traumas.get(tid, {})
-		for st4: String in td.get("mods", {}):
-			if out.has(st4):
-				out[st4]["total"] += int(td["mods"][st4])
-				out[st4]["lines"].append(["Травма «%s»" % td.get("name", tid), int(td["mods"][st4])])
 	for te: Dictionary in s.temp_effects:
 		var st5 := str(te.get("stat", ""))
 		if out.has(st5):

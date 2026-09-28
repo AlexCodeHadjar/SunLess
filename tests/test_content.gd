@@ -26,9 +26,9 @@ func test_stat_resolver_basics() -> void:
 	r = StatResolver.resolve(c, s, "P01", ["U01"], ev, o)
 	eq(r["totals"]["power"], 5, "с U01 Сила:")
 	eq(r["totals"]["cunning"], 7, "U01 даёт +1 Хитрость в выживании:")
-	s.characters["P01"]["traumas"].append("T02")
+	s.characters["P01"]["edge"] = true
 	r = StatResolver.resolve(c, s, "P01", ["U01"], ev, o)
-	eq(r["totals"]["power"], 4, "с Рваной раной:")
+	eq(r["totals"]["power"], 5, "грань смерти характеристик не меняет:")
 
 
 func test_trait_by_tag() -> void:

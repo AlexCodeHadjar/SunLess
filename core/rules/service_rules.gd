@@ -1,21 +1,18 @@
 class_name ServiceRules
 extends RefCounted
-## Услуги торговца (docs/16 §9): лечение травмы, заточка усиления, снятие износа — за осколки душ.
-## Какие услуги у какого торговца — shops.json `services: ["heal", "sharpen", "unwear"]`.
+## Услуги торговца (docs/16 §9): заточка усиления и снятие износа — за осколки душ.
+## Какие услуги у какого торговца — shops.json `services: ["sharpen", "unwear"]`. Лечения нет: грань смерти
+## снимают лагерь и удачная миссия (docs/16 §9е).
 ## Заточка: +1 к первому бонусу усиления в проверках до конца главы (state.sharpened[card] = глава).
 
-const HEAL_PRICE := {"light": 5, "heavy": 10, "critical": 20}
 const SHARPEN_PRICE := 8
 const UNWEAR_PRICE := 3
-const NAMES := {"heal": "Лечение", "sharpen": "Заточка", "unwear": "Починка"}
+const NAMES := {"sharpen": "Заточка", "unwear": "Починка"}
 
 
 static func offers(content: Content, sid: String, kind: String) -> bool:
 	return Array(content.shops.get(sid, {}).get("services", [])).has(kind)
 
-
-static func heal_price(content: Content, tid: String) -> int:
-	return int(HEAL_PRICE.get(str(content.traumas.get(tid, {}).get("severity", "light")), 5))
 
 
 static func sharpened(state: RunState, card: String) -> bool:
@@ -48,24 +45,11 @@ static func _pay(state: RunState, price: int) -> String:
 	return ""
 
 
-## Выполнить услугу. kind: heal (target = герой, extra = травма), sharpen / unwear (target = усиление). "" — успех.
+## Выполнить услугу. kind: sharpen / unwear (target = усиление). "" — успех.
 static func perform(content: Content, state: RunState, sid: String, kind: String, target: String, extra: String = "") -> String:
 	if not offers(content, sid, kind):
 		return "Здесь так не умеют"
 	match kind:
-		"heal":
-			if not state.is_alive(target):
-				return "Некого лечить"
-			if MissionFlow.on_mission(state, target):
-				return "%s на миссии" % content.card_name(target)
-			var tr: Array = state.character(target).get("traumas", [])
-			if not tr.has(extra):
-				return "Такой травмы нет"
-			var err := _pay(state, heal_price(content, extra))
-			if err != "":
-				return err
-			tr.erase(extra)
-			state.note(target, "Вылечено: %s" % content.card_name(extra))
 		"sharpen":
 			if not can_sharpen(content, state, target):
 				return "Это не заточить"
@@ -82,5 +66,5 @@ static func perform(content: Content, state: RunState, sid: String, kind: String
 			state.wear[target] = WearRules.START
 		_:
 			return "Нет такой услуги"
-	state.log.append({"week": 0, "text": "%s: %s" % [NAMES.get(kind, kind), content.card_name(extra if kind == "heal" else target)]})
+	state.log.append({"week": 0, "text": "%s: %s" % [NAMES.get(kind, kind), content.card_name(target)]})
 	return ""

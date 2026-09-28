@@ -5,8 +5,8 @@ extends RefCounted
 ## 6 опыта — развитие: эволюция (80%) или мутация (20%) из data/tag_growth.json; итог — characters[cid].growth[tag].
 ## Эффекты развития — словарь ключей, их читают правила: check, check_night, item_bonus, combat, combat_night,
 ## combat_day, combat_round1, combat_round3, reveal, panic_cap, panic_immune, panic_no_decay, panic_mission,
-## panic_threat_immune, brave, flees_on_fail, trust_gain_mult, trust_after(+unless), no_bonds, trauma_avoid,
-## trauma_avoid_checks, death_save, heal_ally, wear_mult, rest_add, self_trauma, add_tag, remove_tag.
+## panic_threat_immune, brave, flees_on_fail, trust_gain_mult, trust_after(+unless), no_bonds, edge_avoid,
+## edge_avoid_checks, death_save, heal_ally (снять грань с союзника), wear_mult, rest_add, add_tag, remove_tag.
 
 const VETERAN := 3.0
 const EVOLVE := 6.0
@@ -235,10 +235,6 @@ static func apply(content: Content, state: RunState, run: Dictionary, heroes: Ar
 					"text": "%s: «%s» %s — %s (%s)" % [content.card_name(cid), tag, "мутирует" if kind == "mut" else "развивается",
 						e.get("name", ""), e.get("text", "")]})
 				state.note(cid, "%s: %s" % ["Мутация" if kind == "mut" else "Развитие", e.get("name", "")])
-				var st := str(e.get("self_trauma", ""))
-				if st != "" and not Array(ch["traumas"]).has(st):
-					ch["traumas"].append(st)
-					entries.append({"kind": "trauma", "card": st, "text": "%s: %s" % [content.card_name(cid), content.card_name(st)]})
 		ch["tag_xp"] = bag
 		ch["growth"] = growth
 	return entries
@@ -253,11 +249,8 @@ static func after_mission(content: Content, state: RunState, heroes: Array, outc
 			var heal := float(e.get("heal_ally", 0.0))
 			if heal > 0.0 and rng.randf() < heal:
 				for other: String in alive:
-					var tr: Array = state.character(other).get("traumas", [])
-					if other != cid and not tr.is_empty():
-						var tid: String = tr.pop_back()
-						entries.append({"kind": "card", "card": other, "text": "%s: «%s» снимает травму «%s» у %s" % [
-							content.card_name(cid), e.get("name", ""), content.card_name(tid), content.card_name(other)]})
+					if other != cid and EdgeRules.on_edge(state, other):
+						EdgeRules.recover(content, state, other, "«%s» (%s)" % [e.get("name", ""), content.card_name(cid)], entries)
 						break
 			var ta := int(e.get("trust_after", 0))
 			if ta != 0 and outcome != "retreat":

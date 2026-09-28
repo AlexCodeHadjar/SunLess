@@ -3,13 +3,13 @@ extends RefCounted
 ## Состояние одного прохождения. Хранит только ID и изменяемые значения —
 ## тексты и числа карт живут в Content (data/*.json).
 
-const SAVE_VERSION := 2   # 2 — режим миссий (docs/15); сохранения прежнего режима по неделям не читаются
+const SAVE_VERSION := 3   # 3 — грань смерти вместо травм (docs/16 §9е); 2 — режим миссий (docs/15)
 
 var region: String = ""
 var resources: Dictionary = {"shards": 10}
-## ID карт в руке игрока: персонажи, усиления, травмы.
+## ID карт в руке игрока: персонажи, усиления.
 var collection: Array = []
-## character_id -> {stage, traumas:[], perm:{power,will,cunning}, abilities:[], alive, pocket:[]}
+## character_id -> {stage, edge (на грани смерти), perm:{power,will,cunning}, abilities:[], alive, pocket:[]}
 var characters: Dictionary = {}
 ## enhancement_id -> текущий шанс поломки, %
 var wear: Dictionary = {}
@@ -161,7 +161,7 @@ static func _ints(src: Variant) -> Dictionary:
 
 # --- удобные запросы -------------------------------------------------------
 
-## Отметка в журнале карты (получение, травма, поломка, гибель).
+## Отметка в журнале карты (получение, грань, поломка, гибель).
 func note(card_id: String, text: String) -> void:
 	card_log.append({"t": clock, "card": card_id, "text": text, "seq": log.size()})
 

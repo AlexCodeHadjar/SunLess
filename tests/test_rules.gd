@@ -27,16 +27,6 @@ func test_chance_labels() -> void:
 	eq(ChanceCalculator.label(100), "Гарантировано")
 
 
-func test_death_chance_table() -> void:
-	var expected := {0: 0, 1: 0, 2: 0, 3: 15, 4: 35, 5: 55, 6: 75, 7: 95, 8: 100, 9: 100}
-	for n: int in expected:
-		eq(TraumaRules.death_chance(n), expected[n], "травм %d:" % n)
-
-
-func test_t09_not_counted() -> void:
-	eq(TraumaRules.counted(["T01", "T09", "T02"]), 2)
-
-
 func test_wear_progression() -> void:
 	var s := RunState.new()
 	s.wear["U01"] = WearRules.START
@@ -63,28 +53,3 @@ func test_wear_exemptions() -> void:
 	check(WearRules.wears(c, s, "U02"), "после Кошмара Колокольчик изнашивается")
 	check(not WearRules.wears(c, s, "K01"), "знания не изнашиваются")
 	check(WearRules.wears(c, s, "U01"), "обычное оружие изнашивается")
-
-
-func test_trauma_pick_excludes_owned_and_scripted() -> void:
-	var c := content()
-	var rng := RandomNumberGenerator.new()
-	for seed_value in 50:
-		rng.seed = seed_value
-		var t := TraumaRules.pick(c, "all", ["T02"], rng)
-		check(t != "T02", "уже имеющаяся травма не выдаётся")
-		check(t != "T07" and t != "T09", "T07 и T09 только сценарием")
-	rng.seed = 1
-	var phys := TraumaRules.pick(c, "physical", [], rng)
-	eq(c.traumas[phys]["category"], "physical", "пул физических:")
-	# Все физические уже есть — берём из общего пула.
-	var fallback := TraumaRules.pick(c, "physical", ["T02", "T03", "T08", "T10"], rng)
-	check(fallback != "" and c.traumas[fallback]["category"] != "physical", "запасной пул — любые другие")
-
-
-func test_soften() -> void:
-	var c := content()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 3
-	var soft := TraumaRules.soften(c, "T10", [], rng)
-	eq(c.traumas[soft]["severity"], "heavy", "критическая → тяжёлая:")
-	eq(TraumaRules.soften(c, "T02", [], rng), "", "лёгкая смягчается до «нет травмы»:")

@@ -276,13 +276,13 @@ for e in carriers["enemies"]:
             pool = TRAUMA_POOL.get(t, pool)
         kind = "boss" if e["class"] >= 5 else ("elite" if "Элита" in e["tags"] or e["class"] >= 3 else "normal")
         ent = {"id": eid, "name": e["name"], "rank": e["rank"], "class": e["class"], "tags": e["tags"],
-               "kind": kind, "trauma_pool": pool, "shards": (e["rank"] + 1) * e["class"],
+               "kind": kind, "shards": (e["rank"] + 1) * e["class"],
                "art": "res://art/cards/%s.png" % eid}
         if eid in ECHO:
             ent["echo"] = {"card": ECHO[eid][0], "chance": ECHO[eid][1]}
         enemies.append(ent)
 enemies.append({"id": "H_AURO", "name": "Ауро из Девяти", "rank": 1, "class": 1, "human": True, "kind": "elite",
-                "tags": ["Дуэль", "Сталь", "Первый удар", "Гордыня", "Человек"], "trauma_pool": "physical", "shards": 3})
+                "tags": ["Дуэль", "Сталь", "Первый удар", "Гордыня", "Человек"], "shards": 3})
 dump_later = enemies
 
 CON_EXTRA = [

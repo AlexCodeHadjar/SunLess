@@ -1,6 +1,6 @@
 class_name CardAura
 extends Control
-## Живой облик карты: слой поверх CardView, рисующий особенности по тегам, травмам и ранам —
+## Живой облик карты: слой поверх CardView, рисующий особенности по тегам, грани смерти и ранам —
 ## лёд, огонь, кислота, кровь, шипы, камень, металл, тьма, свет, буря, вода, гниль, чары,
 ## паразит, паутина, рой, ярость, трещины, истощение, страх, оглушение.
 ## Не больше MAX мотивов на карту; при «меньше движения» — только статичные элементы.
@@ -32,10 +32,6 @@ const TAG_MOTIFS := {
 	"Рой": "swarm",
 }
 ## Травма → мотив.
-const TRAUMA_MOTIFS := {
-	"T01": "ice", "T02": "blood", "T03": "cracks", "T04": "exhaust", "T05": "dread",
-	"T06": "daze", "T07": "mind", "T08": "blood", "T09": "pain", "T10": "blood",
-}
 
 var motifs: Array = []
 var tint := Color.WHITE        # оттенок камня (коралл — розоватый)
@@ -46,13 +42,12 @@ var _shapes := {}              # заранее посчитанные фигу�
 var _back: Control             # слой за картой: ореол света, круг рун, жар огня
 
 
-## Мотивы по тегам, травмам и числу ран; травмы и раны — первыми.
-static func motifs_for(tags: Array, traumas: Array = [], wounds: int = 0) -> Array:
+## Мотивы по тегам, грани смерти и числу ран; грань и раны — первыми.
+static func motifs_for(tags: Array, edge: bool = false, wounds: int = 0) -> Array:
 	var out: Array = []
-	for t: Variant in traumas:
-		var m: String = TRAUMA_MOTIFS.get(str(t), "")
-		if m != "" and not out.has(m):
-			out.append(m)
+	if edge:
+		out.append("blood")
+		out.append("dread")
 	if wounds > 0 and not out.has("blood"):
 		out.append("blood")
 	if wounds > 1 and not out.has("cracks"):

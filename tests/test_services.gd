@@ -9,19 +9,6 @@ func _run() -> RunState:
 	return s
 
 
-func test_heal() -> void:
-	var c := content()
-	var s := _run()
-	s.character("P01")["traumas"] = ["T03", "T02"]
-	eq(ServiceRules.heal_price(c, "T03"), 10, "тяжёлая травма — 10:")
-	eq(ServiceRules.heal_price(c, "T02"), 5, "лёгкая — 5:")
-	eq(ServiceRules.perform(c, s, "academy_store", "heal", "P01", "T03"), "", "лечение прошло:")
-	check(not Array(s.character("P01")["traumas"]).has("T03"), "перелом снят")
-	eq(int(s.resources["shards"]), 40, "осколки списаны:")
-	s.resources["shards"] = 2
-	check(ServiceRules.perform(c, s, "academy_store", "heal", "P01", "T02").contains("Не хватает"), "без осколков не лечат")
-
-
 func test_sharpen_and_unwear() -> void:
 	var c := content()
 	var s := _run()

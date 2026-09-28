@@ -44,8 +44,8 @@ static func state_events(content: Content, state: RunState) -> Array:
 		out.append("academy_start")
 	for cid: String in MissionFlow.heroes(content, state):
 		var ch := state.character(cid)
-		if not Array(ch.get("traumas", [])).is_empty():
-			out.append("trauma")
+		if bool(ch.get("edge", false)):
+			out.append("edge")
 		if PsycheRules.psyche(state, cid) <= 60:
 			out.append("panic")
 		for tag: String in ch.get("tag_xp", {}):
@@ -68,6 +68,6 @@ static func state_events(content: Content, state: RunState) -> Array:
 	var sky := Atmosphere.sky(content, state)
 	if sky in ["eclipse", "blood_moon"]:
 		out.append("sky_" + sky)
-	if enabled(state, "camp") and out.has("trauma"):
+	if enabled(state, "camp") and out.has("edge"):
 		out.append("camp")
 	return out

@@ -136,15 +136,15 @@ func test_death_save() -> void:
 	var c := content()
 	var s := _run()
 	_grow(s, "P02", "Решимость", "evo")
-	s.character("P02")["traumas"] = ["T03", "T04", "T06", "T08"]
+	s.character("P02")["edge"] = true
 	var rng := RandomNumberGenerator.new()
 	var saved := false
-	for i in 20:
+	for i in 40:
 		rng.seed = i
 		var s2 := s.copy()
-		var res := {"traumas": [], "death": {}}
+		var res := {}
 		var ent: Array = []
-		InjuryRules.give_traumas(c, s2, "P02", [], 1, "all", rng, res, ent)
+		EdgeRules.defeat(c, s2, "P02", [], rng, res, ent)
 		if s2.is_alive("P02") and bool(s2.character("P02").get("death_saved", false)):
 			saved = true
 	check(saved, "Несгибаемый один раз переживает бросок смерти")

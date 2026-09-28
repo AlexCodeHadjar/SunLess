@@ -41,7 +41,6 @@
    "survival",
    "weather"
   ],
-  "trauma_pool": "environment",
   "actions": [
    {
     "id": "SH19_hold",
@@ -180,7 +179,6 @@
    "survival",
    "climb"
   ],
-  "trauma_pool": "environment",
   "actions": [
    {
     "id": "SH20_move",
@@ -353,7 +351,6 @@
    "combat",
    "stealth"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "SH21_weak",
@@ -506,7 +503,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "actions": [
    {
     "id": "SH22_join",
@@ -692,7 +688,6 @@
    "social",
    "survival"
   ],
-  "trauma_pool": "mental",
   "actions": [
    {
     "id": "SH23_believe",
@@ -842,7 +837,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "SH24_ambush",
@@ -1006,7 +1000,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "actions": [
    {
     "id": "SH25_listen",
@@ -1143,7 +1136,6 @@
    "combat",
    "ritual"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "SH26_echo",
@@ -1330,7 +1322,6 @@
    "weather",
    "climb"
   ],
-  "trauma_pool": "environment",
   "actions": [
    {
     "id": "SH27_run",
@@ -1489,7 +1480,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "SH28_trap",
@@ -1674,7 +1664,6 @@
   "context": [
    "ritual"
   ],
-  "trauma_pool": "mental",
   "actions": [
    {
     "id": "SH29_heal",
@@ -1690,17 +1679,14 @@
     "story": true,
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "target": "P01",
-      "severities": [
-       "heavy",
-       "critical"
-      ]
+      "cmd": "recover",
+      "target": "P01"
      },
      {
-      "cmd": "add_trauma",
+      "cmd": "psyche",
       "target": "P02",
-      "trauma": "T09"
+      "value": -15,
+      "text": "Пламя режет и её — Боль"
      },
      {
       "cmd": "adjust_trust",
@@ -1734,11 +1720,8 @@
     "story": true,
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "target": "P01",
-      "severities": [
-       "light"
-      ]
+      "cmd": "recover",
+      "target": "P01"
      },
      {
       "cmd": "adjust_trust",
@@ -1822,7 +1805,6 @@
   "context": [
    "social"
   ],
-  "trauma_pool": "mental",
   "actions": [
    {
     "id": "SH30_trust",
@@ -1968,7 +1950,6 @@
   "context": [
    "duel"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "SH31_learn",
@@ -2055,11 +2036,8 @@
     "story": true,
     "on_success": [
      {
-      "cmd": "remove_trauma",
-      "target": "P01",
-      "severities": [
-       "light"
-      ]
+      "cmd": "recover",
+      "target": "P01"
      }
     ]
    }
@@ -2113,7 +2091,6 @@
    "survival",
    "climb"
   ],
-  "trauma_pool": "all",
   "actions": [
    {
     "id": "SH32_castle",
@@ -2238,7 +2215,6 @@
    "survival",
    "knowledge"
   ],
-  "trauma_pool": "all",
   "actions": [
    {
     "id": "SS01_search",
@@ -2358,7 +2334,6 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "all",
   "actions": [
    {
     "id": "SS02_carry",
@@ -2443,7 +2418,6 @@
   "context": [
    "stealth"
   ],
-  "trauma_pool": "all",
   "actions": [
    {
     "id": "SS03_take",
@@ -2522,7 +2496,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "RS01_hunt",
@@ -2601,7 +2574,6 @@
    "combat",
    "stealth"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "RS02_burn",
@@ -2704,7 +2676,6 @@
   "context": [
    "survival"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "RS03_grab",
@@ -2802,7 +2773,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "RS04_fight",
@@ -2880,7 +2850,6 @@
   "context": [
    "combat"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "NS01_fight",
@@ -2997,7 +2966,6 @@
    "combat",
    "lure"
   ],
-  "trauma_pool": "physical",
   "actions": [
    {
     "id": "NS02_fight",
@@ -3107,7 +3075,6 @@
    "weather",
    "climb"
   ],
-  "trauma_pool": "environment",
   "actions": [
    {
     "id": "NS03_up",

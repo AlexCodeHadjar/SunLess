@@ -6,8 +6,8 @@ extends RefCounted
 ## доверие, рост тегов вдвое, иммунитет к потере психики). Шанс подъёма — от характера, доверия и травм.
 ## Кризис длится до конца боя (если начался в бою) или события (миссии), которое в него ввело.
 ##
-## Что бьёт по психике: угроза, «тёмные» теги места и врагов, небо, свои травмы, вражда в отряде, провалы,
-## новые травмы, гибель товарищей, проигранные раунды и перевес врага в силе.
+## Что бьёт по психике: угроза, «тёмные» теги места и врагов, небо, своя грань смерти, вражда в отряде, провалы,
+## падение на грань, гибель товарищей, проигранные раунды и перевес врага в силе.
 ## Что восстанавливает: удачные этапы и миссии, работа с теми, кому доверяешь (+3 и выше), «светлые» теги,
 ## отдых вне миссий (быстрее в лагере), слова героя в подъёме духа.
 ## Характер (теги): Хладнокровие ×0,65 потерь, Стойкость ×0,7, Хрупкая психика ×1,3, Трус ×1,25, Паникёр ×1,2;
@@ -33,11 +33,11 @@ const DREAD := -5             # за «тёмный» тег места или �
 const DREAD_CAP := -20
 const CALM := 3               # за «светлый» тег
 const SKY := {"blood_moon": -8, "eclipse": -5, "storm": -5, "day": 2}
-const OWN_TRAUMA := -3        # за каждую свою травму при прибытии
+const OWN_EDGE := -6          # герой на грани смерти при прибытии
 const FEUD := -8              # пара в отряде с доверием ≤ −2
 const TEAM := 4               # союзник с доверием ≥ 3
 const STAGE := {"fail": [-20, -12], "partial": [-8, -4], "ok": [3, 1]}   # [исполнитель, остальные]
-const NEW_TRAUMA := -20
+const NEW_EDGE := -20         # поражение в событии: упал на грань или бросал смерть
 const DEATH := -35
 const ROUND_LOST := -14
 const ROUND_WON := 4
@@ -93,7 +93,7 @@ static func loss_mult(content: Content, state: RunState, cid: String) -> float:
 	return k
 
 
-## Шанс подъёма духа (%) при кризисе: характер, доверие в отряде, травмы.
+## Шанс подъёма духа (%) при кризисе: характер, доверие в отряде, грань смерти.
 static func uplift_chance(content: Content, state: RunState, cid: String, squad: Array) -> int:
 	var p := UPLIFT_BASE
 	for t: String in _tags(content, state, cid):
@@ -103,7 +103,7 @@ static func uplift_chance(content: Content, state: RunState, cid: String, squad:
 		if other != cid and state.is_alive(other) and TrustRules.value(state, cid, other) >= TrustRules.HIGH:
 			close += 1
 	p += 7 * mini(close, 3)
-	p -= 5 * TraumaRules.counted(state.character(cid).get("traumas", []))
+	p -= 5 if EdgeRules.on_edge(state, cid) else 0
 	return clampi(p, UPLIFT_MIN, UPLIFT_MAX)
 
 
@@ -218,7 +218,7 @@ static func check_parts(content: Content, state: RunState, cid: String, totals: 
 
 # --- события миссии -----------------------------------------------------------------
 
-## Прибытие: угроза, тёмные и светлые теги, небо, травмы, вражда и доверие в отряде.
+## Прибытие: угроза, тёмные и светлые теги, небо, грань смерти, вражда и доверие в отряде.
 static func arrival(content: Content, state: RunState, m: Dictionary, heroes: Array, rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
 	var tags: Array = Array(m.get("known_tags", [])) + Array(m.get("hidden_tags", []))
@@ -236,7 +236,7 @@ static func arrival(content: Content, state: RunState, m: Dictionary, heroes: Ar
 		if not state.is_alive(cid):
 			continue
 		var d := THREAT * int(m.get("threat", 1)) + dread + calm + sky
-		d += OWN_TRAUMA * TraumaRules.counted(state.character(cid).get("traumas", []))
+		d += OWN_EDGE if EdgeRules.on_edge(state, cid) else 0
 		for other: String in heroes:
 			if other == cid or not state.is_alive(other):
 				continue
@@ -252,16 +252,16 @@ static func arrival(content: Content, state: RunState, m: Dictionary, heroes: Ar
 	return out
 
 
-## После этапа: исход, новые травмы, гибель товарищей.
+## После этапа: исход, поражения (грань смерти), гибель товарищей.
 static func after_stage(content: Content, state: RunState, heroes: Array, actor: String, outcome: String,
-		traumas_got: Dictionary, dead: Array, rng: RandomNumberGenerator, stage_name: String) -> Array:
+		edge_got: Dictionary, dead: Array, rng: RandomNumberGenerator, stage_name: String) -> Array:
 	var out: Array = []
 	var d2: Array = STAGE.get(outcome, [0, 0])
 	for cid: String in heroes:
 		if not state.is_alive(cid):
 			continue
 		var d := int(d2[0]) if cid == actor else int(d2[1])
-		d += NEW_TRAUMA * int(traumas_got.get(cid, 0))
+		d += NEW_EDGE * int(edge_got.get(cid, 0))
 		for x: String in dead:
 			if x != cid:
 				d += DEATH

@@ -4,11 +4,10 @@ extends RefCounted
 ## (MissionResolver): шанс этапа-проверки, шанс боя, правило сложения этапов.
 
 const WORDS := [[15, "Безнадёжно"], [35, "Очень опасно"], [50, "Опасно"], [65, "Неясно"], [85, "Хорошие шансы"], [101, "Уверенно"]]
-const RISK_WORDS := [[0.2, "без потерь"], [0.5, "могут быть раны"], [1.01, "кто-то может не вернуться"]]
+const RISK_WORDS := [[0.2, "без потерь"], [0.5, "кто-то может упасть на грань"], [1.01, "кто-то может не вернуться"]]
 const CHANCE_MIN := 5
 const CHANCE_MAX := 95
 const PARTIAL_BAND := 25     # бросок чуть выше шанса — частичный успех этапа
-const PARTIAL_TRAUMA := 50   # % травмы при частичном успехе этапа
 const BLUR := 12             # насколько размывается прогноз при скрытых тегах
 
 
@@ -19,7 +18,10 @@ static func word(value: int) -> String:
 	return str(WORDS[-1][1])
 
 
-static func risk_word(risk: float) -> String:
+## edge — в отряде есть герой на грани: любое поражение может стоить жизни.
+static func risk_word(risk: float, edge: bool = false) -> String:
+	if edge and risk >= float(RISK_WORDS[0][0]):
+		return str(RISK_WORDS[-1][1])
 	for w: Array in RISK_WORDS:
 		if risk < float(w[0]):
 			return str(w[1])
@@ -102,15 +104,15 @@ static func stage_odds(content: Content, state: RunState, m: Dictionary, a: Dict
 	if st.has("combat"):
 		var c := combat_setup(content, state, m, a, MissionFlow.boss_stage(state, m, st), heroes, reveal)
 		var f := float(c["fight"])
-		# в бою травмы бывают и при победе (проигранный раунд) — риск чуть выше вероятности поражения
+		# проигранный бой — поражение ведущего (грань смерти)
 		return {"ok": f, "partial": 0.0, "fail": 1.0 - f, "hero": c["hero"], "kind": "combat", "links": c["links"],
-			"round": c["round"], "risk": clampf(1.0 - f * f, 0.0, 1.0)}
+			"round": c["round"], "risk": clampf(1.0 - f, 0.0, 1.0)}
 	var actor := stage_actor(content, state, m, a, st, heroes)
 	var ok := float(actor["chance"]) / 100.0
 	var part := minf(float(PARTIAL_BAND), 100.0 - float(actor["chance"])) / 100.0
 	var fail := maxf(0.0, 1.0 - ok - part)
 	return {"ok": ok, "partial": part, "fail": fail, "hero": actor["hero"], "kind": "check", "chance": actor["chance"],
-		"links": [], "risk": fail + part * PARTIAL_TRAUMA / 100.0}
+		"links": [], "risk": fail}
 
 
 ## Прогноз одного действия: вероятности итогов, слово, риск, этапы и сработавшие связи тегов.
@@ -136,7 +138,8 @@ static func action_forecast(content: Content, state: RunState, mission_id: Strin
 	for od: Dictionary in stages:
 		safe *= 1.0 - float(od["risk"])
 	var risk := 1.0 - safe
-	return {"value": value, "word": word(value), "risk": risk, "risk_word": risk_word(risk),
+	var edge := heroes.any(func(h: String) -> bool: return EdgeRules.on_edge(state, h))
+	return {"value": value, "word": word(value), "risk": risk, "risk_word": risk_word(risk, edge),
 		"success": dist["success"], "partial": dist["partial"], "failure": dist["failure"], "stages": stages, "links": links}
 
 

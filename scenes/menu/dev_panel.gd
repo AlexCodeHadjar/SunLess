@@ -123,8 +123,10 @@ func _points() -> Array:
 func _start_chapter(chapter: String, regenerate: bool) -> void:
 	var slot := START + chapter
 	if SaveService.has_save(slot) and not regenerate:
-		_load(slot)
-		return
+		if bool(SaveService.load_state(ContentDB.data, slot)["ok"]):
+			_load(slot)
+			return
+		# точка от прежней версии игры (сменился формат сохранения) — проходим заново
 	_status.text = "Бот проходит игру до главы…"
 	await get_tree().process_frame
 	await get_tree().process_frame

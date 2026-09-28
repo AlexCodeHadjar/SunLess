@@ -34,9 +34,9 @@ func test_hints_once() -> void:
 func test_state_events() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 21)
-	check(not TutorialRules.state_events(c, s).has("trauma"), "травм нет — нет события")
-	s.character("P01")["traumas"] = ["T02"]
-	check(TutorialRules.state_events(c, s).has("trauma"), "первая травма — событие")
+	check(not TutorialRules.state_events(c, s).has("edge"), "никто не на грани — нет события")
+	s.character("P01")["edge"] = true
+	check(TutorialRules.state_events(c, s).has("edge"), "первый герой на грани — событие")
 	check(not TutorialRules.state_events(c, s).has("camp"), "лагерь в Кошмаре не подсказываем")
 	s.chapter = "academy"
 	check(TutorialRules.state_events(c, s).has("camp"), "в Академии — подсказка про лагерь")
@@ -44,7 +44,7 @@ func test_state_events() -> void:
 
 func test_hint_events_exist() -> void:
 	var c := content()
-	var known := ["map", "brief", "launch", "arrival", "report", "trauma", "rest", "shop", "fork", "cost", "expires", "exclusive",
+	var known := ["map", "brief", "launch", "arrival", "report", "edge", "rest", "shop", "fork", "cost", "expires", "exclusive",
 		"boss", "sky_eclipse", "sky_blood_moon", "academy_start", "trust", "bond", "panic", "growth", "camp", "journal", "onslaught", "psyche"]
 	for hid: String in c.tutorial:
 		check(known.has(str(c.tutorial[hid]["event"])), "событие подсказки %s известно" % hid)

@@ -27,15 +27,15 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	rng.seed = state.rng_seed
 	rng.state = state.rng_state
 	var report := {"mission": mid, "action": action_id, "heroes": heroes, "stages": [], "outcome": "",
-		"entries": [], "traumas": {}, "deaths": [], "rest": {}, "combats": [], "opened": [], "forks": []}
+		"entries": [], "edge": {}, "deaths": [], "rest": {}, "combats": [], "opened": [], "forks": []}
 	var run := {"action": action_id, "stages": Array(a.get("stages", [])).duplicate(true), "done": 0, "outcomes": [],
-		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false))}
+		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false)), "shielded": {}}
 	if bool(a.get("retreat", false)):
 		report["outcome"] = "retreat"
 		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
 		return _finish(content, state, m, sq, run, report, rng)
 	_pay_cost(content, state, a, heroes, run, report, rng)
-	# психика с порога: угроза, место, небо, травмы, отношения в отряде (docs/16 §9г)
+	# психика с порога: угроза, место, небо, грань смерти, отношения в отряде (docs/16 §9г)
 	report["entries"].append_array(_psy(report, run, PsycheRules.arrival(content, state, m, heroes, rng)))
 	return _advance(content, state, m, sq, run, report, rng)
 
@@ -123,13 +123,11 @@ static func _pay_cost(content: Content, state: RunState, a: Dictionary, heroes: 
 		# «цена усталости»: отдыха между событиями нет — платят психикой (docs/16 §9г)
 		for cid: String in heroes:
 			entries.append_array(PsycheRules.change(content, state, cid, -int(cost["rest"]), "цена действия", heroes, rng))
-	if int(cost.get("trauma", 0)) > 0:
+	if bool(cost.get("edge", false)):
+		# цена «через грань»: исполнитель платит собой — встаёт на грань (на грани — бросок смерти)
 		var who := _executor(state, heroes)
 		if who != "":
-			var res := {"traumas": [], "death": {}}
-			InjuryRules.give_traumas(content, state, who, MissionFlow.pocket(state, who), int(cost["trauma"]), "physical", rng, res, entries)
-			if not res["traumas"].is_empty():
-				report["traumas"][who] = Array(report["traumas"].get(who, [])) + Array(res["traumas"])
+			_hurt(content, state, who, report, rng, run)
 
 
 ## Этапы по порядку до конца или до развилки: на развилке отряд ждёт решения игрока.
@@ -158,22 +156,22 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 						report["entries"].append_array(TrustRules.change(content, state, cid, other, -1, "сбежал с миссии"))
 		run["fled"] = fled
 		var alive: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c) and not fled.has(c))
-		var trauma_before := {}
+		var edge_before := {}
 		for cid: String in alive:
-			trauma_before[cid] = Array(report["traumas"].get(cid, [])).size()
+			edge_before[cid] = int(report["edge"].get(cid, 0))
 		var rec := {"name": st.get("name", ""), "hero": "", "chance": 0, "roll": 0, "outcome": "fail", "text": ""}
 		if alive.is_empty():
 			rec["text"] = "Идти дальше некому."
 		elif bool(st.get("auto", false)) or bool(run["guaranteed"]):
 			rec["outcome"] = "ok"
 		elif st.has("combat"):
-			var after := _combat_stage(content, state, m, a, MissionFlow.boss_stage(state, m, st), alive, rec, report, rng)
+			var after := _combat_stage(content, state, m, a, MissionFlow.boss_stage(state, m, st), alive, rec, report, rng, run)
 			_copy_into(state, after)
 			sq = MissionFlow.squad(state, int(sq["id"]))
 			GrowthRules.mark_combat(content, state, run, alive, Array(report["combats"]).back()["rounds"], rec["outcome"] == "ok")
 			_psy(report, run, Array(report["combats"]).back().get("crises", []))
 		else:
-			_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used)
+			_check_stage(content, state, m, a, st, alive, rec, report, rng, temp_used, run)
 		if rec["text"] == "":
 			rec["text"] = str(st.get({"ok": "ok", "partial": "partial", "fail": "fail"}[rec["outcome"]], ""))
 			if rec["text"] == "" and rec["outcome"] == "partial":
@@ -191,14 +189,14 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 		for cid: String in alive:
 			if state.is_alive(cid):
 				GrowthRules.mark_panic(content, state, run, cid)
-		# психика после этапа: исход, новые травмы, гибель товарищей
+		# психика после этапа: исход, падение на грань, гибель товарищей
 		var got := {}
 		var dead: Array = []
 		for cid: String in alive:
 			if not state.is_alive(cid):
 				dead.append(cid)
 			else:
-				got[cid] = Array(report["traumas"].get(cid, [])).size() - int(trauma_before.get(cid, 0))
+				got[cid] = int(report["edge"].get(cid, 0)) - int(edge_before.get(cid, 0))
 		if not st.has("combat"):
 			report["entries"].append_array(_psy(report, run, PsycheRules.after_stage(content, state, alive, str(rec["hero"]),
 				str(rec["outcome"]), got, dead, rng, str(rec["name"]))))
@@ -311,6 +309,10 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	entries.append_array(OnslaughtRules.reward(content, state, m, heroes, str(report["outcome"])))
 	entries.append_array(JournalRules.after_mission(content, state, m, report, heroes))
 
+	# удачная миссия снимает грань с выживших (docs/16 §9е)
+	if report["outcome"] == "success":
+		for cid: String in heroes:
+			EdgeRules.recover(content, state, cid, "удачная миссия", entries)
 	# погибшие — в отчёт; отдыха между событиями нет (решение владельца): выжившие свободны сразу
 	for cid: String in heroes:
 		if not state.is_alive(cid) and not report["deaths"].has(cid):
@@ -332,7 +334,7 @@ static func _copy_into(dst: RunState, src: RunState) -> void:
 
 
 static func _check_stage(content: Content, state: RunState, m: Dictionary, a: Dictionary, st: Dictionary,
-		alive: Array, rec: Dictionary, report: Dictionary, rng: RandomNumberGenerator, temp_used: Dictionary) -> void:
+		alive: Array, rec: Dictionary, report: Dictionary, rng: RandomNumberGenerator, temp_used: Dictionary, run: Dictionary) -> void:
 	var actor := MissionForecast.stage_actor(content, state, m, a, st, alive)
 	var cid: String = actor["hero"]
 	var chance := int(actor["chance"])
@@ -347,24 +349,24 @@ static func _check_stage(content: Content, state: RunState, m: Dictionary, a: Di
 		rec["outcome"] = "ok"
 		return
 	rec["outcome"] = "partial" if roll <= chance + MissionForecast.PARTIAL_BAND else "fail"
-	var hurt: bool = rec["outcome"] == "fail" or rng.randi_range(1, 100) <= MissionForecast.PARTIAL_TRAUMA
-	if hurt:
-		_hurt(content, state, m, cid, report, rng)
+	# провал этапа — поражение исполнителя: на грань, а на грани — бросок смерти (частичный успех обходится без этого)
+	if rec["outcome"] == "fail" and not GrowthRules.has(content, state, cid, "edge_avoid_checks"):
+		_hurt(content, state, cid, report, rng, run)
 
 
-static func _hurt(content: Content, state: RunState, m: Dictionary, cid: String, report: Dictionary, rng: RandomNumberGenerator) -> void:
-	var res := {"traumas": [], "death": {}}
-	InjuryRules.give_traumas(content, state, cid, MissionFlow.pocket(state, cid), 1, str(m.get("trauma_pool", "all")),
-		rng, res, report["entries"])
-	if not res["traumas"].is_empty():
-		var got: Array = report["traumas"].get(cid, [])
-		got.append_array(res["traumas"])
-		report["traumas"][cid] = got
+## Поражение героя в событии (EdgeRules.defeat) с отметкой в отчёте: report.edge[cid] — сколько раз.
+static func _hurt(content: Content, state: RunState, cid: String, report: Dictionary, rng: RandomNumberGenerator,
+		run: Dictionary, extra: int = 0) -> void:
+	report["edge"][cid] = int(report["edge"].get(cid, 0)) + 1
+	var res := {}
+	if not run.has("shielded"):
+		run["shielded"] = {}
+	EdgeRules.defeat(content, state, cid, MissionFlow.pocket(state, cid), rng, res, report["entries"], run["shielded"], extra)
 
 
-## Бой этапа: автобой; состояние после боя (травмы, раны врага) становится текущим.
+## Бой этапа: автобой; состояние после боя (грань смерти, раны врага) становится текущим.
 static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: Dictionary, st: Dictionary,
-		alive: Array, rec: Dictionary, report: Dictionary, rng: RandomNumberGenerator) -> RunState:
+		alive: Array, rec: Dictionary, report: Dictionary, rng: RandomNumberGenerator, run: Dictionary) -> RunState:
 	var setup := MissionForecast.combat_setup(content, state, m, a, st, alive, true)
 	var hero: String = setup["hero"]
 	var support: Array = alive.filter(func(c: String) -> bool: return c != hero)
@@ -387,10 +389,8 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": s.allies, "rounds": s.rounds_log,
 		"outcome": s.outcome, "discovered": s.discovered, "setup": replay_setup, "crises": s.crises})
 	report["entries"].append_array(s.entries)
-	if not Array(s.result["traumas"]).is_empty():
-		var got: Array = report["traumas"].get(hero, [])
-		got.append_array(s.result["traumas"])
-		report["traumas"][hero] = got
+	if bool(s.result.get("defeated", false)):
+		report["edge"][hero] = int(report["edge"].get(hero, 0)) + 1
 	if won:
 		var shards := 0
 		for e: Dictionary in s.enemies:

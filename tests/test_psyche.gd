@@ -43,8 +43,8 @@ func test_uplift_chance() -> void:
 	check(nephis > 40 and shifty <= 10, "характер решает: Нефис %d%%, Шифти %d%%" % [nephis, shifty])
 	TrustRules.change(c, s, "P02", "P03", 4, "тест")
 	check(PsycheRules.uplift_chance(c, s, "P02", ["P02", "P03"]) > nephis, "доверие в отряде повышает шанс подъёма")
-	s.character("P02")["traumas"] = ["T02", "T03"]
-	check(PsycheRules.uplift_chance(c, s, "P02", []) < nephis, "травмы понижают шанс подъёма")
+	s.character("P02")["edge"] = true
+	check(PsycheRules.uplift_chance(c, s, "P02", []) < nephis, "грань смерти понижает шанс подъёма")
 	# статистика кризисов: Нефис чаще поднимается, Шифти чаще паникует
 	var up := {"P02": 0, "P10": 0}
 	for i in 300:

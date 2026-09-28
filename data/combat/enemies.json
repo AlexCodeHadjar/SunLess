@@ -14,7 +14,6 @@
    "Стая"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 1,
   "art": "res://art/cards/M01.png"
  },
@@ -33,7 +32,6 @@
    "Регенерация"
   ],
   "kind": "boss",
-  "trauma_pool": "physical",
   "shards": 10,
   "art": "res://art/cards/M02.png"
  },
@@ -50,7 +48,6 @@
    "Когти"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M03.png",
   "echo": {
@@ -70,7 +67,6 @@
    "Элита"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M04.png"
  },
@@ -86,7 +82,6 @@
    "Регенерация"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 6,
   "art": "res://art/cards/M05.png"
  },
@@ -102,7 +97,6 @@
    "Стая"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M06.png"
  },
@@ -117,7 +111,6 @@
    "Засада"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M07.png"
  },
@@ -133,7 +126,6 @@
    "Кровь"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M08.png"
  },
@@ -149,7 +141,6 @@
    "Бесформенный"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M09.png"
  },
@@ -165,7 +156,6 @@
    "Древний"
   ],
   "kind": "normal",
-  "trauma_pool": "mental",
   "shards": 2,
   "art": "res://art/cards/M10.png"
  },
@@ -180,7 +170,6 @@
    "Яйцо"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 20,
   "art": "res://art/cards/M11.png"
  },
@@ -195,7 +184,6 @@
    "Захват"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M12.png"
  },
@@ -210,7 +198,6 @@
    "Запах крови"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M15.png"
  },
@@ -227,7 +214,6 @@
    "Командование"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M16.png"
  },
@@ -244,7 +230,6 @@
    "Командование"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M17.png",
   "echo": {
@@ -265,7 +250,6 @@
    "Многоногость"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 3,
   "art": "res://art/cards/M18.png"
  },
@@ -281,7 +265,6 @@
    "Броня"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M19.png"
  },
@@ -296,7 +279,6 @@
    "Засада"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M20.png"
  },
@@ -311,7 +293,6 @@
    "Подземный"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 6,
   "art": "res://art/cards/M21.png"
  },
@@ -326,7 +307,6 @@
    "Гигант"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M23.png"
  },
@@ -341,7 +321,6 @@
    "Когти"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 3,
   "art": "res://art/cards/M24.png"
  },
@@ -357,7 +336,6 @@
    "Уязвимость: меч"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 12,
   "art": "res://art/cards/M25.png"
  },
@@ -373,7 +351,6 @@
    "Предводитель"
   ],
   "kind": "boss",
-  "trauma_pool": "physical",
   "shards": 15,
   "art": "res://art/cards/M26.png"
  },
@@ -389,7 +366,6 @@
    "Приспешник"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M27.png"
  },
@@ -404,7 +380,6 @@
    "Пробивание"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 3,
   "art": "res://art/cards/M28.png"
  },
@@ -420,7 +395,6 @@
    "Разумный"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M29.png"
  },
@@ -436,7 +410,6 @@
    "Разумный"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M30.png"
  },
@@ -452,7 +425,6 @@
    "Разумный"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M31.png"
  },
@@ -467,7 +439,6 @@
    "Рой"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M32.png"
  },
@@ -482,7 +453,6 @@
    "Запах крови"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M33.png"
  },
@@ -498,7 +468,6 @@
    "Паразит"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M34.png"
  },
@@ -514,7 +483,6 @@
    "Элита"
   ],
   "kind": "elite",
-  "trauma_pool": "physical",
   "shards": 6,
   "art": "res://art/cards/M35.png"
  },
@@ -530,7 +498,6 @@
    "Командование"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 4,
   "art": "res://art/cards/M36.png"
  },
@@ -547,7 +514,6 @@
    "Свет"
   ],
   "kind": "boss",
-  "trauma_pool": "mental",
   "shards": 18,
   "art": "res://art/cards/M37.png"
  },
@@ -563,7 +529,6 @@
    "Паразит"
   ],
   "kind": "normal",
-  "trauma_pool": "physical",
   "shards": 2,
   "art": "res://art/cards/M38.png"
  },
@@ -581,9 +546,37 @@
    "Гордыня",
    "Человек"
   ],
-  "trauma_pool": "physical",
   "shards": 3
  },
-  {"id": "H_CASTER", "name": "Кастер", "rank": 0, "class": 2, "human": true, "kind": "elite", "tags": ["Дуэль", "Скорость", "Первый удар", "Наследник", "Человек"], "trauma_pool": "physical", "shards": 2, "art": "res://art/cards/P04.webp"},
-  {"id": "H_GOLEM", "name": "Учебный голем", "rank": 0, "class": 1, "human": false, "kind": "normal", "tags": ["Конструкт", "Камень", "Оборона"], "trauma_pool": "physical", "shards": 1}
+ {
+  "id": "H_CASTER",
+  "name": "Кастер",
+  "rank": 0,
+  "class": 2,
+  "human": true,
+  "kind": "elite",
+  "tags": [
+   "Дуэль",
+   "Скорость",
+   "Первый удар",
+   "Наследник",
+   "Человек"
+  ],
+  "shards": 2,
+  "art": "res://art/cards/P04.webp"
+ },
+ {
+  "id": "H_GOLEM",
+  "name": "Учебный голем",
+  "rank": 0,
+  "class": 1,
+  "human": false,
+  "kind": "normal",
+  "tags": [
+   "Конструкт",
+   "Камень",
+   "Оборона"
+  ],
+  "shards": 1
+ }
 ]

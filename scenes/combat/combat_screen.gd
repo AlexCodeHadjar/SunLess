@@ -262,7 +262,7 @@ func _ready() -> void:
 	retreat.position = Vector2(1670, 8)
 	retreat.custom_minimum_size = Vector2(210, 46)
 	retreat.add_theme_font_size_override("font_size", 20)
-	retreat.tooltip_text = "Бой прекратится без новых травм. Событие останется, раны врага сохранятся, он станет настороженным."
+	retreat.tooltip_text = "Бой прекратится без поражения — герой не упадёт на грань. Событие останется, раны врага сохранятся, он станет настороженным."
 	retreat.pressed.connect(_on_retreat)
 	add_child(retreat)
 	_retreat_btn = retreat

@@ -1,7 +1,7 @@
 class_name CampRules
 extends RefCounted
 ## Лагерь (docs/16 §9): койки и доска слухов. Герой на койке восстанавливает психику вдвое быстрее,
-## а раз в HEAL_EVERY секунд с него сходит одна лёгкая травма. Уход на миссию освобождает койку.
+## а через HEAL_EVERY секунд герой на грани отходит от неё. Уход на миссию освобождает койку.
 ## Состояние — state.camp {beds: [cid], heal: {cid: накоплено секунд}}.
 
 const BEDS := 2
@@ -17,12 +17,9 @@ static func in_bed(state: RunState, cid: String) -> bool:
 	return beds(state).has(cid)
 
 
-## Лёгкая травма, которую койка вылечит следующей ("" — нечего).
-static func next_heal(content: Content, state: RunState, cid: String) -> String:
-	for tid: String in state.character(cid).get("traumas", []):
-		if str(content.traumas.get(tid, {}).get("severity", "")) == "light":
-			return tid
-	return ""
+## Что койка вылечит: "edge" — герой на грани отойдёт от неё ("" — нечего).
+static func next_heal(_content: Content, state: RunState, cid: String) -> String:
+	return "edge" if EdgeRules.on_edge(state, cid) else ""
 
 
 static func heal_left(state: RunState, cid: String) -> float:
@@ -56,7 +53,7 @@ static func take(state: RunState, cid: String) -> void:
 	state.camp["heal"] = h
 
 
-## Часы лагеря: ускоренный отдых, спад паники, лечение лёгких травм.
+## Часы лагеря: ускоренный отдых, спад паники, герой на грани отходит от неё.
 static func tick(content: Content, state: RunState, dt: float) -> Array:
 	var out: Array = []
 	var h: Dictionary = state.camp.get("heal", {})
@@ -75,9 +72,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 		h[cid] = float(h.get(cid, 0.0)) + dt
 		if float(h[cid]) >= HEAL_EVERY:
 			h[cid] = 0.0
-			Array(ch["traumas"]).erase(tid)
-			state.note(cid, "Лагерь: прошло «%s»" % content.card_name(tid))
-			out.append({"kind": "rested", "card": cid, "text": "%s в лагере: прошло «%s»" % [content.card_name(cid), content.card_name(tid)]})
+			EdgeRules.recover(content, state, cid, "отлежался в лагере", out)
 	state.camp["heal"] = h
 	return out
 

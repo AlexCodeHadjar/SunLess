@@ -5,7 +5,6 @@ extends RefCounted
 var characters: Dictionary = {}
 var enhancements: Dictionary = {}
 var abilities: Dictionary = {}
-var traumas: Dictionary = {}
 var regions: Dictionary = {}
 var tags: Dictionary = {}
 # бой
@@ -35,7 +34,6 @@ static func load_from(dir: String = "res://data") -> Content:
 	c.characters = c._load_map(dir + "/characters.json")
 	c.enhancements = c._load_map(dir + "/enhancements.json")
 	c.abilities = c._load_map(dir + "/abilities.json")
-	c.traumas = c._load_map(dir + "/traumas.json")
 	c.regions = c._load_map(dir + "/regions.json")
 	c.tags = c._load_map(dir + "/tags.json")
 	c.combat_tags = c._load_map(dir + "/combat/tags.json")
@@ -123,15 +121,13 @@ func card_kind(card_id: String) -> String:
 		return "enhancement"
 	if abilities.has(card_id):
 		return "ability"
-	if traumas.has(card_id):
-		return "trauma"
 	if enemies.has(card_id):
 		return "enemy"
 	return ""
 
 
 func card_name(card_id: String) -> String:
-	for m: Dictionary in [characters, enhancements, abilities, traumas, enemies, missions]:
+	for m: Dictionary in [characters, enhancements, abilities, enemies, missions]:
 		if m.has(card_id):
 			return str(m[card_id].get("name", m[card_id].get("title", card_id)))
 	return card_id

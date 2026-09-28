@@ -107,7 +107,7 @@ func test_retreat() -> void:
 	eq(ns.missions["MS02"]["status"], "open", "после отступления миссия снова открыта:")
 	eq(int(ns.missions["MS02"]["attempts"]), 0, "отступление — не попытка:")
 	eq(MissionFlow.busy_reason(c, ns, "P01"), "", "после отступления герой свободен:")
-	check(r["report"]["traumas"].is_empty(), "без ран")
+	check(r["report"]["edge"].is_empty(), "никто не на грани")
 
 
 func test_locked_action_refused() -> void:

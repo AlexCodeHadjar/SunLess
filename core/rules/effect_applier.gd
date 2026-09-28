@@ -40,25 +40,18 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			if not ch.is_empty() and not Array(ch["abilities"]).has(aid):
 				ch["abilities"].append(aid)
 				return [{"kind": "ability", "text": "Способность: %s" % content.card_name(aid), "card": aid}]
-		"add_trauma":
-			var tid: String = e["trauma"]
-			var ch2: Dictionary = state.character(target)
-			if not ch2.is_empty() and not Array(ch2["traumas"]).has(tid):
-				ch2["traumas"].append(tid)
-				state.note(target, "Травма: %s" % content.card_name(tid))
-				return [{"kind": "trauma", "text": "%s: %s" % [content.card_name(target), content.card_name(tid)], "card": tid}]
-		"remove_trauma":
-			return _remove_trauma(content, state, target, e)
-		"clear_traumas":
-			var ch3: Dictionary = state.character(target)
-			if not ch3.is_empty() and not Array(ch3["traumas"]).is_empty():
-				var cats: Array = e.get("categories", [])
-				var keep: Array = []
-				for t: String in ch3["traumas"]:
-					if not cats.is_empty() and not cats.has(content.traumas.get(t, {}).get("category", "")):
-						keep.append(t)
-				ch3["traumas"] = keep
-				return [{"kind": "heal", "text": str(e.get("text", "Травмы сняты"))}]
+		"edge":
+			# сюжет ставит героя на грань смерти (без броска: бросок — только при поражении на грани)
+			if state.is_alive(target) and not EdgeRules.on_edge(state, target):
+				state.character(target)["edge"] = true
+				state.note(target, "На грани")
+				return [{"kind": "edge", "card": target, "text": str(e.get("text", "%s — на грани смерти" % content.card_name(target)))}]
+		"recover":
+			var out: Array = []
+			EdgeRules.recover(content, state, target, str(e.get("text", "раны затянулись")), out)
+			return out
+		"psyche":
+			return PsycheRules.change(content, state, target, int(e.get("value", 0)), str(e.get("text", "")), [target], rng)
 		"set_flag":
 			state.flags[str(e["flag"])] = true
 			if e.has("text"):
@@ -143,7 +136,7 @@ static func add_card(content: Content, state: RunState, card: String) -> Array:
 		if not state.characters.has(card):
 			state.characters[card] = {
 				"stage": str(d.get("start_stage", "")),
-				"traumas": [],
+				"edge": false,
 				"perm": {"power": 0, "will": 0, "cunning": 0},
 				"abilities": Array(d.get("start_abilities", [])).duplicate(),
 				"alive": true,
@@ -172,34 +165,3 @@ static func _remove_card(state: RunState, card: String) -> void:
 					var st: Dictionary = state.missions.get(str(sq.get("mission", "")), {})
 					if not st.is_empty():
 						st["status"] = "open"
-
-
-
-## Какую травму снять: явная "trauma" или самая тяжёлая из подходящих по "severities" и "categories".
-static func _remove_trauma(content: Content, state: RunState, target: String, e: Dictionary) -> Array:
-	var ch: Dictionary = state.character(target)
-	if ch.is_empty():
-		return []
-	var traumas: Array = ch["traumas"]
-	var pick := ""
-	if e.has("trauma"):
-		if traumas.has(e["trauma"]):
-			pick = e["trauma"]
-	else:
-		var sev: Array = e.get("severities", [])
-		var cats: Array = e.get("categories", [])
-		var best_rank := -1
-		for t: String in traumas:
-			var d: Dictionary = content.traumas.get(t, {})
-			if not sev.is_empty() and not sev.has(d.get("severity", "")):
-				continue
-			if not cats.is_empty() and not cats.has(d.get("category", "")):
-				continue
-			var rank := TraumaRules.SEVERITY_ORDER.find(d.get("severity", "light"))
-			if rank > best_rank:  # снимаем самую тяжёлую из подходящих
-				best_rank = rank
-				pick = t
-	if pick == "":
-		return [{"kind": "info", "text": "Подходящей травмы нет"}]
-	traumas.erase(pick)
-	return [{"kind": "heal", "text": "Снята травма: %s" % content.card_name(pick), "card": pick}]

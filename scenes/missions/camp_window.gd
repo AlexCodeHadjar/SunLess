@@ -45,7 +45,7 @@ func _ready() -> void:
 	x.pressed.connect(close)
 	head.add_child(x)
 	body.add_child(head)
-	var intro := UITheme.label("Угли, пара драных плащей и тишина. На койке психика восстанавливается вдвое быстрее, а лёгкие травмы понемногу проходят (одна за %d с). Уход на миссию освобождает койку." % int(CampRules.HEAL_EVERY),
+	var intro := UITheme.label("Угли, пара драных плащей и тишина. На койке психика восстанавливается вдвое быстрее, а герой на грани отходит от неё за %d с. Уход на миссию освобождает койку." % int(CampRules.HEAL_EVERY),
 		"serif_italic", 19, Palette.SILVER)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.custom_minimum_size.x = PANEL.size.x - 56
@@ -146,7 +146,7 @@ func _bed(cid: String) -> Control:
 	if psy < PsycheRules.MAX:
 		v.add_child(UITheme.label("психика %d — %s" % [psy, PsycheRules.word(psy)], "sans", 16, SquadLifeUI.psyche_color(psy)))
 	var tid := CampRules.next_heal(c, s, cid)
-	var heal := UITheme.label("пройдёт «%s» через %d с" % [c.card_name(tid), int(ceil(CampRules.heal_left(s, cid)))] if tid != "" else "лёгких травм нет",
+	var heal := UITheme.label("отойдёт от грани через %d с" % int(ceil(CampRules.heal_left(s, cid))) if tid != "" else "не на грани",
 		"sans", 16, Palette.STAT_UP if tid != "" else Palette.TEXT_DIM)
 	heal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	heal.custom_minimum_size.x = 200

@@ -83,7 +83,7 @@ def rum(text, tag):
 def mission(mid, loc, title, briefing, arrival, rumors, threat, dur, rest, squad, actions, typ="story", **kw):
 	m = {"id": mid, "location": loc, "type": typ, "title": title, "briefing": briefing, "arrival": arrival,
 		"rumors": rumors, "threat": threat, "duration": dur, "rest": rest, "squad": {"min": squad[0], "max": squad[1]},
-		"enemies": [], "field": "F_08", "known_tags": [], "hidden_tags": [], "context": [], "trauma_pool": "all",
+		"enemies": [], "field": "F_08", "known_tags": [], "hidden_tags": [], "context": [],
 		"actions": actions}
 	m.update(kw)
 	return m
@@ -121,12 +121,12 @@ ENH = [
 	 "text": "Воспоминание: +3 Хитрость в подъёме; в погоне и непогоду +1 Хитрость.", "canon": "канон, игровое имя",
 	 "source": "«Дитя Теней», гл. 34–37, 48, 51", "tags": ["Нить", "Воспоминание", "Ловушка"]},
 	{"id": "U12", "name": "Эхо Падальщика Карапакса", "origin": "echo", "rarity": "epic", "wears": False, "art": "res://art/cards/U12.webp",
-	 "art_has_frame": True, "soften_first_physical": True, "bonuses": [{"stat": "power", "value": 3, "tags": ["combat"]}],
-	 "text": "Эхо: +3 Сила в бою; первая физическая травма события смягчается — Эхо принимает удар.",
+	 "art_has_frame": True, "edge_shield": True, "bonuses": [{"stat": "power", "value": 3, "tags": ["combat"]}],
+	 "text": "Эхо: +3 Сила в бою; первое поражение события Эхо принимает на себя — герой не падает на грань.",
 	 "canon": "канон", "source": "«Дитя Теней», гл. 46–47", "tags": ["Эхо", "Панцирь", "Хитин"]},
 	{"id": "U16", "name": "Доспехи Звёздного Легиона", "origin": "memory", "rarity": "epic", "wears": True, "art": "res://art/cards/U16.webp",
-	 "art_has_frame": True, "soften_first_physical": True, "bonuses": [{"stat": "power", "value": 1, "tags": []}],
-	 "text": "Броня: +1 Сила; первая физическая травма события смягчается.", "canon": "канон", "source": "«Дитя Теней», гл. 54, 56",
+	 "art_has_frame": True, "edge_shield": True, "bonuses": [{"stat": "power", "value": 1, "tags": []}],
+	 "text": "Броня: +1 Сила; первое поражение события не ставит героя на грань.", "canon": "канон", "source": "«Дитя Теней», гл. 54, 56",
 	 "tags": ["Броня", "Воспоминание", "Звёздный свет"]},
 	{"id": "K07", "name": "Знание Карапакса", "origin": "knowledge", "rarity": "rare", "wears": False,
 	 "bonuses": [{"stat": "cunning", "value": 2, "tags": ["combat"]}],
@@ -142,7 +142,7 @@ SHOP = {"id": "shore_altar", "chapter": "shore", "name": "Разбитый ал�
 	"text": "Плита с полустёртыми звёздами Легиона. Положишь на неё осколки душ — и к утру рядом лежит вещь, будто море вернуло её тому, кто заплатил. Кто её приносит, не видел никто.",
 	"pos": [1.0, 0.5], "slots": 3, "min_characters": 1, "refresh_every": 7,
 	"stock": [{"card": "U11", "price": 12}, {"card": "K07", "price": 9}, {"card": "K08", "price": 5}, {"card": "U15"}, {"card": "U01"}, {"card": "K02"}],
-	"services": ["heal", "sharpen", "unwear"]}
+	"services": ["sharpen", "unwear"]}
 
 ONSLAUGHT = {"id": "shore", "chapter": "shore", "first_after": 2, "every": [200, 320], "pool": ["NS01", "NS02", "NS03"],
 	"text": "На Берегу угроза приходит сама: прилив, стая, шторм."}
@@ -167,7 +167,7 @@ A(mission("SH19", "stone_isle", "Беззвёздная Пустота",
 		[chk("Руны", {"cunning": 7}, ["knowledge"], "Звёзды и клятва: здесь стоял Звёздный Легион.", "Руны стёрты водой — и течением чуть не стёрло Санни.")],
 		[{"cmd": "add_codex", "entry": "legion", "text": "Звёздный Легион когда-то стоял на Берегу"}, shards(2)])],
 	start=True, requires_heroes=["P01"], field="F_16", known_tags=["Глубина", "Тьма", "Прилив"], hidden_tags=["Прилив / Отлив"],
-	context=["survival", "weather"], trauma_pool="environment", next=["SH20"], from_event="E19"))
+	context=["survival", "weather"], next=["SH20"], from_event="E19"))
 
 A(mission("SH20", "low_tide", "Отлив",
 	"С рассветом море отступает, и под ним открывается Багровый Лабиринт — коралловые стены, песок, кости. Вода вернётся к ночи. Уходить далеко — опасно, стоять на месте — бессмысленно.",
@@ -189,7 +189,7 @@ A(mission("SH20", "low_tide", "Отлив",
 		[chk("Наблюдение", {"will": 5}, ["survival"], "К вечеру ясно, куда вода уходит быстрее.", "Солнце жарит, а время уходит.")],
 		[temp("cunning", 1, "Знаю лабиринт")])],
 	requires_heroes=["P01"], field="F_17", known_tags=["Песок", "Вода", "Прилив / Отлив"], hidden_tags=["Щупальца"],
-	context=["survival", "climb"], trauma_pool="environment", next=["SH21"], sky=None, from_event="E20"))
+	context=["survival", "climb"], next=["SH21"], sky=None, from_event="E20"))
 
 A(mission("SH21", "coral_maze", "Первый Падальщик Карапакса",
 	"В коридоре лабиринта — Падальщик Карапакса: панцирь, как у рыцаря, клешни, как гильотины. Он ещё не заметил Санни. Панцирь не пробить — но у брони всегда есть сочленения.",
@@ -208,7 +208,7 @@ A(mission("SH21", "coral_maze", "Первый Падальщик Карапак�
 		[temp("cunning", 1, "Знаю его повадки")]),
 	 retreat("SH21_retreat")],
 	requires_heroes=["P01"], enemies=["M03"], field="F_08", known_tags=["Панцирь", "Когти"], hidden_tags=["Сочленения", "Скорость"],
-	context=["combat", "stealth"], trauma_pool="physical", next=["SH22"], from_event="E21"))
+	context=["combat", "stealth"], next=["SH22"], from_event="E21"))
 
 A(mission("SH22", "statue_hill", "Тень, Звезда и Оракул",
 	"У подножия безголовой статуи — огонь. Двое: высокая девушка с серебряными волосами и слепая с посохом. Нефис и Касси. Им, как и Санни, нужен кто-то, кто прикроет спину. Но сколько о себе рассказать?",
@@ -224,7 +224,7 @@ A(mission("SH22", "statue_hill", "Тень, Звезда и Оракул",
 	 act("SH22_share", "Поделиться частью", "Рассказать немного — и узнать немного.",
 		[chk("Полуправда", {"cunning": 6, "will": 5}, ["social", "lie"], "Обмен секретами за секреты: каждый знает ровно столько, сколько нужно.", "Слишком осторожно — никто никому не поверил.")],
 		[trust("P01", "P02", 2, "поделились секретами"), trust("P01", "P03", 2, "поделились секретами")])],
-	requires_heroes=["P01"], field="F_06", known_tags=["Укрытия"], context=["social"], trauma_pool="mental",
+	requires_heroes=["P01"], field="F_06", known_tags=["Укрытия"], context=["social"],
 	on_complete=[card("P02"), card("P03"), {"cmd": "add_codex", "entry": "cohort", "text": "Когорта: Санни, Нефис и Касси"}],
 	next=["SH23"], from_event="E22"))
 
@@ -242,7 +242,7 @@ A(mission("SH23", "statue_hill", "Видение замка",
 	 act("SH23_safe", "Искать безопасный путь", "Медленнее, но с запасом.",
 		[chk("Обход", {"cunning": 7}, ["survival"], "Путь длиннее — зато с водой и укрытиями.", "Безопасного пути нет.")],
 		[shards(3)], cost={"rest": 10})],
-	field="F_06", known_tags=["Высота"], hidden_tags=["Пророчество"], context=["social", "survival"], trauma_pool="mental",
+	field="F_06", known_tags=["Высота"], hidden_tags=["Пророчество"], context=["social", "survival"],
 	next=["SH24"], from_event="E23"))
 
 A(mission("SH24", "hunting_grounds", "Охота в багровом лабиринте",
@@ -263,7 +263,7 @@ A(mission("SH24", "hunting_grounds", "Охота в багровом лабир�
 		[card("K07")]),
 	 retreat("SH24_retreat")],
 	enemies=["M03", "M03"], field="F_08", known_tags=["Панцирь", "Стая", "Когти"], hidden_tags=["Сочленения"],
-	context=["combat"], trauma_pool="physical", next=["SH25"], from_event="E24"))
+	context=["combat"], next=["SH25"], from_event="E24"))
 
 A(mission("SH25", "shelter", "Сон Касси",
 	"Ночью Касси просыпается с криком. Во сне — Багровый Шпиль, и тень, падающая с него. Она не говорит, чья.",
@@ -279,7 +279,7 @@ A(mission("SH25", "shelter", "Сон Касси",
 	 act("SH25_let_go", "Не думать о будущем", "Сейчас — важнее.",
 		[chk("Спокойствие", {"will": 8}, ["ritual"], "Страх отступает. Утро как утро.", "Мысли о Шпиле не уходят.")],
 		[temp("will", 2, "Не думать о Шпиле")])],
-	field="F_06", known_tags=["Пророчество"], hidden_tags=["Ментальное давление"], context=["social"], trauma_pool="mental",
+	field="F_06", known_tags=["Пророчество"], hidden_tags=["Ментальное давление"], context=["social"],
 	next=["SH26"], from_event="E25"))
 
 A(mission("SH26", "coral_maze", "Эхо Падальщика",
@@ -302,7 +302,7 @@ A(mission("SH26", "coral_maze", "Эхо Падальщика",
 		[shards(5)]),
 	 retreat("SH26_retreat")],
 	requires_heroes=["P01"], enemies=["M03"], field="F_08", known_tags=["Панцирь", "Когти"], hidden_tags=["Ярость"],
-	context=["combat", "ritual"], trauma_pool="physical", next=["SH27"], from_event="E26"))
+	context=["combat", "ritual"], next=["SH27"], from_event="E26"))
 
 A(mission("SH27", "high_ground", "Шторм",
 	"С моря идёт шторм. Прилив будет выше обычного — вода зальёт лабиринт до самых верхушек. Нужно успеть на высоту. Всем.",
@@ -320,7 +320,7 @@ A(mission("SH27", "high_ground", "Шторм",
 	 act("SH27_echo", "Использовать Эхо", "Эхо несёт тех, кто не успевает.",
 		[chk("На спине Эха", {"power": 4, "will": 6}, ["chase", "climb"], "Эхо выносит всех.", "Даже Эхо сносит волной.")],
 		[perm("power")], conditions=[{"type": "in_collection", "card": "U12", "text": "Нужно Эхо Падальщика"}])],
-	field="F_12", known_tags=["Буря", "Прилив", "Ливень"], hidden_tags=["Высота"], context=["weather", "climb"], trauma_pool="environment",
+	field="F_12", known_tags=["Буря", "Прилив", "Ливень"], hidden_tags=["Высота"], context=["weather", "climb"],
 	sky="storm", next=["SH28"], from_event="E27"))
 
 A(mission("SH28", "centurion_gate", "Смертельная ловушка",
@@ -341,7 +341,7 @@ A(mission("SH28", "centurion_gate", "Смертельная ловушка",
 		[card("U16")], cost={"sacrifice_tag": "Воспоминание"}, guaranteed=False),
 	 retreat("SH28_retreat")],
 	enemies=["M04"], field="F_01", known_tags=["Панцирь", "Элита", "Узость"], hidden_tags=["Дальний удар", "Скорость"],
-	context=["combat"], trauma_pool="physical",
+	context=["combat"],
 	boss={"phases": [{"field": "F_01", "text": "Он отступил вглубь коридора. Раненый — и злой."},
 		{"field": "F_08", "sky": "blood_moon", "text": "Под кровавой луной Центурион возвращается сам."}]},
 	next=["SH29"], from_event="E28"))
@@ -353,15 +353,15 @@ A(mission("SH29", "shelter", "Бессмертное Пламя",
 	1, 6, 15, (1, 3),
 	[act("SH29_heal", "Исцелить раненого", "Пусть пламя сделает своё.",
 		[auto("Пламя", "Раны затягиваются. Нефис бледнеет.")],
-		[{"cmd": "remove_trauma", "target": "P01", "severities": ["heavy", "critical"]}, {"cmd": "add_trauma", "target": "P02", "trauma": "T09"},
+		[{"cmd": "recover", "target": "P01"}, {"cmd": "psyche", "target": "P02", "value": -15, "text": "Пламя режет и её — Боль"},
 		 trust("P01", "P02", 1, "исцелила пламенем")], requires_hero=["P02"]),
 	 act("SH29_spare", "Сберечь её силы", "Лечиться по-старому.",
 		[chk("Перевязки", {"will": 7}, ["survival"], "Медленно, но без её боли.", "Раны не заживают.")],
-		[{"cmd": "remove_trauma", "target": "P01", "severities": ["light"]}, trust("P01", "P02", 1, "пожалел её")]),
+		[{"cmd": "recover", "target": "P01"}, trust("P01", "P02", 1, "пожалел её")]),
 	 act("SH29_armor", "Передать доспех", "Доспех Легиона нужнее тому, кто впереди.",
 		[auto("Доспех", "Нефис молча принимает доспех.")],
 		[trust("P01", "P02", 2, "отдал доспех Легиона")], conditions=[{"type": "in_collection", "card": "U16", "text": "Нужны Доспехи Звёздного Легиона"}])],
-	field="F_06", known_tags=["Белое пламя"], context=["ritual"], trauma_pool="mental",
+	field="F_06", known_tags=["Белое пламя"], context=["ritual"],
 	next=["SH30"], from_event="E29"))
 
 A(mission("SH30", "shelter", "Тяжесть пророчества",
@@ -378,7 +378,7 @@ A(mission("SH30", "shelter", "Тяжесть пророчества",
 	 act("SH30_later", "Оставить на потом", "Сейчас есть дела поважнее.",
 		[chk("Молчание", {"cunning": 5}, ["social"], "Вопрос повис — но команда цела.", "Недосказанность грызёт.")],
 		[temp("will", 1, "Не сейчас")])],
-	field="F_06", known_tags=["Пророчество", "Доверие"], context=["social"], trauma_pool="mental",
+	field="F_06", known_tags=["Пророчество", "Доверие"], context=["social"],
 	next=["SH31"], from_event="E30"))
 
 A(mission("SH31", "shelter", "Тысяча ударов",
@@ -394,8 +394,8 @@ A(mission("SH31", "shelter", "Тысяча ударов",
 		[perm("cunning")]),
 	 act("SH31_survive", "Беречь силы", "Лучше отлежаться перед дорогой.",
 		[chk("Отдых", {"will": 6}, ["survival"], "Тело благодарно.", "Не спится.")],
-		[{"cmd": "remove_trauma", "target": "P01", "severities": ["light"]}])],
-	requires_heroes=["P01"], field="F_17", known_tags=["Дуэль"], context=["duel"], trauma_pool="physical",
+		[{"cmd": "recover", "target": "P01"}])],
+	requires_heroes=["P01"], field="F_17", known_tags=["Дуэль"], context=["duel"],
 	next=["SH32"], from_event="E31"))
 
 A(mission("SH32", "spire_view", "Тень Багрового Шпиля",
@@ -412,8 +412,7 @@ A(mission("SH32", "spire_view", "Тень Багрового Шпиля",
 	 act("SH32_ridge", "Исследовать Костяной хребет", "Кости помнят больше, чем кажется.",
 		[chk("Хребет", {"cunning": 8, "will": 6}, ["knowledge", "climb"], "В костях — осколки душ древнего зверя.", "Кость крошится под ногой.")],
 		[shards(8)])],
-	field="F_25", known_tags=["Кость", "Высота"], hidden_tags=["Ментальное давление"], context=["survival", "climb"],
-	trauma_pool="all", end_chapter=True, from_event="E32"))
+	field="F_25", known_tags=["Кость", "Высота"], hidden_tags=["Ментальное давление"], context=["survival", "climb"], end_chapter=True, from_event="E32"))
 
 # побочные: руины Легиона и миссия-выбор
 A(mission("SS01", "legion_ruins", "Обломки Легиона",
@@ -460,21 +459,21 @@ A(mission("SS03", "drowned_hall", "Чужой лагерь: забрать",
 A(mission("RS01", "coral_maze", "Падальщик в тупике", "В тупике лабиринта — Падальщик над добычей. Мясо и осколки.",
 	"Хруст хитина.", [rum("Он [один]", "Одиночка")], 2, 6, 15, (1, 3),
 	[act("RS01_hunt", "Охотиться", "Взять его.", [fight("Бой", ["M03"], "F_08", "Добыча.", "Сорвалось.")], [shards(2)], story=False),
-	 retreat("RS01_retreat")], typ="random", enemies=["M03"], known_tags=["Панцирь"], context=["combat"], trauma_pool="physical", expires=120))
+	 retreat("RS01_retreat")], typ="random", enemies=["M03"], known_tags=["Панцирь"], context=["combat"], expires=120))
 A(mission("RS02", "coral_maze", "Красные многоножки", "Из щели в коралле лезут красные многоножки. Их укус жжёт, как кислота.",
 	"Шорох сотен ног.", [rum("Их [много]", "Стая"), rum("Укус [жжёт]", "Кислота")], 2, 6, 15, (1, 3),
 	[act("RS02_burn", "Выжечь гнездо", "Разом.", [fight("Бой", ["M06"], "F_08", "Гнездо пусто.", "Многоножки везде.")], [shards(2)], story=False),
 	 act("RS02_sneak", "Проскользнуть", "Не будить.", [chk("Тихо", {"cunning": 7}, ["stealth"], "Проскользнули — и нашли тайник.", "Разбудили.")], [shards(1), temp("cunning", 1, "Тихий шаг")], story=False),
-	 retreat("RS02_retreat")], typ="random", enemies=["M06"], known_tags=["Стая"], hidden_tags=["Кислота", "Засада"], context=["combat", "stealth"], trauma_pool="physical", expires=120))
+	 retreat("RS02_retreat")], typ="random", enemies=["M06"], known_tags=["Стая"], hidden_tags=["Кислота", "Засада"], context=["combat", "stealth"], expires=120))
 A(mission("RS03", "low_tide", "Лужи с щупальцами", "В приливных лужах остались прозрачные щупальца. В их глубине блестит что-то ценное.",
 	"Вода в луже неподвижна. Слишком неподвижна.", [rum("Щупальца [хватают за ноги]", "Захват")], 2, 5, 15, (1, 2),
 	[act("RS03_grab", "Выхватить блестящее", "Быстро.", [chk("Рывок", {"cunning": 6, "power": 4}, ["survival"], "Осколки в кулаке.", "Щупальце хватает.")], [shards(3)], story=False),
 	 act("RS03_fight", "Вычистить лужу", "Бой.", [fight("Бой", ["M09"], "F_17", "Лужа чиста.", "Щупальца утаскивают.")], [shards(3)], story=False),
-	 retreat("RS03_retreat")], typ="random", enemies=["M09"], field="F_17", known_tags=["Щупальца", "Засада"], context=["survival"], trauma_pool="physical", expires=110))
+	 retreat("RS03_retreat")], typ="random", enemies=["M09"], field="F_17", known_tags=["Щупальца", "Засада"], context=["survival"], expires=110))
 A(mission("RS04", "drowned_hall", "Черви под полом", "Под плитами затопленного зала шевелятся плотоядные черви. Плиты — старые, могут не выдержать.",
 	"Пол вибрирует.", [rum("Они [под землёй]", "Подземный")], 3, 6, 20, (1, 3),
 	[act("RS04_fight", "Спуститься к ним", "Бой в темноте.", [fight("Бой", ["M07"], "F_21", "Черви затихли. В их норе — кости и осколки.", "Земля уходит из-под ног.")], [shards(4)], story=False),
-	 retreat("RS04_retreat")], typ="random", enemies=["M07"], field="F_21", known_tags=["Подземный", "Рой"], context=["combat"], trauma_pool="physical", expires=140))
+	 retreat("RS04_retreat")], typ="random", enemies=["M07"], field="F_21", known_tags=["Подземный", "Рой"], context=["combat"], expires=140))
 
 # натиски Берега
 A(mission("NS01", "low_tide", "Прилив", "Вода возвращается раньше, чем должна, — и с ней щупальцевый обитатель глубин. Он идёт на запах тех, кто остался внизу.",
@@ -483,21 +482,20 @@ A(mission("NS01", "low_tide", "Прилив", "Вода возвращается
 	[act("NS01_fight", "Отбить", "Встретить на мелководье.", [fight("Мелководье", ["M12"], "F_16", "Обитатель уходит на глубину.", "Щупальца тянут вниз.")], [shards(5)], story=False),
 	 act("NS01_climb", "Увести всех наверх", "Бегом на высоту.", [chk("Наверх", {"cunning": 6, "power": 5}, ["climb", "chase"], "Все наверху.", "Кого-то утаскивает.")], [shards(2)], story=False),
 	 retreat("NS01_retreat")], typ="onslaught", enemies=["M12"], field="F_16", known_tags=["Глубинный", "Прилив"], hidden_tags=["Захват"],
-	context=["combat"], trauma_pool="physical", expires=60, expire_panic=25,
+	context=["combat"], expires=60, expire_panic=25,
 	on_expire=[shards(-3), {"cmd": "text", "text": "Прилив смыл тайник с припасами. Ночь будет голодной."}], from_event="M12"))
 A(mission("NS02", "hunting_grounds", "Стая Падальщиков", "Падальщики сбились в стаю и идут к расщелине, где вы ночуете.",
 	"Скрежет хитина со всех сторон.", [rum("Их [много]", "Стая"), rum("Панцирь [не пробить в лоб]", "Панцирь")],
 	3, 5, 20, (1, 3),
 	[act("NS02_fight", "Держать проход", "В узости их число не поможет.", [fight("Проход", ["M03", "M03"], "F_01", "Стая отбита.", "Проход прорван.")], [shards(6)], story=False),
 	 act("NS02_lure", "Увести стаю", "Приманкой в сторону.", [chk("Приманка", {"cunning": 7}, ["lure", "chase"], "Стая ушла за приманкой.", "Не поверили.")], [shards(2)], story=False),
-	 retreat("NS02_retreat")], typ="onslaught", enemies=["M03", "M03"], field="F_01", known_tags=["Стая", "Панцирь"], context=["combat", "lure"],
-	trauma_pool="physical", expires=60, expire_panic=25,
+	 retreat("NS02_retreat")], typ="onslaught", enemies=["M03", "M03"], field="F_01", known_tags=["Стая", "Панцирь"], context=["combat", "lure"], expires=60, expire_panic=25,
 	on_expire=[shards(-4), {"cmd": "text", "text": "Стая разорила ночёвку."}], from_event="M03"))
 A(mission("NS03", "high_ground", "Шторм с моря", "Внезапный шторм: ветер валит с ног, вода поднимается. Кто не успеет наверх — не успеет вообще.",
 	"Небо чёрное, волны выше кораллов.", [rum("Шторм [приходит без предупреждения]", "Буря")],
 	3, 5, 20, (1, 3),
 	[act("NS03_up", "Наверх", "Все вместе.", [chk("Подъём", {"will": 6, "cunning": 6}, ["climb", "weather"], "Успели.", "Волна накрывает.")], [shards(3)], story=False),
-	 retreat("NS03_retreat")], typ="onslaught", field="F_12", known_tags=["Буря", "Ливень"], context=["weather", "climb"], trauma_pool="environment",
+	 retreat("NS03_retreat")], typ="onslaught", field="F_12", known_tags=["Буря", "Ливень"], context=["weather", "climb"],
 	expires=60, expire_panic=30, on_expire=[shards(-3), {"cmd": "text", "text": "Шторм прошёл по лагерю. Потеряно всё, что лежало внизу."}], from_event="E27"))
 
 # рисунки: случайные миссии — карта своей твари

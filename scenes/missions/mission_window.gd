@@ -494,8 +494,8 @@ func _cost_text(a: Dictionary, sq: Dictionary) -> String:
 		parts.append("✧ %d" % int(cost["shards"]))
 	if cost.has("rest"):
 		parts.append("психика −%d" % int(cost["rest"]))
-	if int(cost.get("trauma", 0)) > 0:
-		parts.append("травма")
+	if bool(cost.get("edge", false)):
+		parts.append("исполнитель — на грань")
 	var out := ("Цена: " + " · ".join(parts)) if not parts.is_empty() else ""
 	if bool(a.get("guaranteed", false)):
 		out += ("  ·  " if out != "" else "") + "успех наверняка"
@@ -573,7 +573,7 @@ func show_report(rep: Dictionary) -> void:
 	if cr != null:
 		_body.add_child(cr)
 		HintTargets.put("report_crises", [cr])
-	# полученные карты (и травмы) — самими картами, а не строками
+	# полученные карты (и герои на грани) — самими картами, а не строками
 	var got := _reward_cards(rep["entries"])
 	if got != null:
 		_body.add_child(got)
@@ -584,7 +584,7 @@ func show_report(rep: Dictionary) -> void:
 		var kind := str(e.get("kind", "info"))
 		if _is_card_entry(e):
 			continue
-		var col: Color = {"card": Palette.STAT_UP, "trauma": Palette.TRAUMA_BRIGHT, "death": Palette.TRAUMA_BRIGHT,
+		var col: Color = {"card": Palette.STAT_UP, "edge": Palette.TRAUMA_BRIGHT, "recover": Palette.STAT_UP, "death": Palette.TRAUMA_BRIGHT,
 			"mission": Color("#E3C98E"), "story": Color("#E3C98E"), "resource": Palette.COINS, "broken": Palette.STAT_DOWN}.get(kind, Palette.SILVER)
 		if kind == "trust":
 			col = Palette.STAT_UP if int(e.get("delta", 0)) > 0 else Palette.STAT_DOWN
@@ -642,13 +642,13 @@ func _crisis_cards(rep: Dictionary) -> Control:
 	return row
 
 
-## Запись отчёта, которую показываем картой: получена карта, способность или травма.
+## Запись отчёта, которую показываем картой: получена карта, способность, герой упал на грань или отошёл от неё.
 func _is_card_entry(e: Dictionary) -> bool:
 	var card := str(e.get("card", ""))
-	return str(e.get("kind", "")) in ["card", "ability", "trauma"] and card != "" and _content().card_kind(card) != ""
+	return str(e.get("kind", "")) in ["card", "ability", "edge", "recover"] and card != "" and _content().card_kind(card) != ""
 
 
-## Ряд карт-наград: карта, под ней подпись (кому досталась травма); правый щелчок — планшет.
+## Ряд карт-наград: карта, под ней подпись (получено / на грани / отошёл от грани); правый щелчок — планшет.
 func _reward_cards(entries: Array) -> Control:
 	var row := HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 18)
@@ -660,12 +660,14 @@ func _reward_cards(entries: Array) -> Control:
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 4)
 		var cv := CardView.make(str(e["card"]), Vector2(118, 202), false)
-		cv.highlight = kind != "trauma"
+		cv.highlight = kind != "edge"
 		cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 		cv.clicked.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 		v.add_child(cv)
-		var cap := "получено" if kind == "card" else ("способность" if kind == "ability" else str(e.get("text", "")).get_slice(":", 0))
-		var l := UITheme.label(cap, "sans", 15, Palette.TRAUMA_BRIGHT if kind == "trauma" else Palette.STAT_UP)
+		var cap: String = {"card": "получено", "ability": "способность", "edge": "☠ на грани", "recover": "отошёл от грани"}.get(kind, "")
+		if kind == "edge" and str(e.get("text", "")).contains("выживает"):
+			cap = "☠ выжил на грани"
+		var l := UITheme.label(cap, "sans", 15, Palette.TRAUMA_BRIGHT if kind == "edge" else Palette.STAT_UP)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.custom_minimum_size.x = 118
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

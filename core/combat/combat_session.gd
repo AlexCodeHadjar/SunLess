@@ -15,7 +15,6 @@ const CHANCE_MIN := 5
 const CHANCE_MAX := 95
 const MOMENTUM := 0.10
 const WOUND := 0.10
-const TRAUMA_PENALTY := 0.05
 const STAT_STEP := 0.04
 const STAT_ROTATION := ["power", "will", "cunning"]
 const WINS_NEEDED := 2
@@ -54,7 +53,9 @@ var rounds_log: Array = []
 var entries: Array = []
 var discovered: Array = []        # id связей, сработавших в сыгранных раундах
 var crises: Array = []            # кризисы психики в этом бою (PsycheRules): записи kind "crisis"
-var result: Dictionary = {"traumas": [], "death": {}, "wear": [], "loot": {}, "progressed": false}
+var result: Dictionary = {"defeated": false, "edge": [], "death": {}, "wear": [], "loot": {}, "progressed": false}
+var brutal := 0                   # «жестокий удар» врага: прибавка к шансу смерти, если бой проигран на грани
+var shielded := {}                # щит усиления (edge_shield) уже сработал в этом бою
 # бой из миссии (docs/15): вместо события — описание боя и теги проверки миссии/этапа
 var ctx_event: Dictionary = {}
 var ctx_option: Dictionary = {}
@@ -229,7 +230,7 @@ func play_round() -> Dictionary:
 		if not discovered.has(l["id"]):
 			discovered.append(l["id"])
 	var rec := {"round": round_no, "card": round_card, "memories": fired["fired"], "chance": led["chance"], "roll": roll,
-		"hero_won": won, "ledger": led, "traumas": [], "intent": intent, "intent_active": intent_active}
+		"hero_won": won, "ledger": led, "intent": intent, "intent_active": intent_active}
 	if won:
 		hero_wins += 1
 		session_wounds += 1
@@ -237,8 +238,8 @@ func play_round() -> Dictionary:
 	else:
 		enemy_wins += 1
 		momentum = "enemy"
-		var extra := int(intent.get("extra_trauma_on_win", 0)) if intent_active else 0
-		_lose_round(tactic, rec, extra)
+		if intent_active:
+			brutal = maxi(brutal, int(intent.get("brutal", 0)))
 	for t: String in tactic.get("self_tags", []):
 		if not hero_extra_tags.has(t):
 			hero_extra_tags.append(t)
@@ -260,47 +261,36 @@ func play_round() -> Dictionary:
 		finished = true
 		outcome = "win" if hero_wins > enemy_wins else "loss"
 	if finished:
+		if outcome == "loss":
+			_lose_fight(rec)
+			if state.game_over:
+				outcome = "death"
 		for c: String in [hero] + allies:
 			PsycheRules.reset(state, c, "combat")
 	return rec
 
 
-func _lose_round(tactic: Dictionary, rec: Dictionary, extra: int = 0) -> void:
+## Бой проигран (docs/16 §9е): навыки фазы «lose» могут отвести удар; иначе ведущий — на грань,
+## а если уже на грани — бросок смерти (жестокий удар врага прибавляет к шансу).
+func _lose_fight(rec: Dictionary) -> void:
 	var lose := MemoryRules.fire(self, "lose", true)
 	rec["memories_lose"] = lose["fired"]
-	var guard := maxi(int(tactic.get("guard", 0)), int(lose["effect"].get("guard", 0)))
-	var count := (2 if bool(tactic.get("all_in", false)) else 1) + extra
+	var guard := int(lose["effect"].get("guard", 0))
 	if guard > 0 and rng.randi_range(1, 100) <= guard:
-		entries.append({"kind": "info", "text": "Удар отведён — травмы нет"})
+		entries.append({"kind": "info", "text": "Удар отведён — %s не падает на грань" % content.card_name(hero)})
 		return
-	if bool(lose["effect"].get("echo_guard", false)):
+	if bool(lose["effect"].get("echo_guard", false)) and EdgeRules.on_edge(state, hero):
 		var echo := str(lose["effect"].get("echo_card", ""))
 		if echo != "" and enh.has(echo):
 			state.collection.erase(echo)
 			enh.erase(echo)
 			Array(state.character(hero).get("pocket", [])).erase(echo)
-			entries.append({"kind": "broken", "text": "%s принимает удар и рассыпается" % content.card_name(echo), "card": echo})
+			entries.append({"kind": "broken", "text": "%s принимает удар и рассыпается — смерти нет" % content.card_name(echo), "card": echo})
 			return
-	if bool(tactic.get("ally_guard", false)) and not allies.is_empty():
-		var ally: String = allies[0]
-		var before: Array = Array(state.character(ally).get("traumas", [])).duplicate()
-		InjuryRules.give_traumas(content, state, ally, [], 1, _trauma_pool(), rng, result, entries)
-		rec["ally_took"] = ally
-		if not state.is_alive(ally):
-			allies.erase(ally)
-		var _unused := before
-		return
-	var n_before: int = Array(result["traumas"]).size()
-	InjuryRules.give_traumas(content, state, hero, enh, count, _trauma_pool(), rng, result, entries)
-	rec["traumas"] = Array(result["traumas"]).slice(n_before)
-
-
-func _trauma_pool() -> String:
-	var best: Dictionary = {}
-	for e: Dictionary in enemies:
-		if best.is_empty() or _enemy_base(e) > _enemy_base(best):
-			best = e
-	return str(best.get("trauma_pool", "physical"))
+	result["defeated"] = true
+	EdgeRules.defeat(content, state, hero, enh, rng, result, entries, shielded, brutal)
+	rec["edge"] = EdgeRules.on_edge(state, hero)
+	rec["death"] = result.get("death", {})
 
 
 # --- летопись силы -------------------------------------------------------------------
@@ -539,11 +529,9 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 		hs.append({"label": PsycheRules.NAMES[PsycheRules.crisis(state, hero)], "kind": "state", "pct": pk - 1.0, "value": H})
 
 	# 8. Состояния
-	var tr := TraumaRules.counted(state.character(hero).get("traumas", []))
-	if tr > 0:
-		var p := -minf(0.3, tr * TRAUMA_PENALTY)
-		H *= 1.0 + p
-		hs.append({"label": "Травмы (%d)" % tr, "kind": "state", "pct": p, "value": H})
+	if EdgeRules.on_edge(state, hero):
+		H *= 1.0 - EdgeRules.COMBAT_PENALTY
+		hs.append({"label": "На грани смерти", "kind": "state", "pct": -EdgeRules.COMBAT_PENALTY, "value": H})
 	if momentum == "hero":
 		H *= 1.0 + MOMENTUM
 		hs.append({"label": "Натиск", "kind": "state", "pct": MOMENTUM, "value": H})
@@ -568,8 +556,8 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 			es.append({"label": iname + " — погашено (%s)" % intent_neg, "kind": "intent", "pct": 0.0, "value": E})
 		else:
 			var eb2 := float(intent.get("bonus", 0.0))
-			if TraumaRules.counted(state.character(hero).get("traumas", [])) > 0:
-				eb2 += float(intent.get("bonus_if_hero_wounded", 0.0))
+			if EdgeRules.on_edge(state, hero):
+				eb2 += float(intent.get("bonus_if_hero_edge", 0.0))
 			if intent.has("per_enemy"):
 				eb2 += minf(float(intent["per_enemy"]) * maxf(0, enemies.size() - 1), float(intent.get("per_enemy_cap", 0.3)))
 			var red: Dictionary = intent.get("reduced_by", {})

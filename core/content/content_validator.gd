@@ -2,22 +2,17 @@ class_name ContentValidator
 extends RefCounted
 ## Проверка данных до запуска (GDD 8.5). Возвращает список ошибок; пусто — всё в порядке.
 
-const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "add_trauma", "remove_trauma", "clear_traumas",
+const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "edge", "recover", "psyche",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
 	"remove_temporaries", "text", "reset_wear", "adjust_trust"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
-	"attached", "executor_has_trauma"]
-const POOLS := ["all", "physical", "environment", "mental"]
+	"attached", "executor_on_edge"]
 const STATS := ["power", "will", "cunning"]
 
 
 static func validate(c: Content) -> Array[String]:
 	var errors: Array[String] = []
 	errors.append_array(c.load_errors)
-	for tid: String in c.traumas:
-		var t: Dictionary = c.traumas[tid]
-		if not ["physical", "environment", "mental"].has(t.get("category", "")):
-			errors.append("%s: неизвестная категория травмы" % tid)
 	_validate_combat(c, errors)
 	_validate_missions(c, errors)
 	return errors
@@ -34,8 +29,6 @@ static func _validate_effects(c: Content, where: String, effects: Array, errors:
 				errors.append("%s: %s ссылается на несуществующую карту %s" % [where, cmd, e[key]])
 		if e.has("ability") and not c.abilities.has(str(e["ability"])):
 			errors.append("%s: нет способности %s" % [where, e["ability"]])
-		if e.has("trauma") and not c.traumas.has(str(e["trauma"])):
-			errors.append("%s: нет травмы %s" % [where, e["trauma"]])
 		if e.has("stat") and not STATS.has(str(e["stat"])):
 			errors.append("%s: неизвестная характеристика %s" % [where, e["stat"]])
 		if cmd == "set_stage":
@@ -171,8 +164,6 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 			for b2: Dictionary in Array(e.get("check", [])) + Array(e.get("check_night", [])):
 				if not STATS.has(str(b2.get("stat", ""))):
 					errors.append("%s: неизвестная характеристика" % w)
-			if str(e.get("self_trauma", "")) != "" and not c.traumas.has(str(e["self_trauma"])):
-				errors.append("%s: нет травмы %s" % [w, e["self_trauma"]])
 
 
 static func _validate_shop(c: Content, sid: String, errors: Array[String]) -> void:
@@ -231,8 +222,8 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 	var smax := int(squad.get("max", 1))
 	if smin < 1 or smax > 5 or smin > smax:
 		errors.append("%s: мест в отряде %d–%d, нужно 1 ≤ min ≤ max ≤ 5" % [w, smin, smax])
-	if m.has("trauma_pool") and not POOLS.has(m["trauma_pool"]):
-		errors.append("%s: неизвестный пул травм" % w)
+	if m.has("trauma_pool"):
+		errors.append("%s: пула травм больше нет (грань смерти, docs/16 §9е)" % w)
 	for en: String in m.get("enemies", []):
 		if not c.enemies.has(en):
 			errors.append("%s: нет противника %s" % [w, en])
@@ -318,8 +309,8 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 					errors.append("%s: условие ссылается на несуществующую карту %s" % [aw, card])
 		var cost: Dictionary = a.get("cost", {})
 		for r: String in cost:
-			if not ["shards", "sacrifice", "sacrifice_tag", "rest", "trauma"].has(r):
-				errors.append("%s: неизвестная цена «%s» (shards, sacrifice, sacrifice_tag, rest, trauma)" % [aw, r])
+			if not ["shards", "sacrifice", "sacrifice_tag", "rest", "edge"].has(r):
+				errors.append("%s: неизвестная цена «%s» (shards, sacrifice, sacrifice_tag, rest, edge)" % [aw, r])
 		if cost.has("sacrifice") and c.card_kind(str(cost["sacrifice"])) != "enhancement":
 			errors.append("%s: жертвовать можно только усиление, а не %s" % [aw, cost["sacrifice"]])
 		if cost.has("sacrifice_tag") and not c.combat_tags.has(str(cost["sacrifice_tag"])):
