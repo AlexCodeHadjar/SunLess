@@ -7,6 +7,13 @@
    ],
    "typical": 0.548
   },
+  "H_NEPHIS": {
+   "best": 0.781,
+   "fights": [
+    "SA06/SA06_fight/0"
+   ],
+   "typical": 0.598
+  },
   "M01": {
    "best": 0.515,
    "fights": [
@@ -23,7 +30,7 @@
    "typical": 0.042
   },
   "M03": {
-   "best": 0.662,
+   "best": 0.691,
    "fights": [
     "SH21/SH21_fight/0",
     "SH24/SH24_ambush/1",
@@ -34,29 +41,29 @@
     "RS01/RS01_hunt/0",
     "NS02/NS02_fight/0"
    ],
-   "typical": 0.304
+   "typical": 0.312
   },
   "M04": {
-   "best": 0.875,
+   "best": 0.812,
    "fights": [
     "SH28/SH28_duel/0",
     "SH28/SH28_sacrifice/0"
    ],
-   "typical": 0.414
+   "typical": 0.415
   },
   "M07": {
-   "best": 0.899,
+   "best": 0.9,
    "fights": [
     "RS04/RS04_fight/0"
    ],
-   "typical": 0.56
+   "typical": 0.568
   },
   "M09": {
-   "best": 0.808,
+   "best": 0.811,
    "fights": [
     "RS03/RS03_fight/0"
    ],
-   "typical": 0.453
+   "typical": 0.464
   },
   "M12": {
    "best": 0.691,
@@ -223,10 +230,10 @@
   {
    "action": "NS02_fight",
    "action_label": "Держать проход",
-   "bare": 0.408,
-   "best": 0.408,
-   "best_max": 0.408,
-   "best_min": 0.408,
+   "bare": 0.521,
+   "best": 0.521,
+   "best_max": 0.521,
+   "best_min": 0.521,
    "chapter": "shore",
    "enemies": [
     "M03",
@@ -252,15 +259,15 @@
    ],
    "title": "Стая Падальщиков",
    "type": "onslaught",
-   "typical": 0.095
+   "typical": 0.123
   },
   {
    "action": "RS01_hunt",
    "action_label": "Охотиться",
-   "bare": 0.618,
-   "best": 0.618,
+   "bare": 0.613,
+   "best": 0.613,
    "best_max": 0.707,
-   "best_min": 0.378,
+   "best_min": 0.352,
    "chapter": "shore",
    "enemies": [
     "M03"
@@ -276,7 +283,7 @@
    "key": "RS01/RS01_hunt/0",
    "mission": "RS01",
    "samples": 8,
-   "solo": 0.12,
+   "solo": 0.119,
    "stage": "Бой",
    "team": [
     "P04",
@@ -285,20 +292,20 @@
    ],
    "title": "Падальщик в тупике",
    "type": "random",
-   "typical": 0.244
+   "typical": 0.241
   },
   {
    "action": "RS03_fight",
    "action_label": "Вычистить лужу",
-   "bare": 0.808,
-   "best": 0.808,
-   "best_max": 0.845,
+   "bare": 0.811,
+   "best": 0.811,
+   "best_max": 0.867,
    "best_min": 0.698,
    "chapter": "shore",
    "enemies": [
     "M09"
    ],
-   "enh_seen": 7,
+   "enh_seen": 6,
    "field": "F_17",
    "heroes_seen": [
     "P01",
@@ -309,7 +316,7 @@
    "key": "RS03/RS03_fight/0",
    "mission": "RS03",
    "samples": 8,
-   "solo": 0.296,
+   "solo": 0.297,
    "stage": "Бой",
    "team": [
     "P01",
@@ -317,20 +324,20 @@
    ],
    "title": "Лужи с щупальцами",
    "type": "random",
-   "typical": 0.453
+   "typical": 0.464
   },
   {
    "action": "RS04_fight",
    "action_label": "Спуститься к ним",
-   "bare": 0.807,
-   "best": 0.899,
-   "best_max": 0.948,
+   "bare": 0.801,
+   "best": 0.9,
+   "best_max": 0.98,
    "best_min": 0.769,
    "chapter": "shore",
    "enemies": [
     "M07"
    ],
-   "enh_seen": 5,
+   "enh_seen": 6,
    "field": "F_21",
    "heroes_seen": [
     "P01",
@@ -341,7 +348,7 @@
    "key": "RS04/RS04_fight/0",
    "mission": "RS04",
    "samples": 8,
-   "solo": 0.48,
+   "solo": 0.456,
    "stage": "Бой",
    "team": [
     "P01",
@@ -350,20 +357,49 @@
    ],
    "title": "Черви под полом",
    "type": "random",
-   "typical": 0.56
+   "typical": 0.568
+  },
+  {
+   "action": "SA06_fight",
+   "action_label": "Выйти в круг",
+   "bare": 0.539,
+   "best": 0.781,
+   "best_max": 0.886,
+   "best_min": 0.575,
+   "chapter": "academy",
+   "enemies": [
+    "H_NEPHIS"
+   ],
+   "enh_seen": 5,
+   "field": "F_02",
+   "heroes_seen": [
+    "P01",
+    "P04"
+   ],
+   "key": "SA06/SA06_fight/0",
+   "mission": "SA06",
+   "samples": 8,
+   "solo": 0.781,
+   "stage": "Спарринг",
+   "team": [
+    "P04"
+   ],
+   "title": "Спарринг с Нефис",
+   "type": "side",
+   "typical": 0.598
   },
   {
    "action": "SH21_fight",
    "action_label": "Сразиться",
    "bare": 0.241,
-   "best": 0.298,
-   "best_max": 0.383,
-   "best_min": 0.068,
+   "best": 0.297,
+   "best_max": 0.372,
+   "best_min": 0.101,
    "chapter": "shore",
    "enemies": [
     "M03"
    ],
-   "enh_seen": 3,
+   "enh_seen": 4,
    "field": "F_08",
    "heroes_seen": [
     "P01",
@@ -372,7 +408,7 @@
    "key": "SH21/SH21_fight/0",
    "mission": "SH21",
    "samples": 8,
-   "solo": 0.069,
+   "solo": 0.075,
    "stage": "Бой",
    "team": [
     "P01",
@@ -380,15 +416,15 @@
    ],
    "title": "Первый Падальщик Карапакса",
    "type": "story",
-   "typical": 0.183
+   "typical": 0.186
   },
   {
    "action": "SH24_ambush",
    "action_label": "Засада",
    "bare": 0.687,
-   "best": 0.961,
+   "best": 0.936,
    "best_max": 0.972,
-   "best_min": 0.934,
+   "best_min": 0.755,
    "chapter": "shore",
    "enemies": [
     "M03"
@@ -404,7 +440,7 @@
    "key": "SH24/SH24_ambush/1",
    "mission": "SH24",
    "samples": 8,
-   "solo": 0.328,
+   "solo": 0.273,
    "stage": "Удар из засады",
    "team": [
     "P04",
@@ -413,15 +449,15 @@
    ],
    "title": "Охота в багровом лабиринте",
    "type": "story",
-   "typical": 0.553
+   "typical": 0.513
   },
   {
    "action": "SH24_direct",
    "action_label": "Прямой бой",
    "bare": 0.242,
-   "best": 0.725,
+   "best": 0.712,
    "best_max": 0.829,
-   "best_min": 0.401,
+   "best_min": 0.299,
    "chapter": "shore",
    "enemies": [
     "M03",
@@ -438,7 +474,7 @@
    "key": "SH24/SH24_direct/0",
    "mission": "SH24",
    "samples": 8,
-   "solo": 0.036,
+   "solo": 0.02,
    "stage": "Строем",
    "team": [
     "P04",
@@ -447,15 +483,15 @@
    ],
    "title": "Охота в багровом лабиринте",
    "type": "story",
-   "typical": 0.211
+   "typical": 0.199
   },
   {
    "action": "SH24_study",
    "action_label": "Изучать слабые места",
    "bare": 0.568,
-   "best": 0.928,
+   "best": 0.893,
    "best_max": 0.949,
-   "best_min": 0.881,
+   "best_min": 0.64,
    "chapter": "shore",
    "enemies": [
     "M03"
@@ -471,7 +507,7 @@
    "key": "SH24/SH24_study/1",
    "mission": "SH24",
    "samples": 8,
-   "solo": 0.255,
+   "solo": 0.203,
    "stage": "Проверка знаний",
    "team": [
     "P04",
@@ -480,20 +516,20 @@
    ],
    "title": "Охота в багровом лабиринте",
    "type": "story",
-   "typical": 0.503
+   "typical": 0.461
   },
   {
    "action": "SH26_echo",
    "action_label": "Добыть Эхо",
    "bare": 0.503,
-   "best": 0.776,
-   "best_max": 0.915,
-   "best_min": 0.352,
+   "best": 0.852,
+   "best_max": 0.98,
+   "best_min": 0.665,
    "chapter": "shore",
    "enemies": [
     "M03"
    ],
-   "enh_seen": 5,
+   "enh_seen": 6,
    "field": "F_08",
    "heroes_seen": [
     "P01",
@@ -504,7 +540,7 @@
    "key": "SH26/SH26_echo/0",
    "mission": "SH26",
    "samples": 8,
-   "solo": 0.087,
+   "solo": 0.067,
    "stage": "Бой",
    "team": [
     "P01",
@@ -513,20 +549,20 @@
    ],
    "title": "Эхо Падальщика",
    "type": "story",
-   "typical": 0.474
+   "typical": 0.535
   },
   {
    "action": "SH26_lure",
    "action_label": "Использовать как приманку",
    "bare": 0.503,
-   "best": 0.776,
-   "best_max": 0.915,
-   "best_min": 0.352,
+   "best": 0.852,
+   "best_max": 0.98,
+   "best_min": 0.665,
    "chapter": "shore",
    "enemies": [
     "M03"
    ],
-   "enh_seen": 5,
+   "enh_seen": 6,
    "field": "F_08",
    "heroes_seen": [
     "P01",
@@ -537,7 +573,7 @@
    "key": "SH26/SH26_lure/0",
    "mission": "SH26",
    "samples": 8,
-   "solo": 0.087,
+   "solo": 0.067,
    "stage": "Бой",
    "team": [
     "P01",
@@ -546,15 +582,15 @@
    ],
    "title": "Эхо Падальщика",
    "type": "story",
-   "typical": 0.474
+   "typical": 0.535
   },
   {
    "action": "SH28_duel",
    "action_label": "Сразиться вместе с Нефис",
-   "bare": 0.49,
-   "best": 0.875,
+   "bare": 0.488,
+   "best": 0.812,
    "best_max": 0.975,
-   "best_min": 0.715,
+   "best_min": 0.266,
    "chapter": "shore",
    "enemies": [
     "M04"
@@ -570,7 +606,7 @@
    "key": "SH28/SH28_duel/0",
    "mission": "SH28",
    "samples": 8,
-   "solo": 0.177,
+   "solo": 0.137,
    "stage": "Бой",
    "team": [
     "P04",
@@ -579,15 +615,15 @@
    ],
    "title": "Смертельная ловушка",
    "type": "story",
-   "typical": 0.414
+   "typical": 0.415
   },
   {
    "action": "SH28_sacrifice",
    "action_label": "Пожертвовать вещью",
-   "bare": 0.49,
-   "best": 0.875,
+   "bare": 0.488,
+   "best": 0.812,
    "best_max": 0.975,
-   "best_min": 0.715,
+   "best_min": 0.266,
    "chapter": "shore",
    "enemies": [
     "M04"
@@ -603,7 +639,7 @@
    "key": "SH28/SH28_sacrifice/0",
    "mission": "SH28",
    "samples": 8,
-   "solo": 0.177,
+   "solo": 0.137,
    "stage": "Бой",
    "team": [
     "P04",
@@ -612,9 +648,9 @@
    ],
    "title": "Смертельная ловушка",
    "type": "story",
-   "typical": 0.414
+   "typical": 0.415
   }
  ],
- "generated": "2026-09-28T12:15:52",
+ "generated": "2026-09-28T12:53:23",
  "seeds": 8
 }
