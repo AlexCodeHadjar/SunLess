@@ -306,6 +306,18 @@ func _run() -> void:
 	sa.clock = float(sa.tide["until"]) + 0.1
 	await _wait(3.0)
 	await _shot("m21e_tide_ebb")
+	# Воспоминание-добыча (LootRules): выбор 1 из 3
+	var lrng := RandomNumberGenerator.new()
+	lrng.seed = 7
+	LootRules.offer(ContentDB.data, sa, "SH28", "", lrng)
+	await _wait(2.5)
+	await _shot("m21f_memory")
+	for n in get_tree().current_scene.get_children():
+		if n is MemoryChoice:
+			n.call("_choose", 1)
+	await _wait(0.45)
+	await _shot("m21g_memory_pick")
+	await _wait(1.5)
 	# психика (docs/16 §9г): карты в кризисе, момент срабатывания, планшет
 	sa.character("P10")["psy"] = {"state": "panic", "origin": "mission"}
 	sa.character("P10")["panic"] = 100

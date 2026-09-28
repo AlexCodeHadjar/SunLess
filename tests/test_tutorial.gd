@@ -45,6 +45,6 @@ func test_state_events() -> void:
 func test_hint_events_exist() -> void:
 	var c := content()
 	var known := ["map", "brief", "launch", "arrival", "report", "edge", "rest", "shop", "fork", "cost", "expires", "exclusive",
-		"boss", "sky_eclipse", "sky_blood_moon", "academy_start", "trust", "bond", "panic", "growth", "camp", "journal", "onslaught", "psyche", "tide"]
+		"boss", "sky_eclipse", "sky_blood_moon", "academy_start", "trust", "bond", "panic", "growth", "camp", "journal", "onslaught", "psyche", "tide", "memory"]
 	for hid: String in c.tutorial:
 		check(known.has(str(c.tutorial[hid]["event"])), "событие подсказки %s известно" % hid)

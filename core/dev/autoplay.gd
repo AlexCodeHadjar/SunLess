@@ -9,6 +9,9 @@ extends RefCounted
 ## Возвращает {state, error, chapter_started} — резолвер отдаёт новое состояние, поэтому state надо заменить.
 static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> Dictionary:
 	var started := ""
+	# Воспоминание-добыча: бот берёт первую из трёх карт
+	while not LootRules.pending(s).is_empty():
+		LootRules.take(c, s, str(LootRules.pending(s)["options"][0]))
 	if s.demo_complete:
 		var nxt := str(s.flags.get("next_chapter", ""))
 		if nxt == "":

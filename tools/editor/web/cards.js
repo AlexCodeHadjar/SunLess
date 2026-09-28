@@ -268,7 +268,9 @@ const CardsView = {
         field("Не изнашивается в арках", listInput(o, "wear_exempt_arcs", changed, "nightmare")),
         h("label", { class: "field inline" }, bindInput(o, "wears", changed, { type: "checkbox" }), h("span", null, "изнашивается")),
         field("Оружие", bindSelect(o, "weapon", Object.fromEntries(((DB.files[F.weapons] || {}).weapons || []).map((w) => [w.id, w.id])), changed, { allowEmpty: true, emptyLabel: "не оружие" })),
-        h("label", { class: "field inline" }, bindInput(o, "edge_shield", changed, { type: "checkbox" }), h("span", null, "принимает первое поражение")))));
+        h("label", { class: "field inline" }, bindInput(o, "edge_shield", changed, { type: "checkbox" }), h("span", null, "принимает первое поражение")),
+        h("label", { class: "field inline", title: "Воспоминание-добыча: выпадает на выбор 1 из 3 после боя (уровень — по редкости, data/loot.json)" },
+          bindInput(o, "loot", changed, { type: "checkbox" }), h("span", null, "добыча (выбор 1 из 3)")))));
     }
 
     if (c.kind === "ability") {

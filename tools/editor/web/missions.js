@@ -289,6 +289,7 @@ const MissionsView = {
     body.append(
       h("label", { class: "field inline" }, bindInput(m, "start", changed, { type: "checkbox" }), h("span", null, "Доступна с начала главы")),
       h("label", { class: "field inline" }, bindInput(m, "end_chapter", changed, { type: "checkbox" }), h("span", null, "Завершает главу")),
+      field("Воспоминание всегда (при успехе)", bindSelect(m, "memory", { weak: "как со слабой твари", mid: "как с опасной", strong: "как с сильного врага", boss: "как с босса (легендарные)" }, changed, { allowEmpty: true, emptyLabel: "— только шанс в бою" })),
       h("div", { class: "opt-block ok-block" }, EventsView.cmdList("После любого удачного действия", m, "on_complete", EFFECTS, "cmd", structural, () => changed())),
       h("div", { class: "section" }, h("h4", null, "Открывает после успеха"), nextBox),
       h("div", { class: "section" }, h("h4", null, "Откуда приходит"),

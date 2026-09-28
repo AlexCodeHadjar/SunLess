@@ -1,0 +1,38 @@
+{
+ "_doc": "Воспоминания-добыча (docs/16 §11.3, core/rules/loot_rules.gd). После выигранного боя в главах chapters — шанс по силе врагов (сумма 1.6^ранг × множитель класса × power): weak ниже mid_from, mid ниже strong_from, strong — дальше или элита, boss — противник-босс. Миссия с полем memory (weak|mid|strong|boss) даёт выбор всегда при успехе. Выпало — choices карт из пула (усиления с loot: true, которых нет у игрока) с уровнем по весам tiers.",
+ "chapters": [
+  "shore",
+  "tree"
+ ],
+ "mid_from": 2.0,
+ "strong_from": 3.0,
+ "chance": {
+  "weak": 0.15,
+  "mid": 0.25,
+  "strong": 0.4,
+  "boss": 1.0
+ },
+ "tiers": {
+  "weak": {
+   "common": 85,
+   "rare": 15
+  },
+  "mid": {
+   "common": 50,
+   "rare": 40,
+   "epic": 10
+  },
+  "strong": {
+   "common": 20,
+   "rare": 45,
+   "epic": 35
+  },
+  "boss": {
+   "rare": 20,
+   "epic": 50,
+   "legendary": 30
+  }
+ },
+ "choices": 3,
+ "dust": 5
+}

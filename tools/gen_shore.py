@@ -514,6 +514,12 @@ for m in M:
 	if m["id"] == "NS01":
 		m["on_expire"] = m.get("on_expire", []) + [{"cmd": "tide", "warn": 15, "flood": 60, "text": "Прилив пришёл раньше срока."}]
 
+# Воспоминание-добыча (LootRules, docs/16 §11.3): ключевые сюжетные бои — выбор 1 из 3 всегда
+MEMORY = {"SH24": "strong", "SH26": "strong", "SH28": "boss", "SH32": "boss"}
+for m in M:
+	if m["id"] in MEMORY:
+		m["memory"] = MEMORY[m["id"]]
+
 # рисунки: случайные миссии — карта своей твари
 for m in M:
 	if m["id"] in ("RS01", "RS02", "RS03", "RS04") and m.get("enemies"):

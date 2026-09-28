@@ -975,7 +975,8 @@
   "next": [
    "SH25"
   ],
-  "from_event": "E24"
+  "from_event": "E24",
+  "memory": "strong"
  },
  {
   "id": "SH25",
@@ -1302,7 +1303,8 @@
   "next": [
    "SH27"
   ],
-  "from_event": "E26"
+  "from_event": "E26",
+  "memory": "strong"
  },
  {
   "id": "SH27",
@@ -1657,7 +1659,8 @@
   "next": [
    "SH29"
   ],
-  "from_event": "E28"
+  "from_event": "E28",
+  "memory": "boss"
  },
  {
   "id": "SH29",
@@ -2216,7 +2219,8 @@
    }
   ],
   "end_chapter": true,
-  "from_event": "E32"
+  "from_event": "E32",
+  "memory": "boss"
  },
  {
   "id": "SS01",

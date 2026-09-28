@@ -28,6 +28,7 @@ var _toast_tw: Tween
 var _end: Control
 var _combat_open := false
 var _tide: TideLayer
+var _memory: MemoryChoice      # выбор Воспоминания (LootRules) — после отчёта миссии
 var _tide_banner: Label
 var _shown_tide := ""     # прилив, при котором построены метки (новые проходы — перестроить)
 var _badge_timer := 0.0
@@ -80,7 +81,16 @@ func _process(delta: float) -> void:
 		_update_badges()
 		_update_sky()
 		_update_tide()
-	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open
+	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open and _memory == null
+	# Воспоминание-добыча: выбор 1 из 3, как только отчёт закрыт
+	if quiet and not GameState.state.game_over and not LootRules.pending(GameState.state).is_empty():
+		_memory = MemoryChoice.open(self, LootRules.pending(GameState.state))
+		_memory.done.connect(func() -> void:
+			_memory = null
+			_refresh())
+		move_child(_toast, get_child_count() - 1)
+		GameState.tutorial("memory")
+		return
 	if GameState.state.game_over and quiet:
 		_show_end()
 	elif GameState.state.demo_complete and quiet:

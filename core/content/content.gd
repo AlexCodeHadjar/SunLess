@@ -27,6 +27,7 @@ var onslaught: Dictionary = {}     # натиск Кошмара по глава
 var tutorial: Dictionary = {}      # подсказки обучения: data/tutorial.json (TutorialRules)
 var story: Dictionary = {}         # сюжетные окна по главам: data/story.json (StoryRules)
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
+var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
 var modifiers: Dictionary = {}     # модификаторы миссий: data/modifiers.json (ModifierRules) — {chapters, types, two_chance, list}
 var load_errors: Array[String] = []
 
@@ -67,6 +68,12 @@ static func load_from(dir: String = "res://data") -> Content:
 		c.tutorial = c._load_map(dir + "/tutorial.json")
 	if FileAccess.file_exists(dir + "/story.json"):
 		c.story = c._load_map(dir + "/story.json")
+	if FileAccess.file_exists(dir + "/loot.json"):
+		var ll: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/loot.json"))
+		if ll is Dictionary:
+			c.loot = ll
+		else:
+			c.load_errors.append("data/loot.json: ожидается словарь настроек добычи")
 	if FileAccess.file_exists(dir + "/modifiers.json"):
 		var ml: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/modifiers.json"))
 		if ml is Dictionary:

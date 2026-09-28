@@ -190,6 +190,15 @@ func tutorial(event: String) -> void:
 		EventBus.tutorial_hint.emit(h)
 
 
+## Воспоминание-добыча: игрок взял одну из трёх карт ("" — отказался).
+func take_memory(card: String) -> Array:
+	var out := LootRules.take(content(), state, card)
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+	missions_changed.emit()
+	return out
+
+
 func shop_seen(shop_id: String) -> void:
 	ShopRules.mark_seen(content(), state, shop_id)
 	SaveService.save_state(state)

@@ -16,6 +16,7 @@ static func validate(c: Content) -> Array[String]:
 	_validate_combat(c, errors)
 	_validate_missions(c, errors)
 	_validate_modifiers(c, errors)
+	_validate_loot(c, errors)
 	return errors
 
 
@@ -39,6 +40,23 @@ static func _validate_effects(c: Content, where: String, effects: Array, errors:
 
 
 ## Боевые данные: все теги связей, полей, карт раунда и носителей существуют.
+static func _validate_loot(c: Content, errors: Array[String]) -> void:
+	for tier: String in c.loot.get("tiers", {}):
+		if not LootRules.TIERS.has(tier):
+			errors.append("loot.json: неизвестный уровень источника «%s»" % tier)
+		for r: String in c.loot["tiers"][tier]:
+			if not LootRules.RARITY_ORDER.has(r):
+				errors.append("loot.json: %s — неизвестная редкость «%s»" % [tier, r])
+	for mid: String in c.missions:
+		var mem := str(c.missions[mid].get("memory", ""))
+		if mem != "" and not LootRules.TIERS.has(mem):
+			errors.append("%s: memory — неизвестный уровень «%s»" % [mid, mem])
+	for id: String in c.enhancements:
+		var e: Dictionary = c.enhancements[id]
+		if bool(e.get("loot", false)) and not LootRules.RARITY_ORDER.has(str(e.get("rarity", ""))):
+			errors.append("%s: у добычи неизвестная редкость «%s»" % [id, e.get("rarity", "")])
+
+
 static func _validate_modifiers(c: Content, errors: Array[String]) -> void:
 	var seen := {}
 	for d: Dictionary in c.modifiers.get("list", []):

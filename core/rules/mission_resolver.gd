@@ -265,6 +265,10 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 		if executor != "" and not state.game_over:
 			entries.append_array(EffectApplier.apply_all(content, state, m.get("on_complete", []), executor, rng))
 			entries.append_array(ModifierRules.on_success(content, state, mid, executor, rng))
+			var mem := LootRules.offer(content, state, mid, str(run.get("loot_tier", "")), rng)
+			if not mem.is_empty():
+				report["memory"] = mem
+				entries.append({"kind": "memory_drop", "text": "Воспоминание! Выберите одно из трёх (%s)" % LootRules.TIER_NAMES.get(mem["tier"], "")})
 		status["status"] = "done"
 		var story := bool(a.get("story", false)) or str(m.get("type", "")) == "story"
 		entries.append({"kind": "story" if story else "info",
@@ -395,6 +399,11 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	if bool(s.result.get("defeated", false)):
 		report["edge"][hero] = int(report["edge"].get(hero, 0)) + 1
 	if won:
+		# Воспоминание-добыча (docs/16 §11.3): шанс по силе врагов, выбор — в итоге миссии
+		if not s.spar:
+			var lt := LootRules.roll_fight(content, after, key, s.enemies, rng)
+			if lt != "":
+				run["loot_tier"] = LootRules.better(lt, str(run.get("loot_tier", ""))) if str(run.get("loot_tier", "")) != "" else lt
 		var shards := 0
 		for e: Dictionary in s.enemies:
 			shards += int(e.get("shards", 0))
