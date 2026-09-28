@@ -114,6 +114,18 @@ static func _validate_missions(c: Content, errors: Array[String]) -> void:
 		var st: Dictionary = b.get("effect", {}).get("stat", {})
 		if not st.is_empty() and not STATS.has(str(st.get("stat", ""))):
 			errors.append("Связка %s: неизвестная характеристика" % bid)
+	# сюжетные окна (docs/16 §9е)
+	for ch: String in c.story:
+		var pages: Array = c.story[ch].get("pages", [])
+		if pages.is_empty():
+			errors.append("Сюжет %s: нет страниц" % ch)
+		for p: Dictionary in pages:
+			if str(p.get("text", "")) == "" or str(p.get("title", "")) == "":
+				errors.append("Сюжет %s: у страницы нет заголовка или текста" % ch)
+			if not ["left", "right"].has(str(p.get("side", "left"))):
+				errors.append("Сюжет %s: side — left или right" % ch)
+			if not ResourceLoader.exists(str(p.get("image", ""))):
+				errors.append("Сюжет %s: нет картинки %s" % [ch, p.get("image", "")])
 	# особые навыки карт (docs/16 §9д)
 	for id: String in c.enhancements.keys() + c.abilities.keys():
 		var m: Dictionary = c.enhancements.get(id, c.abilities.get(id, {})).get("memory", {})

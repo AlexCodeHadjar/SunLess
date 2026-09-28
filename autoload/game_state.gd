@@ -7,6 +7,7 @@ signal mission_events(events: Array)
 var state: RunState
 var combat: CombatSession   # бой, который сейчас показывает экран «Столкновение» (просмотр автобоя)
 var _autosave_at := 0.0
+var story_open := false     # идёт сюжетное окно: часы стоят, подсказки ждут
 
 
 func content() -> Content:
@@ -181,7 +182,7 @@ func camp_take(cid: String) -> void:
 
 ## Подсказка обучения к событию (docs/16 Ф12): один раз за прохождение, если подсказки включены.
 func tutorial(event: String) -> void:
-	if state == null or not bool(SettingsService.get_value("tutorial")):
+	if state == null or story_open or not bool(SettingsService.get_value("tutorial")):
 		return
 	var h := TutorialRules.take(content(), state, event)
 	if not h.is_empty():

@@ -46,13 +46,29 @@ func _ready() -> void:
 	EventBus.toast.connect(_show_toast)
 	AudioManager.play_music()
 	AudioManager.play_ambient()
+	# сюжетное окно главы (вступление при новой игре, переход между главами) — до карты, один раз
+	var story := StoryRules.pending(ContentDB.data, GameState.state)
+	if not story.is_empty():
+		GameState.story_open = true
+		var sc := StoryScreen.play(self, story, str(ContentDB.data.regions.get(_region(), {}).get("arc_name", "")))
+		sc.finished.connect(func() -> void:
+			StoryRules.mark_seen(GameState.state, GameState.state.chapter)
+			SaveService.save_state(GameState.state)
+			GameState.story_open = false
+			_refresh()
+			_first_toast())
 	_refresh()
+	if story.is_empty():
+		_first_toast()
+
+
+func _first_toast() -> void:
 	if GameState.state.completed_missions == 0 and GameState.state.squads.is_empty():
 		_show_toast("Щёлкните по карте миссии, прочтите её и отправьте отряд — или перетащите героя прямо на карту.")
 
 
 func _process(delta: float) -> void:
-	if not _combat_open:
+	if not _combat_open and not GameState.story_open:
 		GameState.mission_tick(delta)
 	_update_pins()
 	_badge_timer -= delta
@@ -691,8 +707,17 @@ func _show_chapter_end() -> void:
 				break
 		b.text = "ДАЛЬШЕ: %s ›" % next_name.to_upper()
 		b.pressed.connect(func() -> void:
-			GameState.next_chapter()
-			get_tree().reload_current_scene())
+			# экран темнеет → сюжетное окно новой главы → карта проявляется
+			b.disabled = true
+			var black := ColorRect.new()
+			black.color = Color(0, 0, 0, 0)
+			black.set_anchors_preset(Control.PRESET_FULL_RECT)
+			_end.add_child(black)
+			var tw := create_tween()
+			tw.tween_property(black, "color:a", 1.0, 0.8)
+			tw.tween_callback(func() -> void:
+				GameState.next_chapter()
+				get_tree().reload_current_scene()))
 	else:
 		b.text = "НОВАЯ ИГРА"
 		b.pressed.connect(func() -> void:

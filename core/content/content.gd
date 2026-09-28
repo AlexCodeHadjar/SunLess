@@ -25,6 +25,7 @@ var bonds: Dictionary = {}         # связки героев: data/bonds.json 
 var tag_growth: Dictionary = {}    # рост тегов: data/tag_growth.json (GrowthRules)
 var onslaught: Dictionary = {}     # натиск Кошмара по главам: data/onslaught.json (OnslaughtRules)
 var tutorial: Dictionary = {}      # подсказки обучения: data/tutorial.json (TutorialRules)
+var story: Dictionary = {}         # сюжетные окна по главам: data/story.json (StoryRules)
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
 var load_errors: Array[String] = []
 
@@ -58,6 +59,8 @@ static func load_from(dir: String = "res://data") -> Content:
 		c.onslaught = c._load_map(dir + "/onslaught.json")
 	if FileAccess.file_exists(dir + "/tutorial.json"):
 		c.tutorial = c._load_map(dir + "/tutorial.json")
+	if FileAccess.file_exists(dir + "/story.json"):
+		c.story = c._load_map(dir + "/story.json")
 	if FileAccess.file_exists(dir + "/psyche.json"):
 		var pl: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/psyche.json"))
 		if pl is Dictionary:

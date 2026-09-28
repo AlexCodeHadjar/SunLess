@@ -43,12 +43,37 @@ func _shop() -> ShopWindow:
 	return null
 
 
+func _story() -> StoryScreen:
+	for ch in get_tree().current_scene.get_children():
+		if ch is StoryScreen:
+			return ch
+	return null
+
+
+## Убирает сюжетное окно, как будто его досмотрели.
+func _dismiss_story() -> void:
+	var sc := _story()
+	if sc:
+		sc.queue_free()
+	StoryRules.mark_seen(GameState.state, GameState.state.chapter)
+	GameState.story_open = false
+
+
 func _run() -> void:
 	SettingsService.values["roll_speed"] = 0.0
 	await _wait(0.6)
 	await _shot("m01_menu")
 	GameState.new_mission_run(4242)
 	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	# сюжетное окно вступления: текст проявляется, потом показан целиком
+	await _wait(3.2)
+	await _shot("m00_story_intro")
+	var story := _story()
+	if story:
+		story.call("_reveal_all")
+		await _wait(0.5)
+		await _shot("m00b_story_full")
+	_dismiss_story()
 	await _wait(1.2)
 	await _shot("m02_map")
 	var game := get_tree().current_scene
@@ -217,6 +242,7 @@ func _run() -> void:
 	await _shot("m15_chapter_end")
 	# Академия: «Дальше» на экране конца главы
 	GameState.next_chapter()
+	StoryRules.mark_seen(GameState.state, "academy")
 	get_tree().reload_current_scene()
 	await _wait(1.5)
 	await _shot("m16_academy_map")
@@ -239,6 +265,9 @@ func _run() -> void:
 		sa.collection.erase(cid)
 	GameState.next_chapter()
 	get_tree().reload_current_scene()
+	await _wait(3.0)
+	await _shot("m19a_story_shore")
+	_dismiss_story()
 	await _wait(1.5)
 	sa = GameState.state
 	sa.clock = 10.0

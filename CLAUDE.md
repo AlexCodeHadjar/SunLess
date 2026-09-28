@@ -51,6 +51,7 @@ python tools/editor/server.py                          # редактор кон
 | `characters.json` | герои | `stats` или `stages`, `tags`, `support_tags`, `traits[].bonuses`, `start_abilities`, `status` (temporary уходят в конце главы, если не куплены) |
 | `enhancements.json`, `abilities.json`, `traumas.json` | карты | `bonuses[{stat,value,tags}]`, `memory{name, cond, text, phase, when, effect, once, wear, support}` — особый навык (docs/16 §9д) |
 | `combat/*.json` | бой: теги, симбиозы, конфликты, поля, противники, приёмы | генерируются `tools/gen_combat_data.py` из docs/12 + `editor_overrides.json`; приёмов больше нет — особые навыки карт в поле `memory` усилений и способностей (`memory_rules.gd`) |
+| `story.json` | сюжетные окна по главам (вступление, переходы) | `id`=глава, `pages[{image, crop:card, side:left|right, title, text}]` — `StoryRules`, `scenes/story/story_screen.gd` |
 | `psyche.json` | реплики героев в кризисе психики | `{panic, uplift, despair, blame, break, scar, rally, bond, insight: [строки с {name} {other} {card}]}` |
 | `bonds.json` | связки героев | `heroes[2], name, text, effect{reveal, stat, combat, quarrel}, min_trust` |
 | `onslaught.json` | натиск по главам | `chapter, first_after, every[от,до], pool` (миссии `type: onslaught` с `expires`, `on_expire`, `expire_panic`) |
