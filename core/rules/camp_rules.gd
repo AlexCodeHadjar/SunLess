@@ -64,7 +64,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 		var extra := dt * (SPEED - 1.0)
 		var ch := state.character(cid)
 		if int(ch.get("panic", 0)) > 0 and not GrowthRules.has(content, state, cid, "panic_no_decay"):
-			ch["panic"] = maxi(0, int(round(float(ch["panic"]) - PsycheRules.DECAY * extra)))
+			PsycheRules.rest(state, cid, PsycheRules.DECAY * extra)
 		var tid := next_heal(content, state, cid)
 		if tid == "":
 			h.erase(cid)

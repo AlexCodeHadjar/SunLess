@@ -139,3 +139,16 @@ func test_tags_and_nightmare() -> void:
 	PsycheRules.change(c, s, "P01", -100, "тест")
 	eq(PsycheRules.crisis(s, "P01"), "", "в Кошмаре психика не работает (обучение):")
 	check(c.psyche_lines.has("panic") and c.psyche_lines.has("rally"), "реплики героев загружены")
+
+
+func test_rest_by_frames() -> void:
+	# часы игры тикают каждый кадр: доли копятся, психика вне миссий растёт (в лагере — быстрее)
+	var c := content()
+	var s := _run()
+	s.character("P01")["panic"] = 60
+	s.character("P02")["panic"] = 60
+	CampRules.put(c, s, "P02")
+	for i in 600:   # 10 секунд по 1/60
+		MissionFlow.tick(c, s, 1.0 / 60.0)
+	eq(PsycheRules.psyche(s, "P01"), 41, "вне миссии +0,12 в секунду:")
+	check(PsycheRules.psyche(s, "P02") > PsycheRules.psyche(s, "P01"), "в лагере быстрее: %d" % PsycheRules.psyche(s, "P02"))

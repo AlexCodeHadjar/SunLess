@@ -167,7 +167,21 @@ static func decay(state: RunState, dt: float, content: Content = null) -> void:
 		if content != null and GrowthRules.has(content, state, cid, "panic_no_decay"):
 			continue
 		if int(ch.get("panic", 0)) > 0 and not MissionFlow.on_mission(state, cid):
-			ch["panic"] = maxi(0, int(round(float(ch["panic"]) - DECAY * dt)))
+			rest(state, cid, DECAY * dt)
+
+
+## Отдых: психика растёт на amount (дробные доли копятся — часы тикают каждый кадр по сотым долям секунды).
+static func rest(state: RunState, cid: String, amount: float) -> void:
+	var ch := state.character(cid)
+	if int(ch.get("panic", 0)) <= 0:
+		ch.erase("rest_acc")
+		return
+	var acc := float(ch.get("rest_acc", 0.0)) + maxf(0.0, amount)
+	var whole := int(acc)
+	if whole > 0:
+		ch["panic"] = maxi(0, int(ch["panic"]) - whole)
+		acc -= whole
+	ch["rest_acc"] = acc
 
 
 # --- влияние состояния ----------------------------------------------------------------
