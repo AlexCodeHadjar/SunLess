@@ -238,94 +238,23 @@ func test_forecast_is_honest() -> void:
 func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	var s := MissionFlow.new_run(c, seed_value)
 	var steps := 0
-	var attempts := 0
-	var nightmare_done := false
-	var academy_done := false
+	var done := {"attempts": 0, "nightmare": false, "academy": false}
+	var on_report := func(mid: String, rep: Dictionary) -> void:
+		done["attempts"] += 1
+		_count(stats, mid, rep)
 	while steps < 12000 and not s.game_over:
 		steps += 1
-		if s.demo_complete:
-			if str(s.flags.get("next_chapter", "")) == "":
-				break
-			if s.chapter == "academy":
-				academy_done = true
-			nightmare_done = true
-			MissionFlow.start_chapter(c, s, str(s.flags["next_chapter"]))
-		for sid: String in ShopRules.shops_of(c, s):
-			for it: Dictionary in ShopRules.ensure(c, s, sid)["items"]:
-				if c.card_kind(it["card"]) == "character" and not it["sold"] and int(s.resources.get("shards", 0)) >= int(it["price"]):
-					ShopRules.buy(c, s, sid, it["card"])
-		# как осторожный игрок: лечит тяжёлые травмы у торговца, укладывает раненых и измотанных в лагерь
-		for sid2: String in ShopRules.shops_of(c, s):
-			for h: String in MissionFlow.free_heroes(c, s):
-				for tid: String in Array(s.character(h).get("traumas", [])).duplicate():
-					if str(c.traumas.get(tid, {}).get("severity", "")) != "light":
-						ServiceRules.perform(c, s, sid2, "heal", h, tid)
-		for h2: String in MissionFlow.free_heroes(c, s):
-			if TraumaRules.counted(s.character(h2).get("traumas", [])) >= 2 or PsycheRules.psyche(s, h2) < 40:
-				CampRules.put(c, s, h2)
-		var open := MissionFlow.open_missions(s)
-		open.sort_custom(func(x: String, y: String) -> bool:
-			var sx := str(c.missions[x]["type"]) == "story"
-			var sy := str(c.missions[y]["type"]) == "story"
-			return sx and not sy if sx != sy else x < y)
-		for mid: String in open:
-			var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) 				and (str(c.missions[mid]["type"]) == "story" or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= 30)))
-			if free.is_empty():
-				continue
-			var mx := int(c.missions[mid]["squad"]["max"])
-			var team: Array = []
-			for need: String in c.missions[mid].get("requires_heroes", []):
-				if free.has(need):
-					team.append(need)
-			for h: String in free:
-				# не берёт в отряд тех, кто не пойдёт вместе (доверие −3)
-				if team.size() < mx and not team.has(h) and (str(c.missions[mid]["type"]) == "story" or TrustRules.refusal(c, s, team + [h]) == ""):
-					team.append(h)
-			if MissionFlow.can_launch(c, s, mid, team) == "":
-				# как игрок: раскладывает свободные усиления по кармашкам отряда (навыки карт — docs/16 §9д)
-				_equip(c, s, team)
-				# как осторожный игрок: на несюжетное — только с хорошим прогнозом
-				if str(c.missions[mid]["type"]) != "story" and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < 50:
-					continue
-				MissionFlow.launch(c, s, mid, team)
-		MissionFlow.tick(c, s, 1.0)
-		for sq: Dictionary in s.squads.duplicate():
-			# отряд мог исчезнуть: сюжет увёл его единственного героя (remove_card)
-			if MissionFlow.squad(s, int(sq["id"])).is_empty():
-				continue
-			if sq["phase"] == "fork":
-				# на развилке бот идёт дальше первым вариантом
-				var opts: Array = sq["pending"]["report"]["fork"]["options"]
-				var rf := MissionResolver.resume(c, s, int(sq["id"]), str(opts[0]["id"]))
-				if not rf["ok"]:
-					return {"stuck": true, "error": rf["error"]}
-				s = rf["state"]
-				if not rf.has("fork"):
-					_count(stats, sq["mission"], rf["report"])
-				continue
-			if sq["phase"] != "arrived":
-				continue
-			var best := ""
-			var best_v := -1
-			var retreat := ""
-			for e: Dictionary in MissionFlow.actions_for(c, s, sq["mission"], sq["heroes"]):
-				var a: Dictionary = e["action"]
-				if bool(a.get("retreat", false)):
-					retreat = str(a["id"])
-				elif e["available"]:
-					var v := int(MissionForecast.action_forecast(c, s, sq["mission"], a, sq["heroes"], true)["value"])
-					if v > best_v:
-						best_v = v
-						best = str(a["id"])
-			var need := 20 if str(c.missions[sq["mission"]]["type"]) == "story" else 50
-			var pick := best if best_v >= need or retreat == "" else retreat
-			var r := MissionResolver.resolve(c, s, int(sq["id"]), pick)
-			if not r["ok"]:
-				return {"stuck": true, "error": r["error"]}
-			s = r["state"]
-			attempts += 1
-			if not r.has("fork"):
-				_count(stats, sq["mission"], r["report"])
+		var prev := s.chapter
+		var r := AutoPlay.step(c, s, on_report)
+		s = r["state"]
+		if str(r["error"]) != "":
+			return {"stuck": true, "error": r["error"]}
+		if bool(r.get("finished", false)):
+			break
+		if str(r["chapter_started"]) != "":
+			done["nightmare"] = true
+			if prev == "academy":
+				done["academy"] = true
 	var grown := {"vet": 0, "evo": 0, "mut": 0}
 	for cid: String in s.characters:
 		for tag: String in s.characters[cid].get("tag_xp", {}):
@@ -335,35 +264,11 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	if steps >= 12000:
 		return {"stuck": true, "error": "12000 шагов: глава %s, открыто %s, отряды %s, герои %s" % [s.chapter, MissionFlow.open_missions(s),
 			s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]]), MissionFlow.heroes(c, s)]}
-	return {"stuck": false, "over": s.game_over, "attempts": attempts, "clock": s.clock, "grown": grown, "academy_done": academy_done,
+	var academy_done: bool = done["academy"]
+	return {"stuck": false, "over": s.game_over, "attempts": done["attempts"], "clock": s.clock, "grown": grown, "academy_done": academy_done,
 		"shore_done": s.demo_complete and s.chapter == "shore",
-		"nightmare_done": nightmare_done, "story_done": academy_done or (s.demo_complete and s.chapter == "academy"),
+		"nightmare_done": done["nightmare"], "story_done": academy_done or (s.demo_complete and s.chapter == "academy"),
 		"heroes": MissionFlow.heroes(c, s).size()}
-
-
-## Усиления, не занятые героями на миссии, — по три в кармашек каждому из отряда (сначала первому).
-func _equip(c: Content, s: RunState, team: Array) -> void:
-	var spare: Array = []
-	for card: String in s.collection:
-		if c.card_kind(card) != "enhancement":
-			continue
-		var owner := MissionFlow.pocket_owner(s, card)
-		if owner != "" and MissionFlow.on_mission(s, owner):
-			continue
-		spare.append(card)
-	for cid: String in team:
-		s.character(cid)["pocket"] = []
-	for cid: String in s.characters:
-		if not MissionFlow.on_mission(s, cid):
-			var keep: Array = Array(s.character(cid).get("pocket", [])).filter(func(x: String) -> bool: return not spare.has(x))
-			s.character(cid)["pocket"] = keep
-	var i := 0
-	for cid: String in team:
-		var pocket: Array = []
-		while pocket.size() < 3 and i < spare.size():
-			pocket.append(spare[i])
-			i += 1
-		s.character(cid)["pocket"] = pocket
 
 
 func _count(stats: Dictionary, mid: String, rep: Dictionary) -> void:

@@ -627,6 +627,14 @@ func _open_settings() -> void:
 	m.add_child(SettingsPanel.new())
 
 
+## F5 (только в отладочной сборке) — точка сохранения разработчика; загрузка — в меню «Разработчик».
+func _unhandled_key_input(event: InputEvent) -> void:
+	if DevPanel.enabled() and event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F5:
+		DevPanel.save_point(GameState.state)
+		_show_toast("Точка сохранения разработчика записана (меню → Разработчик)")
+		get_viewport().set_input_as_handled()
+
+
 func _show_toast(text: String) -> void:
 	_toast.text = text
 	if _toast_tw:

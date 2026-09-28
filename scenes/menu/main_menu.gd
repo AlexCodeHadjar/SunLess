@@ -36,6 +36,8 @@ func _ready() -> void:
 	var ng := _button(v, "Новая игра", _on_new)
 	if not SaveService.has_save():
 		ng.grab_focus.call_deferred()
+	if DevPanel.enabled():
+		_button(v, "Разработчик", _on_dev)
 	_button(v, "Выход", func() -> void: get_tree().quit())
 
 	var ver := UITheme.label("Версия %s · демоверсия: Первый Кошмар и Академия · фанатский некоммерческий проект" % ProjectSettings.get_setting("application/config/version"), "sans", 14, Palette.TEXT_DIM)
@@ -73,3 +75,15 @@ func _on_new() -> void:
 	GameState.new_mission_run()
 	get_tree().change_scene_to_file(MISSIONS)
 
+
+
+## Панель разработчика: начало любой главы и свои точки сохранения (только в отладочной сборке).
+func _on_dev() -> void:
+	for ch in get_children():
+		if ch is DevPanel:
+			ch.queue_free()
+			return
+	var p := DevPanel.new()
+	p.position = Vector2(620, 240)
+	p.loaded.connect(func() -> void: get_tree().change_scene_to_file(MISSIONS))
+	add_child(p)

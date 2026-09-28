@@ -36,6 +36,7 @@ python tools/editor/server.py                          # редактор кон
 | Экран карты | `scenes/missions/mission_game.gd` (карта, герои, небо, окна), `mission_marker.gd` (карта миссии + кольцо), `mission_window.gd` (брифинг → прибытие → отчёт), `shop_*.gd`, `drop_zone.gd`, `squad_life_ui.gd` (значки доверия/паники, строка брифинга), `camp_window.gd` (лагерь), `journal_window.gd` (журнал), `hint_popup.gd` (подсказки-прожектор), `hint_targets.gd` (цели подсказок); `scenes/vfx/crisis_fx.gd` (момент кризиса психики) |
 | Карты | `scenes/cards/card_view.gd` (отрисовка, арт `art/cards/<ID>.webp`), `card_inspector.gd` (планшет), `card_aura.gd` (облик по тегам) |
 | Фон | `scenes/map/map_backdrop.gd` (рисунки неба `art/regions/<регион>_<небо>.webp` или процедурный), `map_life.gd` |
+| Разработчику | `core/dev/autoplay.gd` (бот-игрок: тесты баланса и «к началу главы»), `scenes/menu/dev_panel.gd` (меню → «Разработчик»: начало любой главы, свои точки; F5 на карте — записать точку; только отладочная сборка) |
 | Общее UI | `ui/theme/palette.gd`, `ui_theme.gd` (`UITheme.label/box/font/plural`), `scenes/vfx/vfx.gd` |
 
 ## Где что (данные `data/`)
