@@ -28,6 +28,7 @@ var tutorial: Dictionary = {}      # подсказки обучения: data/t
 var story: Dictionary = {}         # сюжетные окна по главам: data/story.json (StoryRules)
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
 var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
+var deck: Dictionary = {}          # колода событий глав: data/deck.json (DeckRules) — {глава: [{name, pick, min_chains, units}]}
 var modifiers: Dictionary = {}     # модификаторы миссий: data/modifiers.json (ModifierRules) — {chapters, types, two_chance, list}
 var load_errors: Array[String] = []
 
@@ -80,6 +81,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.modifiers = ml
 		else:
 			c.load_errors.append("data/modifiers.json: ожидается словарь {chapters, types, list}")
+	if FileAccess.file_exists(dir + "/deck.json"):
+		var dl: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/deck.json"))
+		if dl is Dictionary:
+			c.deck = dl
+		else:
+			c.load_errors.append("data/deck.json: ожидается словарь {глава: [группы]}")
 	if FileAccess.file_exists(dir + "/psyche.json"):
 		var pl: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/psyche.json"))
 		if pl is Dictionary:

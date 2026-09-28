@@ -85,6 +85,8 @@ static func rumors(content: Content, state: RunState, limit: int = 6) -> Array:
 			break
 		if state.missions.has(mid) or MissionFlow.chapter_of(content, mid) != state.chapter:
 			continue
+		if not DeckRules.allowed(content, state, mid):   # не выпавшее в колоде — не слух
+			continue
 		var rs: Array = content.missions[mid].get("rumors", [])
 		if rs.is_empty():
 			continue

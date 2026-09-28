@@ -59,7 +59,7 @@ func test_chance_and_chapters() -> void:
 	var n := MissionFlow.new_run(c, 41)
 	eq(LootRules.roll_fight(c, n, "MS03", ["M01"], rng), "", "в обучении добычи нет:")
 	# проклятая миссия — чаще
-	MissionFlow.open(c, s, "RS02")
+	MissionFlow.open(c, s, "RS02", true)
 	s.missions["RS02"]["mods"] = ["cursed"]
 	hits = 0
 	for i in 2000:

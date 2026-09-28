@@ -17,6 +17,7 @@ static func validate(c: Content) -> Array[String]:
 	_validate_missions(c, errors)
 	_validate_modifiers(c, errors)
 	_validate_loot(c, errors)
+	_validate_deck(c, errors)
 	return errors
 
 
@@ -55,6 +56,30 @@ static func _validate_loot(c: Content, errors: Array[String]) -> void:
 		var e: Dictionary = c.enhancements[id]
 		if bool(e.get("loot", false)) and not LootRules.RARITY_ORDER.has(str(e.get("rarity", ""))):
 			errors.append("%s: у добычи неизвестная редкость «%s»" % [id, e.get("rarity", "")])
+
+
+## Колода событий (docs/16 §11.4): миссии существуют, из своей главы, не повторяются; pick не больше единиц.
+static func _validate_deck(c: Content, errors: Array[String]) -> void:
+	var seen := {}
+	for ch: String in c.deck:
+		if ch.begins_with("_"):
+			continue
+		for g: Dictionary in DeckRules.groups(c, ch):
+			var units: Array = g.get("units", [])
+			var chains := units.filter(func(u: Variant) -> bool: return DeckRules.unit(u)["chain"]).size()
+			if int(g.get("pick", 0)) > units.size() or int(g.get("pick", 0)) < 1:
+				errors.append("deck.json: %s/%s — pick %s при %d единицах" % [ch, g.get("name", ""), g.get("pick", 0), units.size()])
+			if int(g.get("min_chains", 0)) > mini(chains, int(g.get("pick", 0))):
+				errors.append("deck.json: %s/%s — min_chains больше, чем цепочек" % [ch, g.get("name", "")])
+			for u: Variant in units:
+				for mid: String in DeckRules.unit(u)["missions"]:
+					if not c.missions.has(mid):
+						errors.append("deck.json: %s — нет миссии %s" % [ch, mid])
+					elif MissionFlow.chapter_of(c, mid) != ch:
+						errors.append("deck.json: %s — миссия %s из другой главы" % [ch, mid])
+					if seen.has(mid):
+						errors.append("deck.json: миссия %s в колоде дважды" % mid)
+					seen[mid] = true
 
 
 static func _validate_modifiers(c: Content, errors: Array[String]) -> void:

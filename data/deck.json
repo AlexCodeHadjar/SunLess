@@ -1,0 +1,24 @@
+{
+ "_doc": "Колода событий главы (docs/16 §11.4, core/rules/deck_rules.gd). Побочных и случайных миссий написано больше, чем игрок увидит: при открытии главы из каждой группы выпадает pick единиц. Единица — id миссии или {id, name, chain, missions} (пара-выбор или цепочка идут целиком). min_chains — сколько цепочек в группе выпадает всегда. Миссии вне выпавших не открываются. Выпавшее — state.flags.deck[глава].",
+ "shore": [
+  {
+   "name": "side",
+   "pick": 5,
+   "min_chains": 1,
+   "units": [
+    "SS01",
+    {"id": "strangers_camp", "name": "Чужой лагерь", "missions": ["SS02", "SS03"]},
+    "SS04",
+    "SS05",
+    "SS06",
+    {"id": "deep_song", "name": "Песнь глубин", "chain": true, "missions": ["SC01", "SC02", "SC03"]},
+    {"id": "last_legion", "name": "Последний легионер", "chain": true, "missions": ["SC04", "SC05", "SC06"]}
+   ]
+  },
+  {
+   "name": "random",
+   "pick": 6,
+   "units": ["RS01", "RS02", "RS03", "RS04", "RS05", "RS06", "RS07", "RS08", "RS09", "RS10"]
+  }
+ ]
+}

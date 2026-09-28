@@ -62,7 +62,7 @@ func test_flood_washes_side_blocks_story_and_ebb_reshapes() -> void:
 		if str(m.get("type", "")) == "story" and story == "":
 			story = mid
 	check(side != "" and story != "", "в низине %s есть случайная и сюжетная миссии" % low)
-	MissionFlow.open(c, s, side)
+	MissionFlow.open(c, s, side, true)
 	MissionFlow.open(c, s, story)
 	TideRules.schedule(c, s, 2, 2)
 	check(TideRules.threatened(s, low), "низина под угрозой")

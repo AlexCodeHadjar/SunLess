@@ -69,6 +69,12 @@ static func mission_flooded(content: Content, state: RunState, mid: String) -> b
 	return str(m.get("type", "")) != "onslaught" and flooded(state, str(m.get("location", "")))
 
 
+## Смывает ли вода миссию: побочные и случайные — да; сюжетные и звенья цепочек (DeckRules) ждут отлива.
+static func washable(content: Content, mid: String) -> bool:
+	var m: Dictionary = content.missions.get(mid, {})
+	return str(m.get("type", "")) in ["side", "random"] and DeckRules.chain_info(content, mid).is_empty()
+
+
 ## Опасно отправлять: другие отряды в деле могут закончить свои миссии раньше и привести воду,
 ## пока этот ещё здесь. Нет других отрядов — не опасно: свою миссию он закончит до воды.
 static func risky(content: Content, state: RunState, mid: String) -> bool:
@@ -161,7 +167,7 @@ static func _flood(content: Content, state: RunState) -> Array:
 			out.append_array(_caught(content, state, sq, rng))
 	for mid: String in MissionFlow.open_missions(state):
 		var m: Dictionary = content.missions.get(mid, {})
-		if not here.has(str(m.get("location", ""))) or not str(m.get("type", "")) in ["side", "random"]:
+		if not here.has(str(m.get("location", ""))) or not washable(content, mid):
 			continue
 		state.missions[mid]["status"] = "expired"
 		out.append({"kind": "expired", "card": mid, "text": "Смыто приливом: %s" % m.get("title", mid)})
@@ -192,7 +198,7 @@ static func _caught(content: Content, state: RunState, sq: Dictionary, rng: Rand
 			EdgeRules.defeat(content, state, victim, MissionFlow.pocket(state, victim), rng, {}, entries)
 	state.squads = state.squads.filter(func(s: Dictionary) -> bool: return int(s["id"]) != int(sq["id"]))
 	var st2: Dictionary = state.missions.get(mid, {})
-	st2["status"] = "open" if str(m.get("type", "")) == "story" else "expired"
+	st2["status"] = "expired" if washable(content, mid) else "open"
 	state.missions[mid] = st2
 	var who := ", ".join(heroes.map(func(c: String) -> String: return content.card_name(c)))
 	var text := ""

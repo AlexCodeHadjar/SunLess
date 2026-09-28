@@ -27,6 +27,7 @@ static func new_run(content: Content, seed_value: int, chapter: String = "nightm
 ## Открывает стартовые миссии главы и заводит таймеры случайных миссий её локаций.
 static func open_chapter(content: Content, state: RunState, chapter: String) -> Array:
 	state.chapter = chapter
+	DeckRules.ensure(content, state, chapter)   # колода событий главы (docs/16 §11.4)
 	var out: Array = []
 	for mid: String in _sorted(content.missions):
 		var m: Dictionary = content.missions[mid]
@@ -65,8 +66,12 @@ static func chapter_of(content: Content, mission_id: String) -> String:
 	return str(content.locations.get(lid, {}).get("chapter", ""))
 
 
-static func open(content: Content, state: RunState, mission_id: String) -> Array:
+## Открывает миссию. Миссии колоды главы, не выпавшие в этом прохождении, не открываются (DeckRules);
+## force — открыть всё равно (снимки, тесты).
+static func open(content: Content, state: RunState, mission_id: String, force: bool = false) -> Array:
 	if not content.missions.has(mission_id):
+		return []
+	if not force and not DeckRules.allowed(content, state, mission_id):
 		return []
 	var cur: Dictionary = state.missions.get(mission_id, {})
 	if cur.get("status", "") in ["open", "active"]:
@@ -296,7 +301,7 @@ static func reached(content: Content, state: RunState, lid: String) -> bool:
 	return false
 
 
-## Случайная миссия локации: первая по порядку из пула, которая сейчас не открыта.
+## Случайная миссия локации: первая по порядку из пула, которая сейчас не открыта и выпала в колоде.
 ## Только там, куда сюжет уже привёл (не спойлерим места раньше времени).
 static func spawn_random(content: Content, state: RunState, lid: String) -> Array:
 	if not reached(content, state, lid):
@@ -307,6 +312,8 @@ static func spawn_random(content: Content, state: RunState, lid: String) -> Arra
 		if st in ["open", "active"]:
 			continue
 		if st in ["done", "expired", "closed"] and str(m.get("type", "")) != "random":
+			continue
+		if not DeckRules.allowed(content, state, mid):
 			continue
 		return open(content, state, mid)
 	return []

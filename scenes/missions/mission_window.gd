@@ -540,6 +540,9 @@ func _notes(m: Dictionary) -> VBoxContainer:
 		v.add_child(UITheme.label("⌛ Уйдёт через %d с — потом её не будет" % int(ceil(left)), "sans_bold", 17, Palette.REQ_MISS))
 	for other: String in m.get("exclusive", []):
 		v.add_child(UITheme.label("⇄ Выбор: выполните эту — и «%s» будет упущена" % c.missions.get(other, {}).get("title", other), "sans_bold", 17, Palette.REQ_MISS))
+	var chain := DeckRules.chain_info(c, str(m.get("id", "")))
+	if not chain.is_empty():
+		v.add_child(UITheme.label("⛓ Цепочка «%s»: %d из %d" % [chain["name"], chain["index"], chain["total"]], "sans_bold", 17, Palette.SILVER))
 	var phases: Array = m.get("boss", {}).get("phases", [])
 	if not phases.is_empty():
 		var ph := clampi(int(s.missions.get(str(m.get("id", "")), {}).get("phase", 0)), 0, phases.size() - 1)

@@ -23,7 +23,7 @@ func test_only_side_random_of_main_chapters() -> void:
 	for i in 60:
 		s.clock = i * 3.0
 		s.missions.erase("RS01")
-		MissionFlow.open(c, s, "RS01")
+		MissionFlow.open(c, s, "RS01", true)
 		var mods: Array = s.missions["RS01"].get("mods", [])
 		check(mods.size() in [1, 2], "1–2 модификатора: %s" % str(mods))
 		for x: String in mods:
@@ -39,7 +39,7 @@ func test_combat_changes() -> void:
 	var c := content()
 	var s := _shore()
 	var mid := _combat_random(c)
-	MissionFlow.open(c, s, mid)
+	MissionFlow.open(c, s, mid, true)
 	var m: Dictionary = c.missions[mid]
 	var st: Dictionary = {}
 	for a: Dictionary in m["actions"]:
@@ -68,7 +68,7 @@ func test_combat_changes() -> void:
 func test_checks_rewards_expires() -> void:
 	var c := content()
 	var s := _shore()
-	MissionFlow.open(c, s, "RS02")
+	MissionFlow.open(c, s, "RS02", true)
 	s.missions["RS02"]["mods"] = ["fog"]
 	var parts := ModifierRules.check_parts(c, s, "RS02", ["stealth"])
 	eq(parts.size(), 1, "туман помогает скрытности:")
