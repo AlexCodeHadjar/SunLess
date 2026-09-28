@@ -303,7 +303,7 @@ func _refresh() -> void:
 	var travelling := s.squads.filter(func(sq: Dictionary) -> bool: return sq["phase"] == "travel").size()
 	var arrived := s.squads.size() - travelling
 	_top_labels["squads"].text = "Отрядов в пути: %d%s" % [travelling, (" · прибыли: %d" % arrived) if arrived > 0 else ""]
-	if s.collection != _shown_collection:
+	if _tray_cards() != _shown_collection:
 		_rebuild_cards()
 	_update_badges()
 	if _map_missions() != _shown_missions:
@@ -342,18 +342,29 @@ func _update_sky() -> void:
 		_show_toast(str(Atmosphere.OMENS[next]))
 
 
+## Карты нижнего ряда: живые герои и усиления вне кармашков (усиление в кармашке видно только в планшете героя).
+func _tray_cards() -> Array:
+	var s := GameState.state
+	var c := ContentDB.data
+	return s.collection.filter(func(card: String) -> bool:
+		var kind := c.card_kind(card)
+		if kind == "enhancement":
+			return MissionFlow.pocket_owner(s, card) == ""
+		return kind == "character" and s.is_alive(card))
+
+
 func _rebuild_cards() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
-	_shown_collection = s.collection.duplicate()
+	_shown_collection = _tray_cards()
 	for ch in _heroes_row.get_children():
 		ch.queue_free()
 	_hero_cards.clear()
 	_enh_cards.clear()
 	var enh: Array = []
-	for card: String in s.collection:
+	for card: String in _shown_collection:
 		var kind := c.card_kind(card)
-		if kind == "character" and s.is_alive(card):
+		if kind == "character":
 			var cv := CardView.make(card, CardView.SIZE_PANEL, true)
 			cv.inspect_requested.connect(func(id: String) -> void: CardInspector.open_for(self, id))
 			cv.clicked.connect(func(id: String) -> void: CardInspector.open_for(self, id))
@@ -395,11 +406,10 @@ func _update_badges() -> void:
 		var ev: CardView = _enh_cards[card]
 		if not is_instance_valid(ev):
 			continue
-		var owner := MissionFlow.pocket_owner(s, card)
-		var eb := ("у героя: %s" % c.card_name(owner)) if owner != "" else "не в кармашке"
+		var eb := ""   # в ряду только усиления вне кармашков — без подписи
 		if ev.badge != eb:
 			ev.badge = eb
-			ev.draggable = owner == "" or not MissionFlow.on_mission(s, owner)
+			ev.draggable = true
 			ev.queue_redraw()
 
 

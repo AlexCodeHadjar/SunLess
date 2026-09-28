@@ -459,3 +459,25 @@ func _draw_procedural() -> void:
 			var y0 := size.y * (0.46 + int(L["depth"]) * 0.14)
 			for j in 8:
 				draw_rect(Rect2(0, y0 + j * 6, size.x, 6), Color(0.62, 0.66, 0.75, 0.018 * (8 - j) / 8.0))
+	if region == "academy":
+		_draw_academy_ground(tint, win_a)
+
+
+## Академия (пока без рисунка): верхняя галерея на опорах и мостовая — карты мест стоят на них, а не в небе.
+## Высоты совпадают с рядами мест на карте (mission_game._map_point: доли 0.08 и 0.95).
+func _draw_academy_ground(tint: Color, lamps: float) -> void:
+	var gal_y := 380.0
+	var street_y := 683.0
+	var stone := Color("#1A1D26") * tint
+	for x in range(300, int(size.x), 170):
+		draw_rect(Rect2(x, gal_y + 12, 14, street_y - gal_y - 12), stone.darkened(0.25))
+	draw_rect(Rect2(250, gal_y, size.x - 250, 14), stone)
+	draw_line(Vector2(250, gal_y), Vector2(size.x, gal_y), Color(0.75, 0.78, 0.85, 0.35), 2.0)
+	draw_rect(Rect2(0, street_y, size.x, size.y - street_y), stone.darkened(0.35))
+	draw_line(Vector2(0, street_y), Vector2(size.x, street_y), Color(0.75, 0.78, 0.85, 0.3), 2.0)
+	for x in range(0, int(size.x), 64):
+		draw_line(Vector2(x, street_y + 4), Vector2(x - 30, street_y + 90), Color(0.6, 0.63, 0.7, 0.06), 1.0)
+	if lamps > 0.02:
+		for x in range(385, int(size.x), 340):
+			draw_circle(Vector2(x, gal_y - 6), 4.0, Color(0.95, 0.8, 0.55, 0.7 * lamps))
+			draw_circle(Vector2(x, gal_y - 6), 14.0, Color(0.95, 0.8, 0.55, 0.08 * lamps))
