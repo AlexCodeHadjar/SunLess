@@ -100,14 +100,15 @@ static func combat_setup(content: Content, state: RunState, m: Dictionary, a: Di
 ## Вероятности исходов одного этапа: {ok, partial, fail, hero, kind, links}.
 static func stage_odds(content: Content, state: RunState, m: Dictionary, a: Dictionary, st: Dictionary,
 		heroes: Array, reveal: bool) -> Dictionary:
-	if bool(st.get("auto", false)):
+	if bool(st.get("auto", false)) or st.has("watch"):
 		return {"ok": 1.0, "partial": 0.0, "fail": 0.0, "hero": "", "kind": "auto", "links": [], "risk": 0.0}
 	if st.has("combat"):
 		var c := combat_setup(content, state, m, a, MissionFlow.boss_stage(state, m, st), heroes, reveal)
 		var f := float(c["fight"])
 		# проигранный бой — поражение ведущего (грань смерти)
+		var spar := bool(st["combat"].get("spar", false))   # тренировка: проигрыш без грани
 		return {"ok": f, "partial": 0.0, "fail": 1.0 - f, "hero": c["hero"], "kind": "combat", "links": c["links"],
-			"round": c["round"], "risk": clampf(1.0 - f, 0.0, 1.0)}
+			"round": c["round"], "risk": 0.0 if spar else clampf(1.0 - f, 0.0, 1.0)}
 	var actor := stage_actor(content, state, m, a, st, heroes)
 	var ok := float(actor["chance"]) / 100.0
 	var part := minf(float(PARTIAL_BAND), 100.0 - float(actor["chance"])) / 100.0

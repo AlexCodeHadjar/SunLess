@@ -427,7 +427,7 @@ func show_fork(sid: int) -> void:
 	var ci := 0
 	for st: Dictionary in rep["stages"]:
 		done.add_child(_stage_card(st, rep, ci))
-		if st.has("combat"):
+		if st.has("combat"):   # и смотр (запись этапа с combat)
 			ci += 1
 	_body.add_child(done)
 	_body.add_child(_caption("Что изменилось"))
@@ -550,7 +550,7 @@ func show_report(rep: Dictionary) -> void:
 	var ci := 0
 	for st: Dictionary in rep["stages"]:
 		stages.add_child(_stage_card(st, rep, ci))
-		if st.has("combat"):
+		if st.has("combat"):   # и смотр (запись этапа с combat)
 			ci += 1
 	for f: Dictionary in rep.get("forks", []):
 		_body.add_child(_para("⑂ %s → %s" % [f.get("text", ""), f.get("choice", "")], "serif_italic", 18, Palette.SILVER))

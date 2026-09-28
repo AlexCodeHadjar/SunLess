@@ -339,6 +339,14 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 static func _validate_stage(c: Content, w: String, st: Dictionary, errors: Array[String]) -> void:
 	if str(st.get("name", "")) == "":
 		errors.append("%s: у этапа нет названия" % w)
+	if st.has("watch"):
+		var wt: Dictionary = st["watch"]
+		if not c.characters.has(str(wt.get("hero", ""))):
+			errors.append("%s: смотр — нет героя %s" % [w, wt.get("hero", "")])
+		for we: String in wt.get("enemies", []):
+			if not c.enemies.has(we):
+				errors.append("%s: смотр — нет противника %s" % [w, we])
+		return
 	if st.has("combat"):
 		var en: Array = st["combat"].get("enemies", [])
 		if en.is_empty():

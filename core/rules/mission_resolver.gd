@@ -162,6 +162,8 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 		var rec := {"name": st.get("name", ""), "hero": "", "chance": 0, "roll": 0, "outcome": "fail", "text": ""}
 		if alive.is_empty():
 			rec["text"] = "Идти дальше некому."
+		elif st.has("watch"):
+			_watch_stage(content, state, m, a, st, rec, report, rng)
 		elif bool(st.get("auto", false)) or bool(run["guaranteed"]):
 			rec["outcome"] = "ok"
 		elif st.has("combat"):
@@ -409,6 +411,35 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 	for e: Dictionary in s.enemies:
 		after.note(str(e.get("id", "")), "Бой «%s» · %s" % [m.get("title", key), "победа" if won else "поражение"])
 	return after
+
+
+## Смотр (docs/16 §9е п.6): бой двух персонажей без участия отряда — на копии состояния, отряд ничем не рискует.
+## Бой можно посмотреть из отчёта; связи тегов, сработавшие в нём, открываются, как в своём бою.
+static func _watch_stage(content: Content, state: RunState, m: Dictionary, a: Dictionary, st: Dictionary,
+		rec: Dictionary, report: Dictionary, rng: RandomNumberGenerator) -> void:
+	var w: Dictionary = st["watch"]
+	var hero := str(w.get("hero", ""))
+	var s0 := state.copy()
+	for cid: String in [hero] + Array(w.get("allies", [])):
+		if not s0.owns(cid):
+			EffectApplier.add_card(content, s0, cid)
+		s0.character(cid)["pocket"] = []
+	s0.rng_state = rng.state
+	var spec := {"enemies": w.get("enemies", []), "field": w.get("field", ""), "spar": true}
+	var setup := {"state": s0.to_dict(), "key": "%s:watch" % m.get("id", ""), "spec": spec, "hero": hero, "enh": [],
+		"support": w.get("allies", []), "ctx_event": MissionForecast.ctx_event(m), "ctx_option": MissionForecast.ctx_option(a, st)}
+	var s := replay_session(content, setup)
+	s.auto_play()
+	rng.state = s.rng.state
+	var foe := ", ".join(Array(w.get("enemies", [])).map(func(e: String) -> String: return str(content.enemies.get(e, {}).get("name", e))))
+	rec["outcome"] = "ok"
+	rec["combat"] = {"outcome": s.outcome, "hero_wins": s.hero_wins, "enemy_wins": s.enemy_wins, "allies": s.allies, "watch": true}
+	if str(rec.get("text", "")) == "":
+		rec["text"] = str(st.get("ok", "%s против %s: %s" % [content.card_name(hero), foe, "победа" if s.outcome == "win" else "поражение"]))
+	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": s.allies, "rounds": s.rounds_log, "outcome": s.outcome,
+		"discovered": s.discovered, "setup": setup, "crises": [], "watch": true})
+	report["entries"].append({"kind": "info", "text": "Смотр: %s против %s — %s. Сработавшие связи тегов открыты." % [
+		content.card_name(hero), foe, "победа" if s.outcome == "win" else "поражение"]})
 
 
 ## Бой в том же виде, в каком его сыграл резолвер (для просмотра автобоя).

@@ -31,6 +31,7 @@ var allies: Array = []
 var enemies: Array = []           # копии описаний противников
 var field: Dictionary = {}
 var kind := "normal"
+var spar := false                 # тренировка (docs/16 §9е п.6): проигрыш без грани и смерти — только по психике
 
 var round_no := 0
 var hero_wins := 0                # раунды, где отряд отнял у врага большую долю, чем потерял сам
@@ -86,6 +87,7 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 	var fid := str(spec.get("field", ""))
 	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
 	s.kind = str(spec.get("kind", "normal"))
+	s.spar = bool(spec.get("spar", false))
 	for e: Dictionary in s.enemies:
 		if e.get("kind", "normal") == "boss" or (e.get("kind", "") == "elite" and s.kind == "normal"):
 			s.kind = str(e["kind"])
@@ -286,6 +288,10 @@ func play_round() -> Dictionary:
 ## Бой проигран (docs/16 §9е): навыки фазы «lose» могут отвести удар; иначе ведущий — на грань,
 ## а если уже на грани — бросок смерти (жестокий удар врага прибавляет к шансу).
 func _lose_fight(rec: Dictionary) -> void:
+	if spar:
+		entries.append({"kind": "info", "text": "Поражение на тренировке — без ран, только по самолюбию"})
+		entries.append_array(PsycheRules.change(content, state, hero, -6, "проигранный спарринг", [hero] + allies, rng))
+		return
 	var lose := MemoryRules.fire(self, "lose", true)
 	rec["memories_lose"] = lose["fired"]
 	var guard := int(lose["effect"].get("guard", 0))
