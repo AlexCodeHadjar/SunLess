@@ -264,6 +264,7 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	elif report["outcome"] in ["success", "partial"]:
 		if executor != "" and not state.game_over:
 			entries.append_array(EffectApplier.apply_all(content, state, m.get("on_complete", []), executor, rng))
+			entries.append_array(ModifierRules.on_success(content, state, mid, executor, rng))
 		status["status"] = "done"
 		var story := bool(a.get("story", false)) or str(m.get("type", "")) == "story"
 		entries.append({"kind": "story" if story else "info",
@@ -402,6 +403,8 @@ static func _combat_stage(content: Content, state: RunState, m: Dictionary, a: D
 				report["entries"].append_array(EffectApplier.add_card(content, after, str(echo["card"])))
 		if shards > 0 and Atmosphere.sky(content, after) == "blood_moon":
 			shards = int(ceil(shards * Atmosphere.BLOOD_LOOT))
+		if shards > 0:
+			shards = int(ceil(shards * ModifierRules.loot_mult(content, after, key)))
 		if shards > 0:
 			report["entries"].append_array(EffectApplier.apply(content, after, {"cmd": "adjust_resource", "resource": "shards", "value": shards}, hero, rng))
 		after.enemy_wounds.erase(key)

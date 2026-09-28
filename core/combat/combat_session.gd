@@ -88,6 +88,7 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
 	s.kind = str(spec.get("kind", "normal"))
 	s.spar = bool(spec.get("spar", false))
+	ModifierRules.apply_combat(p_content, s.state, key, s)   # модификаторы миссии: теги, сила, лишний враг, место
 	for e: Dictionary in s.enemies:
 		if e.get("kind", "normal") == "boss" or (e.get("kind", "") == "elite" and s.kind == "normal"):
 			s.kind = str(e["kind"])

@@ -47,6 +47,8 @@ static func resolve(content: Content, state: RunState, character_id: String, enh
 	# небо над картой (docs/16 §4)
 	if state.mode == "missions" and not content.locations.is_empty():
 		parts.append_array(Atmosphere.check_parts(content, state, tags))
+		# модификаторы миссии (docs/16 §11.2)
+		parts.append_array(ModifierRules.check_parts(content, state, str(event.get("id", "")), tags))
 		# рост тегов героя (docs/16 §8)
 		parts.append_array(GrowthRules.check_parts(content, state, character_id, tags, enhancement_ids))
 

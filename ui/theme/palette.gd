@@ -19,6 +19,8 @@ const REQ_MISS := Color("#C79A4B")
 const STAT_UP := Color("#6FA47B")
 const STAT_DOWN := Color("#B65F63")
 const STAT_NEUTRAL := Color("#A8ADB4")
+## модификаторы миссий (ModifierRules): тон значка
+const MOD_TONE := {"bad": Color("#C0666A"), "good": Color("#7DB38A"), "mixed": Color("#D2A95A")}
 
 const RARITY := {
 	"common": Color("#8A8D96"),

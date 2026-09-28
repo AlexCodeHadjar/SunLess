@@ -142,7 +142,7 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	if notes.get_child_count() > 0:
 		col.add_child(notes)
 	col.add_child(_caption("Вероятные теги врага и места"))
-	col.add_child(_tags_flow(m.get("known_tags", []), Array(m.get("hidden_tags", [])).size()))
+	col.add_child(_tags_flow(Array(m.get("known_tags", [])) + _mod_tags(m), Array(m.get("hidden_tags", [])).size()))
 
 	_body.add_child(_caption("Отряд · перетащите героя в место или щёлкните по нему"))
 	_slots = HBoxContainer.new()
@@ -335,7 +335,7 @@ func show_arrival(sid: int) -> void:
 	col.add_child(_caption("Что увидели"))
 	col.add_child(_para(str(m.get("arrival", "")), "serif", 20, Palette.TEXT))
 	col.add_child(_caption("Теги раскрылись"))
-	col.add_child(_tags_flow(Array(m.get("known_tags", [])) + Array(m.get("hidden_tags", [])), 0))
+	col.add_child(_tags_flow(Array(m.get("known_tags", [])) + Array(m.get("hidden_tags", [])) + _mod_tags(m), 0))
 	var team := HBoxContainer.new()
 	team.add_theme_constant_override("separation", 8)
 	for cid: String in sq["heroes"]:
@@ -502,6 +502,16 @@ func _cost_text(a: Dictionary, sq: Dictionary) -> String:
 	return out
 
 
+## Теги, которые добавили модификаторы миссии (враг и место в бою) — их игрок знает сразу.
+func _mod_tags(m: Dictionary) -> Array:
+	var out: Array = []
+	for d: Dictionary in ModifierRules.of(_content(), GameState.state, str(m.get("id", ""))):
+		for t: String in Array(d.get("enemy_tags", [])) + Array(d.get("field_tags", [])):
+			if not out.has(t) and not Array(m.get("known_tags", [])).has(t):
+				out.append(t)
+	return out
+
+
 ## Заметки брифинга: срок, миссия-выбор, заход босса, небо.
 func _notes(m: Dictionary) -> VBoxContainer:
 	var c := _content()
@@ -509,6 +519,12 @@ func _notes(m: Dictionary) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	var left := MissionFlow.expires_in(c, s, str(m.get("id", "")))
+	# модификаторы миссии (docs/16 §11.2)
+	for d: Dictionary in ModifierRules.of(c, s, str(m.get("id", ""))):
+		var ml := UITheme.label("◆ %s — %s" % [d.get("name", ""), d.get("text", "")], "sans_bold", 17,
+			Palette.MOD_TONE.get(str(d.get("tone", "mixed")), Palette.GOLD))
+		ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(ml)
 	# прилив (TideRules): место под водой или вода идёт
 	var mid := str(m.get("id", ""))
 	if TideRules.mission_flooded(c, s, mid):
@@ -757,7 +773,7 @@ func _intel(m: Dictionary) -> Control:
 	var names: Array = []
 	for e: String in enemies:
 		names.append(_content().card_name(e) + (" ×?" if int(enemies[e]) > 1 else ""))
-	for pair: Array in [["Угроза", _dots(int(m.get("threat", 1)))], ["В пути", "~%d с" % int(m.get("duration", 8))],
+	for pair: Array in [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))], ["В пути", "~%d с" % int(m.get("duration", 8))],
 			["Отряд", _squad_size(m)], ["Противники", ", ".join(names) if not names.is_empty() else "не видно"]]:
 		var v := VBoxContainer.new()
 		v.add_child(UITheme.label(str(pair[0]).to_upper(), "sans_bold", 13, Palette.TEXT_DIM))

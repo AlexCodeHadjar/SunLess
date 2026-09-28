@@ -72,7 +72,13 @@ static func open(content: Content, state: RunState, mission_id: String) -> Array
 	if cur.get("status", "") in ["open", "active"]:
 		return []
 	state.missions[mission_id] = {"status": "open", "attempts": int(cur.get("attempts", 0)), "opened_at": state.clock}
-	return [{"kind": "mission", "text": "Новая миссия: %s" % content.missions[mission_id].get("title", mission_id), "card": mission_id}]
+	# модификаторы (docs/16 §11.2): у побочных и случайных миссий основных глав
+	var mods := ModifierRules.roll(content, state, mission_id)
+	var extra := ""
+	if not mods.is_empty():
+		state.missions[mission_id]["mods"] = mods
+		extra = " · " + ", ".join(mods.map(func(x: String) -> String: return str(ModifierRules.def(content, x).get("name", x))))
+	return [{"kind": "mission", "text": "Новая миссия: %s%s" % [content.missions[mission_id].get("title", mission_id), extra], "card": mission_id}]
 
 
 static func open_missions(state: RunState) -> Array:
@@ -266,7 +272,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]
-		var exp := float(content.missions.get(mid, {}).get("expires", 0))
+		var exp := ModifierRules.expires(content, state, mid)
 		if exp > 0.0 and str(stt.get("status", "")) == "open" and state.clock >= float(stt.get("opened_at", 0.0)) + exp:
 			stt["status"] = "expired"
 			out.append({"kind": "expired", "card": mid, "text": "Упущено: %s" % content.missions[mid].get("title", mid)})
@@ -333,7 +339,7 @@ static func after_completion(content: Content, state: RunState) -> Array:
 
 ## Сколько секунд осталось до ухода устаревающей миссии (-1 — не устаревает).
 static func expires_in(content: Content, state: RunState, mission_id: String) -> float:
-	var exp := float(content.missions.get(mission_id, {}).get("expires", 0))
+	var exp := ModifierRules.expires(content, state, mission_id)
 	var st: Dictionary = state.missions.get(mission_id, {})
 	if exp <= 0.0 or str(st.get("status", "")) != "open":
 		return -1.0

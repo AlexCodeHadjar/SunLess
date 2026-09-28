@@ -15,6 +15,7 @@ static func validate(c: Content) -> Array[String]:
 	errors.append_array(c.load_errors)
 	_validate_combat(c, errors)
 	_validate_missions(c, errors)
+	_validate_modifiers(c, errors)
 	return errors
 
 
@@ -38,6 +39,21 @@ static func _validate_effects(c: Content, where: String, effects: Array, errors:
 
 
 ## Боевые данные: все теги связей, полей, карт раунда и носителей существуют.
+static func _validate_modifiers(c: Content, errors: Array[String]) -> void:
+	var seen := {}
+	for d: Dictionary in c.modifiers.get("list", []):
+		var id := str(d.get("id", ""))
+		if id == "" or seen.has(id):
+			errors.append("modifiers.json: пустой или повторный id «%s»" % id)
+		seen[id] = true
+		for t: String in Array(d.get("enemy_tags", [])) + Array(d.get("field_tags", [])):
+			if not c.combat_tags.has(t):
+				errors.append("modifiers.json: %s — нет боевого тега «%s»" % [id, t])
+		for b: Dictionary in d.get("check", []):
+			if not STATS.has(str(b.get("stat", ""))):
+				errors.append("modifiers.json: %s — неизвестная характеристика %s" % [id, b.get("stat", "")])
+
+
 static func _validate_combat(c: Content, errors: Array[String]) -> void:
 	var T := c.combat_tags
 	for sid: String in c.synergies:

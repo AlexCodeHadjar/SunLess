@@ -235,7 +235,7 @@ static func arrival(content: Content, state: RunState, m: Dictionary, heroes: Ar
 	for cid: String in heroes:
 		if not state.is_alive(cid):
 			continue
-		var d := THREAT * int(m.get("threat", 1)) + dread + calm + sky
+		var d := THREAT * ModifierRules.threat(content, state, str(m.get("id", ""))) + dread + calm + sky
 		d += OWN_EDGE if EdgeRules.on_edge(state, cid) else 0
 		for other: String in heroes:
 			if other == cid or not state.is_alive(other):

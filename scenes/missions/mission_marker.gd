@@ -40,11 +40,41 @@ func _ready() -> void:
 	card.inspect_requested.connect(func(_id: String) -> void: pressed.emit(mission_id))
 	card.set_drag_forwarding(Callable(), _can_drop, _drop)
 	add_child(card)
+	_add_mods()
 	_ring = Control.new()
 	_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ring.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_ring.draw.connect(_draw_ring)
 	add_child(_ring)
+
+
+## Модификаторы миссии (docs/16 §11.2) — значки над картой; подробности во всплывающей подсказке и брифинге.
+func _add_mods() -> void:
+	var mods := ModifierRules.of(ContentDB.data, GameState.state, mission_id)
+	if mods.is_empty():
+		return
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 3)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for d: Dictionary in mods:
+		var tone: Color = Palette.MOD_TONE.get(str(d.get("tone", "mixed")), Palette.GOLD)
+		var pill := PanelContainer.new()
+		var st := UITheme.box(Color(0.04, 0.045, 0.06, 0.92), tone, 1, 10, 0)
+		st.content_margin_left = 9
+		st.content_margin_right = 9
+		st.content_margin_top = 1
+		st.content_margin_bottom = 2
+		pill.add_theme_stylebox_override("panel", st)
+		pill.tooltip_text = "%s — %s" % [d.get("name", ""), d.get("text", "")]
+		pill.mouse_filter = Control.MOUSE_FILTER_STOP
+		var l := UITheme.label("◆ " + str(d.get("name", "")), "sans_bold", 14, tone)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pill.add_child(l)
+		col.add_child(pill)
+	add_child(col)
+	col.reset_size()
+	# поверх верха карты: над ней в верхнем ряду места нет (панель и строка прилива)
+	col.position = Vector2((size.x - col.size.x) / 2.0, 10.0)
 
 
 func set_state(p: float, rem: float, arr: bool) -> void:
