@@ -2,7 +2,7 @@
 "use strict";
 
 const LORE_ONLY = { id: "lore", name: "Задуманные (нет в игре)", emblem: "art/ui/emblems/story.png" };
-const PREFIX_KIND = { P: "character", U: "enhancement", K: "enhancement", A: "ability", T: "trauma", I: "initiator", M: "enemy", H: "enemy", E: "event" };
+const PREFIX_KIND = { P: "character", U: "enhancement", K: "enhancement", A: "ability", I: "initiator", M: "enemy", H: "enemy", E: "event" };
 
 const CardsView = {
   kind: "all", query: "", selected: null, tab: "desc", stage: null,
@@ -190,7 +190,7 @@ const CardsView = {
         PREFIX_KIND[c.id[0]] && PREFIX_KIND[c.id[0]] !== "event" ? h("button", { class: "btn add", onclick: () => this.addLoreToGame(c) }, "Добавить в игру") : null) : null,
       c.kind !== "lore" && c.kind !== "event" ? h("div", { class: "row" },
         ("rarity" in c.obj || ["character", "enhancement"].includes(c.kind)) ? field("Редкость", bindSelect(c.obj, "rarity", Object.fromEntries(Object.entries(RARITY).map(([k, v]) => [k, v[0]])), () => { changed(); }, { allowEmpty: true })) : null,
-        c.kind !== "event" && c.kind !== "trauma" && c.kind !== "ability" && c.kind !== "initiator" ? field("Картинка", h("label", { class: "field inline" },
+        c.kind !== "event" && c.kind !== "ability" && c.kind !== "initiator" ? field("Картинка", h("label", { class: "field inline" },
           bindInput(c.obj, "art_has_frame", changed, { type: "checkbox" }), h("span", null, "уже с рамкой и названием"))) : null) : null,
       c.kind === "event" ? h("div", { class: "row" },
         h("span", null, h("span", { class: "type-dot", style: { background: EVENT_COLORS[c.obj.type] || "#888" } }), EVENT_TYPES[c.obj.type] || c.obj.type),
@@ -233,11 +233,12 @@ const CardsView = {
     const use = (...keys) => keys.forEach((k) => handled.add(k));
 
     if (c.kind === "character") {
-      use("role", "status", "source", "rank", "stages", "start_stage", "stats", "tags", "support_tags", "traits", "start_abilities");
+      use("role", "status", "source", "rank", "weapon", "stages", "start_stage", "stats", "tags", "support_tags", "traits", "start_abilities");
       body.append(h("div", { class: "cols" },
         field("Роль", bindInput(o, "role", changed)),
         field("Статус", bindSelect(o, "status", { playable: "Играбельный", temporary: "Временный спутник" }, changed, { allowEmpty: true })),
         field("Ранг", bindInput(o, "rank", changed, { type: "number" })),
+        field("Оружие", bindSelect(o, "weapon", Object.fromEntries(((DB.files[F.weapons] || {}).weapons || []).map((w) => [w.id, w.id])), changed, { allowEmpty: true, emptyLabel: "—" })),
         field("Источник", bindInput(o, "source", changed))));
       if (o.stages && Object.keys(o.stages).length) body.append(this.stagesSection(o, changed));
       else {
@@ -266,30 +267,19 @@ const CardsView = {
         field("Источник", bindInput(o, "source", changed)),
         field("Не изнашивается в арках", listInput(o, "wear_exempt_arcs", changed, "nightmare")),
         h("label", { class: "field inline" }, bindInput(o, "wears", changed, { type: "checkbox" }), h("span", null, "изнашивается")),
-        h("label", { class: "field inline" }, bindInput(o, "soften_first_physical", changed, { type: "checkbox" }), h("span", null, "смягчает первую физ. травму")))));
+        field("Оружие", bindSelect(o, "weapon", Object.fromEntries(((DB.files[F.weapons] || {}).weapons || []).map((w) => [w.id, w.id])), changed, { allowEmpty: true, emptyLabel: "не оружие" })),
+        h("label", { class: "field inline" }, bindInput(o, "edge_shield", changed, { type: "checkbox" }), h("span", null, "принимает первое поражение")))));
     }
 
     if (c.kind === "ability") {
-      use("text", "owner", "bonuses", "modes", "reveal", "soften_physical");
+      use("text", "owner", "bonuses", "modes", "reveal", "edge_soft");
       body.append(sec("Описание на карте", bindInput(o, "text", changed, { type: "textarea", rows: 3, keepEmpty: true })));
       body.append(h("div", { class: "cols" },
         field("Владелец", idSelect(o, "owner", ["character"], changed)),
         field("Раскрывает вариантов", bindInput(o, "reveal", changed, { type: "number" })),
-        h("label", { class: "field inline" }, bindInput(o, "soften_physical", changed, { type: "checkbox" }), h("span", null, "смягчает физические травмы"))));
+        h("label", { class: "field inline" }, bindInput(o, "edge_soft", changed, { type: "checkbox" }), h("span", null, "на грани смерть вдвое реже"))));
       body.append(this.bonusSection("Постоянные бонусы", o, "bonuses", changed));
       body.append(this.modesSection(o, changed));
-    }
-
-    if (c.kind === "trauma") {
-      use("short", "mods", "category", "severity", "random", "context_tag");
-      o.mods = o.mods || {};
-      body.append(h("div", { class: "cols" },
-        field("Короткое имя", bindInput(o, "short", changed)),
-        field("Категория", bindSelect(o, "category", { physical: "Физическая", environment: "Среда", mental: "Ментальная" }, changed)),
-        field("Тяжесть", bindSelect(o, "severity", { light: "Лёгкая", heavy: "Тяжёлая", critical: "Критическая" }, changed)),
-        field("Действует только в", bindSelect(o, "context_tag", Object.fromEntries(list(F.ctxTags).map((t) => [t.id, t.name])), changed, { allowEmpty: true, emptyLabel: "везде" })),
-        h("label", { class: "field inline" }, bindInput(o, "random", changed, { type: "checkbox" }), h("span", null, "в случайном пуле"))));
-      body.append(sec("Штраф к характеристикам", statsEditor(o.mods, changed, { signed: true })));
     }
 
     if (c.kind === "initiator") {
@@ -299,13 +289,13 @@ const CardsView = {
     }
 
     if (c.kind === "enemy") {
-      use("rank", "class", "kind", "human", "trauma_pool", "shards", "tags", "echo");
+      use("rank", "class", "power", "kind", "human", "shards", "tags", "echo");
       body.append(sec("Характеристики", h("div", { class: "cols" },
         field("Ранг", bindInput(o, "rank", changed, { type: "number" }), "×1.6 за ранг"),
         field("Класс", bindInput(o, "class", changed, { type: "number" }), "×1.0…×2.5"),
         field("Вид", bindSelect(o, "kind", { normal: "Обычный", elite: "Элита", boss: "Босс" }, changed)),
         field("Осколки душ за победу", bindInput(o, "shards", changed, { type: "number" })),
-        field("Пул травм", bindSelect(o, "trauma_pool", POOLS, changed)),
+        field("Сила ×", bindInput(o, "power", changed, { type: "number" }), "множитель баланса (пусто — 1.0); удобнее — вкладка «Сила»"),
         h("label", { class: "field inline" }, bindInput(o, "human", changed, { type: "checkbox" }), h("span", null, "человек")))));
       o.tags = o.tags || [];
       body.append(sec("Боевые теги", tagRow(o.tags, changed)));
@@ -492,9 +482,8 @@ const CardsView = {
       case "character": return { id, name, status: "playable", rarity: "common", role: "", stats: { power: 3, will: 3, cunning: 3 }, traits: [], tags: [] };
       case "enhancement": return { id, name, origin: "improvised", rarity: "common", wears: true, bonuses: [], text: "", tags: [] };
       case "ability": return { id, name, owner: "P01", bonuses: [], text: "" };
-      case "trauma": return { id, name, short: name, mods: { power: -1 }, category: "physical", severity: "light", random: true };
       case "initiator": return { id, name, event: "", text: "" };
-      case "enemy": return { id, name, rank: 0, class: 1, tags: [], kind: "normal", trauma_pool: "physical", shards: 1 };
+      case "enemy": return { id, name, rank: 0, class: 1, tags: [], kind: "normal", shards: 1 };
     }
     // новый тип карт: берём набор полей у первой карты этого типа
     const sample = (list((KIND[kind] || {}).file || "")[0]) || {};

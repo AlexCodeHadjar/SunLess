@@ -5,7 +5,6 @@ const F = {
   characters: "data/characters.json",
   enhancements: "data/enhancements.json",
   abilities: "data/abilities.json",
-  traumas: "data/traumas.json",
   enemies: "data/combat/enemies.json",
   ctxTags: "data/tags.json",
   tags: "data/combat/tags.json",
@@ -14,7 +13,7 @@ const F = {
   conflicts: "data/combat/conflicts.json",
   fields: "data/combat/fields.json",
   roundCards: "data/combat/round_cards.json",
-  tactics: "data/combat/tactics.json",
+  weapons: "data/combat/weapons.json",
   enemyAbilities: "data/combat/enemy_abilities.json",
   regions: "data/regions.json",
   locations: "data/locations.json",
@@ -225,7 +224,6 @@ const KINDS = [
   { id: "character", name: "Персонажи", file: F.characters, emblem: "art/ui/emblems/character.png", prefix: "P" },
   { id: "enhancement", name: "Усиления", file: F.enhancements, emblem: "art/ui/emblems/enhancement.png", prefix: "U" },
   { id: "ability", name: "Способности", file: F.abilities, emblem: "art/ui/emblems/will.png", prefix: "A" },
-  { id: "trauma", name: "Травмы", file: F.traumas, emblem: "art/ui/emblems/trauma.png", prefix: "T" },
   { id: "initiator", name: "Инициаторы", file: F.initiators, emblem: "art/ui/emblems/story.png", prefix: "I" },
   { id: "enemy", name: "Противники", file: F.enemies, emblem: "art/ui/emblems/monster.png", prefix: "M" },
   { id: "event", name: "События", file: null, emblem: "art/ui/emblems/story.png", prefix: "E" },
@@ -348,7 +346,6 @@ const COMBAT_TAG_PATHS = {
   [F.conflicts]: ["a", "b"],
   [F.fields]: ["tags[]", "effects[]/tag"],
   [F.roundCards]: ["tags[]", "effects[]/tag"],
-  [F.tactics]: ["add_tags[]", "blocked_by_env[]", "cancel_enemy_tags[]", "double_tags[]", "enemy_penalty_if/tags[]", "requires/hero_any[]", "self_tags[]"],
   [F.enemyAbilities]: ["when_tags[]", "negated_by[]", "cancel_hero_tags[]", "backfire_tags[]", "reduced_by/tags[]"],
   "@missions": ["known_tags[]", "hidden_tags[]", "actions[]/requires_any[]"],
   "@events": ["options[]/on_success[]/hero_tags[]", "options[]/on_success[]/enemy_tags[]",
@@ -359,14 +356,13 @@ const COMBAT_TAG_PATHS = {
 const STRICT_TAG_PATHS = new Set([
   F.characters + ":tags[]", F.characters + ":support_tags[]", F.characters + ":stages/*/tags[]",
   F.enhancements + ":tags[]", F.enemies + ":tags[]", F.synergies + ":tags[]", F.conflicts + ":a", F.conflicts + ":b",
-  F.fields + ":tags[]", F.roundCards + ":tags[]", F.tactics + ":add_tags[]", F.tactics + ":self_tags[]",
+  F.fields + ":tags[]", F.roundCards + ":tags[]",
   ...["when_tags[]", "negated_by[]", "cancel_hero_tags[]", "backfire_tags[]", "reduced_by/tags[]"].map((p) => F.enemyAbilities + ":" + p),
 ]);
 const CTX_TAG_PATHS = {
   [F.characters]: ["traits[]/bonuses[]/tags[]"],
   [F.enhancements]: ["bonuses[]/tags[]"],
   [F.abilities]: ["bonuses[]/tags[]"],
-  [F.traumas]: ["context_tag"],
   "@missions": ["context[]", "actions[]/stages[]/tags[]"],
   "@events": ["tags[]", "options[]/tags[]", "options[]/on_success[]/tags[]", "options[]/on_failure[]/tags[]",
     "on_appear[]/tags[]", "on_success_common[]/tags[]"],
@@ -451,8 +447,8 @@ function refLabel(ref) {
   const who = o.name || o.title || o.id;
   const group = {
     [F.characters]: "Персонаж", [F.enhancements]: "Усиление", [F.enemies]: "Противник", [F.abilities]: "Способность",
-    [F.traumas]: "Травма", [F.synergies]: "Симбиоз", [F.conflicts]: "Конфликт", [F.fields]: "Поле боя",
-    [F.roundCards]: "Карта раунда", [F.tactics]: "Приём", [F.enemyAbilities]: "Намерение врага",
+    [F.synergies]: "Симбиоз", [F.conflicts]: "Конфликт", [F.fields]: "Поле боя",
+    [F.roundCards]: "Карта раунда", [F.enemyAbilities]: "Намерение врага",
   }[f] || (f.startsWith("data/events/") ? "Событие" : f.startsWith("data/missions/") ? "Миссия" : f);
   return { group, who, id: o.id, where: ref.path.replace(/\[\]/g, "").replace(/\//g, " › ") };
 }
@@ -463,9 +459,9 @@ const EFFECTS = {
   add_card: { name: "Дать карту", fields: { card: "card" } },
   remove_card: { name: "Забрать карту", fields: { card: "card", text: "text" } },
   add_ability: { name: "Дать способность", fields: { ability: "ability", character: "character" } },
-  add_trauma: { name: "Нанести травму", fields: { trauma: "trauma", target: "character" } },
-  remove_trauma: { name: "Снять травму", fields: { target: "character", categories: "list", severities: "list" } },
-  clear_traumas: { name: "Снять все травмы", fields: { target: "character", categories: "list", text: "text" } },
+  edge: { name: "Поставить на грань смерти", fields: { target: "character", text: "text" } },
+  recover: { name: "Снять грань смерти", fields: { target: "character", text: "text" } },
+  psyche: { name: "Психика ±", fields: { target: "character", value: "number", text: "text" } },
   set_flag: { name: "Поставить флаг", fields: { flag: "text", text: "text" } },
   clear_flag: { name: "Снять флаг", fields: { flag: "text" } },
   adjust_resource: { name: "Осколки душ ±", fields: { resource: { shards: "осколки душ" }, value: "number" } },
@@ -487,12 +483,12 @@ const CONDITIONS = {
   not_flag: { name: "Флага нет", fields: { flag: "text", text: "text" } },
   owned_count: { name: "Несколько карт из списка", fields: { cards: "list", min: "number", text: "text" } },
   attached: { name: "Карта в кармашке отряда", fields: { card: "card" } },
-  executor_has_trauma: { name: "У исполнителя есть травма", fields: { severity: "list", categories: "list", text: "text" } },
+  executor_on_edge: { name: "Исполнитель на грани смерти", fields: { text: "text" } },
 };
 
 const FIELD_LABELS = {
-  card: "Карта", text: "Текст игроку", ability: "Способность", character: "Персонаж", target: "Цель", trauma: "Травма",
-  categories: "Категории травм", severities: "Тяжесть травм", severity: "Тяжесть травм", flag: "Флаг", resource: "Ресурс",
+  card: "Карта", text: "Текст игроку", ability: "Способность", character: "Персонаж", target: "Цель",
+  flag: "Флаг", resource: "Ресурс",
   value: "Значение", stat: "Характеристика", label: "Подпись", tags: "Теги", remaining: "Сколько проверок", stage: "Стадия",
   event: "Событие", options: "Варианты (id)", entry: "Запись кодекса", region: "Регион", arc: "Арка", hero_tags: "Теги героя",
   enemy_tags: "Теги врага", add_enemies: "Доп. противники", allies: "Союзники", field: "Поле боя", chapter: "Глава",
@@ -500,7 +496,7 @@ const FIELD_LABELS = {
 };
 const COND_LABELS = { text: "Подсказка игроку", ids: "Исполнитель — один из", cards: "Карты", min: "Минимум карт" };
 
-const REF_KEYS = ["card", "ability", "trauma", "character", "target", "event"];
+const REF_KEYS = ["card", "ability", "character", "target", "event"];
 
 function describeValue(k, v) {
   if (Array.isArray(v)) return v.map((x) => (typeof x === "string" && findCard(x) ? cardName(x) : x)).join(", ");

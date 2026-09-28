@@ -1,7 +1,7 @@
 // Оболочка: вкладки, статус изменений, сохранение, проверка, задачи Godot.
 "use strict";
 
-const Views = { cards: CardsView, tags: TagsView, missions: MissionsView };
+const Views = { cards: CardsView, tags: TagsView, missions: MissionsView, balance: BalanceView };
 
 const App = {
   view: null,

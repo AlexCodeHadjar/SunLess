@@ -168,7 +168,6 @@ const MissionsView = {
         field("Отдых после, с", bindInput(m, "rest", changed, { type: "number" })),
         field("Мест в отряде: от", bindInput(m.squad, "min", changed, { type: "number" })),
         field("Мест в отряде: до", bindInput(m.squad, "max", changed, { type: "number" })),
-        field("Пул травм", bindSelect(m, "trauma_pool", POOLS, changed, { allowEmpty: true })),
         field("Небо над картой", bindSelect(m, "sky", { blood_moon: "Кровавая луна", eclipse: "Затмение" }, changed, { allowEmpty: true, emptyLabel: "как обычно (день и ночь)" }),
           "Пока миссия открыта или отряд в пути, фон главы меняется на это небо. Затмение сильнее луны. Только атмосфера — на шансы не влияет.")),
       h("div", { class: "cols" },

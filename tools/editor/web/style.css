@@ -368,3 +368,30 @@ input.stage-name { font-family: "Cormorant"; font-size: 18px; font-weight: 600; 
 .shop-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2, rgba(255,255,255,.02)); }
 .shop-row .grow { flex: 1; }
 .shop-row input { width: 90px; }
+
+/* --- вкладка «Сила» --- */
+.bal { padding: 18px 24px; }
+.bal-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+.bal-head h2 { margin: 0; font-size: 22px; }
+.bal-tabs { display: flex; gap: 4px; }
+.bal-tabs button { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; color: var(--dim); }
+.bal-tabs button.on { color: var(--text); border-color: var(--gold); }
+.bal-stats-info { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 13px; }
+.bal-legend { font-size: 13px; max-width: 1100px; margin: 4px 0 14px; }
+.bal-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.bal-table th { text-align: left; color: var(--dim); font-weight: normal; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); }
+.bal-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.bal-table tr.unused td { opacity: .55; }
+.bal-table tr:hover td { background: var(--bg-raised); }
+.bal-art { width: 36px; height: 54px; object-fit: cover; border-radius: 3px; }
+.bal-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.bal-table .num-in { width: 70px; }
+.bal-table .pct { text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; }
+.bal-table .pct.hard { color: #D0605F; }
+.bal-table .pct.easy { color: #D9C27A; }
+.bal-table .small { font-size: 12px; }
+.bal-table .mono { font-family: monospace; color: var(--dim); }
+.bal-open > td { background: var(--bg-panel); }
+.bal-sub { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bal-sub th, .bal-sub td { padding: 4px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; }
+.btn.small { padding: 3px 8px; font-size: 12px; }

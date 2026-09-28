@@ -20,7 +20,7 @@ G="/d/Godot_v4.7.2-stable_win64_console.exe"
 "$G" --headless --path . -s res://tests/run_tests.gd   # тесты (+ бот проходит демо 120 раз)
 "$G" --path . --resolution 1920x1080 -- --mshots=<папка>   # автоснимки: tools/mission_shots.gd
 python tools/ctx.py …                                  # справки по данным
-python tools/editor/server.py                          # редактор контента (http://127.0.0.1:8765)
+python tools/editor/server.py                          # редактор контента (http://127.0.0.1:8765), вкладка «Сила» — баланс и статистика боёв
 ```
 
 ## Где что (код)
@@ -32,7 +32,7 @@ python tools/editor/server.py                          # редактор кон
 | API для интерфейса | `autoload/game_state.gd` (запуск, тик часов, отряды, магазин, главы) |
 | Миссии | `core/rules/mission_flow.gd` (открытие, герои, отряды, часы, действия, главы), `mission_forecast.gd` (слова прогноза), `mission_resolver.gd` (этапы, бой, последствия, отдых) |
 | Правила | `chance_calculator.gd`, `stat_resolver.gd` (характеристики + бонусы по тегам), `condition_checker.gd`, `effect_applier.gd` (команды `cmd`), `injury_rules.gd` (износ, гибель), `edge_rules.gd` (грань смерти вместо травм: поражение → на грань, на грани → бросок смерти 35%; лагерь/удачная миссия снимают), `wear_rules.gd`, `shop_rules.gd`, `atmosphere.gd` (небо); живой отряд — `trust_rules.gd` (доверие пар), `bond_rules.gd` (связки, `data/bonds.json`), `psyche_rules.gd` (психика 100→0, кризис: паника / подъём духа, поступки героев, `data/psyche.json`); рост — `growth_rules.gd` (опыт тегов, эволюции/мутации, `data/tag_growth.json`); `service_rules.gd` (заточка, починка у торговца); `camp_rules.gd` (лагерь: койки, доска слухов); `onslaught_rules.gd` (Натиск Кошмара), `mission_debrief.gd` (разбор «что решило исход»), `journal_rules.gd` (бестиарий, слухи); `memory_rules.gd` (особые навыки карт в бою: условие на тегах → эффект, вместо приёмов); `tutorial_rules.gd` (механики по главам `UNLOCK`, подсказки `data/tutorial.json`) |
-| Бой | `core/combat/combat_session.gd` (автобой, ledger — расчёт силы); экран — `scenes/combat/combat_screen.gd` (только просмотр) |
+| Бой | `core/combat/combat_session.gd` (автобой, ledger — расчёт силы, запас сторон), `core/combat/strikes.gd` (удары: оружие, броня, окружение, прогноз `odds`; данные `data/combat/weapons.json`); экран — `scenes/combat/combat_screen.gd` (только просмотр); калибровка — `tools/strike_calib.gd`, статистика боёв для редактора — `tools/combat_stats.gd` |
 | Экран карты | `scenes/missions/mission_game.gd` (карта, герои, небо, окна), `mission_marker.gd` (карта миссии + кольцо), `mission_window.gd` (брифинг → прибытие → отчёт), `shop_*.gd`, `drop_zone.gd`, `squad_life_ui.gd` (значки доверия/паники, строка брифинга), `camp_window.gd` (лагерь), `journal_window.gd` (журнал), `hint_popup.gd` (подсказки-прожектор), `hint_targets.gd` (цели подсказок); `scenes/vfx/crisis_fx.gd` (момент кризиса психики) |
 | Карты | `scenes/cards/card_view.gd` (отрисовка, арт `art/cards/<ID>.webp`), `card_inspector.gd` (планшет), `card_aura.gd` (облик по тегам) |
 | Фон | `scenes/map/map_backdrop.gd` (рисунки неба `art/regions/<регион>_<небо>.webp` или процедурный), `map_life.gd` |

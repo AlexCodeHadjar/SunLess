@@ -416,6 +416,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._send(200, load_all())
             if path == "/api/version":
                 return self._send(200, {"signature": signature()})
+            if path == "/api/stats":
+                full = os.path.join(ROOT, "tools", "editor", "combat_stats.json")
+                if not os.path.exists(full):
+                    return self._send(200, {})
+                with io.open(full, encoding="utf-8") as f:
+                    return self._send(200, json.load(f))
             if path == "/api/job":
                 name = urllib.parse.parse_qs(url.query).get("name", [""])[0]
                 return self._send(200, _jobs.get(name, {"running": False, "code": None, "log": ""}))
@@ -441,6 +447,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._send(200, save(payload))
             if path == "/api/godot/import":
                 return self._send(200, run_job("import", ["--headless", "--path", ".", "--import"], 600))
+            if path == "/api/godot/stats":
+                return self._send(200, run_job("stats", ["--headless", "--path", ".", "-s", "res://tools/combat_stats.gd"], 900))
             if path == "/api/godot/test":
                 return self._send(200, run_job("test", ["--headless", "--path", ".", "-s", "res://tests/run_tests.gd"], 900))
             return self._send(404, {"error": "нет такого метода"})
