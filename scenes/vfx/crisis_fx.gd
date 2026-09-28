@@ -102,6 +102,7 @@ func _run() -> void:
 		# карта героя в облике кризиса
 		var card := CardView.make(cid, CARD, false)
 		card.psy_override = _state
+		card.psy_big = true
 		card.hover_lift = false
 		card.smoke_on_hover = false
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE

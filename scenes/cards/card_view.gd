@@ -37,6 +37,7 @@ var _art_framed := false
 ## Кризис психики (docs/16 §9г): "" — по состоянию героя; "panic" | "uplift" — показать так принудительно
 ## (отчёт, эффект срабатывания). Обложка меняется на art/cards/<ID>_panic|_uplift, иначе — живой облик поверх.
 var psy_override := ""
+var psy_big := false         # крупная карта момента кризиса (CrisisFX): надпись — заголовком над ней, не меткой
 static var _crisis_art := {}
 var _plate: Control   # плашка читаемости — отдельным слоем поверх живого облика (ауры)
 
@@ -395,8 +396,10 @@ func _draw() -> void:
 	_draw_overlays(r, d, scale_k)
 	if _plate:
 		_plate.queue_redraw()
-	if pst != "":
-		_pill(Vector2(r.get_center().x, r.position.y + r.size.y * 0.60), "ПАНИКА" if pst == "panic" else "ПОДЪЁМ ДУХА", 12 * scale_k,
+	# метка кризиса — над картой, не на рисунке (решение владельца); в момент кризиса (CrisisFX) — крупный заголовок над ней
+	if pst != "" and not psy_big:
+		var pfs := maxf(11.0, 12 * scale_k)
+		_pill(Vector2(r.get_center().x, r.position.y - pfs - 10), "ПАНИКА" if pst == "panic" else "ПОДЪЁМ ДУХА", pfs,
 			SquadLifeUI.PANIC_COLOR if pst == "panic" else SquadLifeUI.UPLIFT_COLOR, false, true)
 	var border := _border_color(d)
 	var w := 3.0 if (highlight or _hover) else 1.5
