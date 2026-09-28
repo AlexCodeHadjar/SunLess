@@ -472,6 +472,7 @@ const EFFECTS = {
   remove_temporaries: { name: "Временные спутники уходят", fields: {} },
   reset_wear: { name: "Сбросить износ (кузнец)", fields: {} },
   text: { name: "Показать текст", fields: { text: "text" } },
+  tide: { name: "Прилив (Берег)", fields: { warn: "number", flood: "number", text: "text" } },
 };
 
 // Условия доступности варианта (core/rules/condition_checker.gd).

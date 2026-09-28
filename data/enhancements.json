@@ -508,6 +508,7 @@
   "wears": true,
   "art": "res://art/cards/U07.webp",
   "art_has_frame": true,
+  "weapon": "Меч",
   "bonuses": [
    {
     "stat": "power",
@@ -546,8 +547,7 @@
     "bonus": 0.05
    },
    "wear": 6
-  },
-  "weapon": "Меч"
+  }
  },
  {
   "id": "U11",

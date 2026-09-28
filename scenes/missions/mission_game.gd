@@ -27,6 +27,9 @@ var _toast: Label
 var _toast_tw: Tween
 var _end: Control
 var _combat_open := false
+var _tide: TideLayer
+var _tide_banner: Label
+var _shown_tide := ""     # прилив, при котором построены метки (новые проходы — перестроить)
 var _badge_timer := 0.0
 
 
@@ -76,6 +79,7 @@ func _process(delta: float) -> void:
 		_badge_timer = 0.5
 		_update_badges()
 		_update_sky()
+		_update_tide()
 	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open
 	if GameState.state.game_over and quiet:
 		_show_end()
@@ -99,6 +103,8 @@ func _build_map() -> void:
 	_embers = Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP)))
 	add_child(_embers)
 	_update_sky()
+	_tide = TideLayer.new()
+	add_child(_tide)
 	_pins_layer = Control.new()
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -241,6 +247,21 @@ func _build_toast() -> void:
 	_toast.modulate.a = 0.0
 	_toast.z_index = 50
 	add_child(_toast)
+	# прилив: строка с отсчётом под верхней панелью
+	_tide_banner = UITheme.label("", "sans_bold", 21, Color(0.72, 0.88, 1.0))
+	_tide_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_tide_banner.anchor_right = 1.0
+	_tide_banner.offset_left = LEFT_W
+	_tide_banner.offset_top = MAP_TOP + 10
+	_tide_banner.offset_bottom = MAP_TOP + 44
+	_tide_banner.add_theme_constant_override("outline_size", 8)
+	_tide_banner.add_theme_color_override("font_outline_color", Color(0, 0.02, 0.05, 0.95))
+	_tide_banner.mouse_filter = Control.MOUSE_FILTER_STOP
+	_tide_banner.tooltip_text = "Прилив Забытого Берега: низины уходят под воду всегда, средние места — как повезёт, высоты — никогда.
+Отряд, которого застанет вода, бежит (проверка Хитрости): провал — один герой падает на грань смерти.
+Незавершённые побочные и случайные миссии в затопленных местах смывает. После отлива лабиринт другой: новые проходы и новые встречи."
+	_tide_banner.visible = false
+	add_child(_tide_banner)
 	add_child(HintPopup.new())
 	HintTargets.resolver = _hint_target
 
@@ -255,6 +276,8 @@ func _hint_target(name: String) -> Rect2:
 	for n in get_children():
 		if (n is MissionWindow or n is ShopWindow or n is CampWindow or n is JournalWindow or n is CardInspector or n is CombatScreen) 				and (n as CanvasItem).visible:
 			return Rect2()
+	if name == "tide_banner":
+		return _tide_banner.get_global_rect() if _tide_banner.visible else Rect2()
 	if name == "sky_moon":
 		var br := _backdrop.get_global_rect()
 		return Rect2(br.position + br.size * MapBackdrop.MOON_AT - Vector2(46, 46), Vector2(92, 92))
@@ -322,9 +345,45 @@ func _refresh() -> void:
 	if _tray_cards() != _shown_collection:
 		_rebuild_cards()
 	_update_badges()
-	if _map_missions() != _shown_missions:
+	if _map_missions() != _shown_missions or _tide_key() != _shown_tide:
 		_rebuild_markers()
 	_update_pins()
+	_update_tide()
+
+
+## Прилив: вода под местами, строка с отсчётом (TideRules).
+func _update_tide() -> void:
+	var s := GameState.state
+	var c := ContentDB.data
+	var ph := TideRules.phase(s)
+	var spots: Array = TideRules.places(s).map(func(l: String) -> Vector2: return _map_point(TideRules.pos(c, s, l)))
+	var left := TideRules.left(s)
+	var urgency := 0.0
+	if ph == "warn":
+		urgency = 1.0 - clampf(left / 45.0, 0.0, 1.0)
+	var titles: Array = TideRules.places(s).map(func(l: String) -> String: return str(c.locations.get(l, {}).get("name", l)))
+	# у места, где ещё лежит карта миссии, подпись уже есть — вода подписывает только опустевшие
+	var shown := {}
+	for mid: String in _markers:
+		shown[str(c.missions.get(mid, {}).get("location", ""))] = true
+	var captions: Array = []
+	for i in titles.size():
+		captions.append("" if shown.has(TideRules.places(s)[i]) else titles[i])
+	_tide.show_tide(ph, spots, urgency, captions)
+	var names := ", ".join(titles)
+	match ph:
+		"warn":
+			_tide_banner.text = "≈ Прилив через %d с — под воду уйдут: %s" % [int(ceil(left)), names]
+		"flood":
+			_tide_banner.text = "≈ Под водой: %s · отлив через %d с" % [names, int(ceil(left))]
+		_:
+			_tide_banner.text = ""
+	_tide_banner.visible = ph != ""
+
+
+func _tide_key() -> String:
+	var t: Dictionary = GameState.state.tide
+	return "%s|%s|%s" % [TideRules.phase(GameState.state), str(t.get("slot", {})), str(t.get("shift", {}))]
 
 
 ## Небо над картой: день и ночь по часам, кровавая луна и затмение — по сюжету (Atmosphere).
@@ -444,6 +503,7 @@ func _map_missions() -> Array:
 func _rebuild_markers() -> void:
 	var c := ContentDB.data
 	_shown_missions = _map_missions()
+	_shown_tide = _tide_key()
 	for ch in _pins_layer.get_children():
 		ch.queue_free()
 	_markers.clear()
@@ -455,7 +515,7 @@ func _rebuild_markers() -> void:
 		by_loc[lid].append(mid)
 	for lid: String in by_loc:
 		var loc: Dictionary = c.locations.get(lid, {})
-		var foot := _map_point(loc.get("pos", [0.5, 0.5]))
+		var foot := _map_point(TideRules.pos(c, GameState.state, lid))
 		var here: Array = by_loc[lid]
 		# сюжетные — крупнее и первыми; несколько миссий одной локации лежат веером
 		here.sort_custom(func(a: String, b: String) -> bool:
@@ -513,6 +573,15 @@ func _update_pins() -> void:
 		var badge := ("⌛ %d с" % int(ceil(left))) if left >= 0.0 and progress < 0.0 and not arrived else ""
 		if badge != "" and str(ContentDB.data.missions.get(mid, {}).get("type", "")) == "onslaught":
 			badge = "НАТИСК · " + badge
+		# прилив: место под водой — ждать отлива; вода идёт — успеет ли отряд
+		var under := TideRules.mission_flooded(ContentDB.data, s, mid)
+		if under:
+			badge = "ПОД ВОДОЙ · %d с" % int(ceil(TideRules.left(s)))
+		elif progress < 0.0 and not arrived and TideRules.risky(ContentDB.data, s, mid):
+			badge = "≈ ВОДА ЧЕРЕЗ %d с" % int(ceil(TideRules.left(s)))
+		var tint := Color(0.5, 0.64, 0.86, 0.8) if under else Color(1, 1, 1, 1)
+		if mk.modulate != tint:
+			mk.modulate = tint
 		if mk.card.badge != badge:
 			mk.card.badge = badge
 			mk.card.queue_redraw()
@@ -536,6 +605,23 @@ func _on_events(events: Array) -> void:
 			"mission":
 				AudioManager.play("open", -8.0)
 				_show_toast(str(e["text"]))
+			"tide_warn", "tide":
+				AudioManager.play("bell", -4.0, 0.5)
+				_show_toast(str(e["text"]))
+				GameState.tutorial("tide")
+			"tide_flood":
+				AudioManager.play("bell", -2.0, 0.4)
+				_show_toast(str(e["text"]))
+			"tide_ebb":
+				AudioManager.play("bell", -8.0, 0.8)
+				_show_toast(str(e["text"]))
+			"tide_caught":
+				# вода застала отряд: окно его прибытия больше не нужно
+				if is_instance_valid(_window) and _window.squad_id == int(e.get("squad", -1)) and _window.mode in ["arrival", "fork"]:
+					_window.close()
+				var hurt: Array = Array(e.get("entries", [])).filter(func(x: Dictionary) -> bool: return str(x.get("kind", "")) in ["edge", "death"]) 					.map(func(x: Dictionary) -> String: return str(x.get("text", "")))
+				AudioManager.play("bell", -2.0, 0.45)
+				_show_toast(str(e["text"]) + ((". " + hurt[0]) if not hurt.is_empty() else ""))
 	_refresh()
 
 

@@ -305,7 +305,15 @@
   "next": [
    "SH21"
   ],
-  "from_event": "E20"
+  "from_event": "E20",
+  "on_complete": [
+   {
+    "cmd": "tide",
+    "warn": 45,
+    "flood": 80,
+    "text": "Солнце клонится — вода возвращается."
+   }
+  ]
  },
  {
   "id": "SH21",
@@ -791,7 +799,15 @@
   "next": [
    "SH24"
   ],
-  "from_event": "E23"
+  "from_event": "E23",
+  "on_complete": [
+   {
+    "cmd": "tide",
+    "warn": 40,
+    "flood": 80,
+    "text": "Касси вздрагивает: «Вода идёт»."
+   }
+  ]
  },
  {
   "id": "SH24",
@@ -1091,7 +1107,15 @@
   "next": [
    "SH26"
   ],
-  "from_event": "E25"
+  "from_event": "E25",
+  "on_complete": [
+   {
+    "cmd": "tide",
+    "warn": 40,
+    "flood": 90,
+    "text": "Лабиринт гудит: море возвращается."
+   }
+  ]
  },
  {
   "id": "SH26",
@@ -1434,7 +1458,15 @@
   "next": [
    "SH28"
   ],
-  "from_event": "E27"
+  "from_event": "E27",
+  "on_complete": [
+   {
+    "cmd": "tide",
+    "warn": 30,
+    "flood": 120,
+    "text": "Шторм гонит воду в лабиринт."
+   }
+  ]
  },
  {
   "id": "SH28",
@@ -1911,7 +1943,15 @@
   "next": [
    "SH31"
   ],
-  "from_event": "E30"
+  "from_event": "E30",
+  "on_complete": [
+   {
+    "cmd": "tide",
+    "warn": 40,
+    "flood": 90,
+    "text": "Ночь. Чёрное море поднимается снова."
+   }
+  ]
  },
  {
   "id": "SH31",
@@ -2924,6 +2964,12 @@
    {
     "cmd": "text",
     "text": "Прилив смыл тайник с припасами. Ночь будет голодной."
+   },
+   {
+    "cmd": "tide",
+    "warn": 15,
+    "flood": 60,
+    "text": "Прилив пришёл раньше срока."
    }
   ],
   "from_event": "M12"

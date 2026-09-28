@@ -121,6 +121,9 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			return [{"kind": "info", "text": "%s: износ сброшен до %d%%" % [content.card_name(worst), WearRules.START]}]
 		"text":
 			return [{"kind": "story", "text": str(e["text"])}]
+		"tide":
+			# прилив Забытого Берега (TideRules): предупреждение → вода → отлив с новыми проходами
+			return TideRules.schedule(content, state, float(e.get("warn", TideRules.WARN)), float(e.get("flood", TideRules.FLOOD)), str(e.get("text", "")))
 		_:
 			push_error("Неизвестная команда эффекта: %s" % str(e.get("cmd", "")))
 	return []

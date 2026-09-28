@@ -29,6 +29,9 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		var sy := str(c.missions[y]["type"]) == "story"
 		return sx and not sy if sx != sy else x < y)
 	for mid: String in open:
+		# прилив: не отправляет туда, где вода застанет отряд (ждёт отлива)
+		if TideRules.risky(c, s, mid):
+			continue
 		var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) \
 			and (str(c.missions[mid]["type"]) == "story" or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= 30)))
 		if free.is_empty():

@@ -51,6 +51,7 @@ static func start_chapter(content: Content, state: RunState, chapter: String) ->
 	state.squads.clear()
 	state.rest_until.clear()
 	state.loc_timers.clear()
+	state.tide = {}
 	for lid: String in _sorted(content.locations):
 		if str(content.locations[lid].get("chapter", "")) == chapter:
 			state.region = str(content.locations[lid].get("region", state.region))
@@ -195,6 +196,8 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	if state.missions.get(mission_id, {}).get("status", "") != "open":
 		return "Миссия недоступна"
 	var m: Dictionary = content.missions.get(mission_id, {})
+	if TideRules.mission_flooded(content, state, mission_id):
+		return "Под водой — ждите отлива"
 	var sq: Dictionary = m.get("squad", {})
 	if heroes_ids.size() < int(sq.get("min", 1)):
 		return "Нужно героев: не меньше %d" % int(sq.get("min", 1))
@@ -259,6 +262,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 	PsycheRules.decay(state, dt, content)
 	out.append_array(CampRules.tick(content, state, dt))
 	out.append_array(OnslaughtRules.tick(content, state))
+	out.append_array(TideRules.tick(content, state))
 	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]
@@ -272,7 +276,7 @@ static func tick(content: Content, state: RunState, dt: float) -> Array:
 		var at := float(state.loc_timers[lid])
 		if at <= state.clock:
 			var loc: Dictionary = content.locations.get(lid, {})
-			out.append_array(_spawn_random(content, state, lid))
+			out.append_array(spawn_random(content, state, lid))
 			state.loc_timers[lid] = state.clock + maxf(1.0, float(loc.get("random", {}).get("every", 60)))
 	return out
 
@@ -288,7 +292,7 @@ static func reached(content: Content, state: RunState, lid: String) -> bool:
 
 ## Случайная миссия локации: первая по порядку из пула, которая сейчас не открыта.
 ## Только там, куда сюжет уже привёл (не спойлерим места раньше времени).
-static func _spawn_random(content: Content, state: RunState, lid: String) -> Array:
+static func spawn_random(content: Content, state: RunState, lid: String) -> Array:
 	if not reached(content, state, lid):
 		return []
 	for mid: String in content.locations.get(lid, {}).get("random", {}).get("pool", []):
@@ -321,7 +325,7 @@ static func after_completion(content: Content, state: RunState) -> Array:
 		var loc: Dictionary = content.locations[lid]
 		var every_n := int(loc.get("random", {}).get("after_missions", 0))
 		if every_n > 0 and str(loc.get("chapter", "")) == state.chapter and n % every_n == 0:
-			out.append_array(_spawn_random(content, state, lid))
+			out.append_array(spawn_random(content, state, lid))
 	return out
 
 

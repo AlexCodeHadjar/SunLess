@@ -49,6 +49,8 @@ var sharpened: Dictionary = {}
 var camp: Dictionary = {}
 ## бестиарий и подтверждённые слухи (JournalRules)
 var journal: Dictionary = {}
+## прилив главы (TideRules): phase warn|flood, at, until, flood, places, slot, shift, count
+var tide: Dictionary = {}
 
 
 func to_dict() -> Dictionary:
@@ -85,6 +87,7 @@ func to_dict() -> Dictionary:
 		"sharpened": sharpened.duplicate(true),
 		"camp": camp.duplicate(true),
 		"journal": journal.duplicate(true),
+		"tide": tide.duplicate(true),
 	}
 
 
@@ -138,6 +141,8 @@ static func from_dict(d: Dictionary) -> RunState:
 		var rec: Dictionary = s.journal["bestiary"][eid]
 		rec["fights"] = int(rec.get("fights", 0))
 		rec["wins"] = int(rec.get("wins", 0))
+	s.tide = Dictionary(d.get("tide", {})).duplicate(true)
+	s.tide["count"] = int(s.tide.get("count", 0))
 	s.shops = Dictionary(d.get("shops", {})).duplicate(true)
 	for sid: String in s.shops:
 		s.shops[sid]["gen"] = int(s.shops[sid].get("gen", 0))

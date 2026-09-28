@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "edge", "recover", "psyche",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
-	"remove_temporaries", "text", "reset_wear", "adjust_trust"]
+	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_on_edge"]
 const STATS := ["power", "will", "cunning"]
