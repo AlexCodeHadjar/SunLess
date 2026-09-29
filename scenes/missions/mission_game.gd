@@ -3,7 +3,7 @@ extends Control
 ## Карта занимает всё окно: глава, день и фаза — надписями прямо на ней, меню — строкой в углу,
 ## ряд героев — почти прозрачный. Карту-план можно чуть сдвинуть, зажав кнопку мыши.
 
-const TRAY_TOP := 790.0         # верх ряда героев (ряд лежит поверх карты)
+const TRAY_H := 290.0           # высота ряда героев от низа окна (ряд лежит поверх карты)
 # раскладка старой панорамы (главы без карты-плана): точки мест из locations.pos
 const PANO_LEFT := 250.0
 const PANO_TOP := 72.0
@@ -45,6 +45,7 @@ var _drag_from := Vector2.ZERO  # где зажали кнопку мыши
 var _drag_pan := Vector2.ZERO   # сдвиг карты в этот момент
 var _dragging := false
 var _drag_armed := false
+var _relayout_in := -1.0        # окно сменило размер: через сколько секунд переложить карту
 
 
 func _ready() -> void:
@@ -58,6 +59,7 @@ func _ready() -> void:
 	_build_bottom()
 	_build_toast()
 	GameState.missions_changed.connect(_refresh)
+	get_viewport().size_changed.connect(func() -> void: _relayout_in = 0.2)
 	GameState.mission_events.connect(_on_events)
 	EventBus.state_changed.connect(_refresh)
 	EventBus.toast.connect(_show_toast)
@@ -85,6 +87,10 @@ func _first_toast() -> void:
 
 
 func _process(delta: float) -> void:
+	if _relayout_in >= 0.0:
+		_relayout_in -= delta
+		if _relayout_in < 0.0:
+			_relayout()
 	if not _combat_open and not GameState.story_open:
 		GameState.mission_tick(delta)
 	_update_pins()
@@ -115,7 +121,7 @@ func _process(delta: float) -> void:
 func _build_map() -> void:
 	var cfg := MapRules.config(ContentDB.data, GameState.state.chapter)
 	if not cfg.is_empty():
-		_sleeper = SleeperMap.make(cfg, Rect2(0, 0, 1920, 1080))
+		_sleeper = SleeperMap.make(cfg, Rect2(Vector2.ZERO, _screen()))
 		add_child(_sleeper)
 		_sleeper.panned.connect(func(off: Vector2) -> void:
 			if _pan_layer != null:
@@ -126,18 +132,19 @@ func _build_map() -> void:
 		_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 		add_child(_backdrop)
 		_life = MapLife.new()
-		_life.size = Vector2(1920, TRAY_TOP)
+		_life.size = Vector2(1920, 790)
 		add_child(_life)
-	_fog = Vfx.fog(Rect2(Vector2(-200, 160), Vector2(2320, TRAY_TOP - 160)), 0.07)
+	var tray_top := _screen().y - TRAY_H
+	_fog = Vfx.fog(Rect2(Vector2(-200, 160), Vector2(_screen().x + 400, tray_top - 160)), 0.07)
 	add_child(_fog)
-	_embers = Vfx.ambient_embers(Rect2(Vector2(0, 0), Vector2(1920, TRAY_TOP)))
+	_embers = Vfx.ambient_embers(Rect2(Vector2(0, 0), Vector2(_screen().x, tray_top)))
 	add_child(_embers)
 	_update_sky()
 	_tide = TideLayer.new()
 	add_child(_tide)
 	_pan_layer = Control.new()
 	_pan_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_pan_layer.size = Vector2(1920, 1080)
+	_pan_layer.size = _screen()
 	add_child(_pan_layer)
 	_pins_layer = Control.new()
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -154,8 +161,25 @@ func _build_map() -> void:
 		_shops[sid] = icon
 	# лагерь — в середину видимой части карты
 	if _sleeper != null:
-		_sleeper.focus(_sleeper.center(c, GameState.state, GameState.state.party_at), Vector2(960, TRAY_TOP * 0.5))
+		_sleeper.focus(_sleeper.center(c, GameState.state, GameState.state.party_at), Vector2(_screen().x / 2.0, (_screen().y - TRAY_H) * 0.5))
 		_pan_layer.position = _sleeper.pan
+
+
+## Настоящий размер окна в единицах интерфейса: при растяжении «expand» он шире или выше 1920×1080.
+func _screen() -> Vector2:
+	return get_viewport_rect().size
+
+
+## Окно сменило размер (F11, другое соотношение сторон): карта-план, метки и лавки — под новое окно.
+func _relayout() -> void:
+	if _sleeper == null:
+		return
+	_sleeper.relayout(Rect2(Vector2.ZERO, _screen()))
+	_pan_layer.size = _screen()
+	for sid: String in _shops:
+		(_shops[sid] as Control).position = _shop_point(sid) - Vector2(110, 42)
+	_rebuild_markers()
+	_update_pins()
 
 
 func _region() -> String:
@@ -294,8 +318,10 @@ func _build_bottom() -> void:
 	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	shade.stretch_mode = TextureRect.STRETCH_SCALE
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shade.position = Vector2(0, TRAY_TOP - 60)
-	shade.size = Vector2(1920, 1080 - TRAY_TOP + 60)
+	shade.anchor_top = 1.0
+	shade.anchor_bottom = 1.0
+	shade.anchor_right = 1.0
+	shade.offset_top = -(TRAY_H + 60)
 	add_child(shade)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
@@ -303,7 +329,7 @@ func _build_bottom() -> void:
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
 	panel.anchor_right = 1.0
-	panel.offset_top = -(1080 - TRAY_TOP)
+	panel.offset_top = -TRAY_H
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
@@ -335,7 +361,15 @@ func _build_bottom() -> void:
 func _build_day_panel() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	box.position = Vector2(1430, TRAY_TOP + 22)
+	# у правого нижнего края окна при любом соотношении сторон
+	box.anchor_left = 1.0
+	box.anchor_right = 1.0
+	box.anchor_top = 1.0
+	box.anchor_bottom = 1.0
+	box.offset_left = -490
+	box.offset_right = -30
+	box.offset_top = -(TRAY_H - 22)
+	box.offset_bottom = -20
 	box.custom_minimum_size = Vector2(460, 0)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)

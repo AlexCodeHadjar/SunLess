@@ -493,18 +493,12 @@ func _build_pocket(y: float) -> void:
 	var head := UITheme.label("КАРМАШЕК УСИЛЕНИЙ", "caps", 19, Palette.GOLD)
 	head.position = Vector2(0, y)
 	_content.add_child(head)
-	var tip := UITheme.label("Усиления в кармашке сами прикладываются к событию, когда %s — исполнитель. Их бонусы и теги уже учтены выше. Щелчок — положить или убрать." % c.card_name(card_id),
-		"sans", 16, Palette.TEXT_DIM)
-	tip.position = Vector2(250, y + 2)
-	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	tip.custom_minimum_size = Vector2(860, 0)
-	_content.add_child(tip)
 	var row := HBoxContainer.new()
-	row.position = Vector2(0, y + 50)
+	row.position = Vector2(2, y + 36)
 	row.add_theme_constant_override("separation", 12)
 	_content.add_child(row)
 	var pocket := _pocket()
-	var slot := Vector2(128, 219)
+	var slot := Vector2(118, 202)   # с запасом: рамки и подъём при наведении не вылезают за планшет
 	for i in POCKET_MAX:
 		if i < pocket.size():
 			var cv := CardView.make(pocket[i], slot, false)
@@ -523,14 +517,14 @@ func _build_pocket(y: float) -> void:
 	# доступные усиления
 	var sep := ColorRect.new()
 	sep.color = Palette.LINE
-	sep.custom_minimum_size = Vector2(1, 222)
+	sep.custom_minimum_size = Vector2(1, 204)
 	row.add_child(sep)
 	var avail_col := VBoxContainer.new()
 	avail_col.add_theme_constant_override("separation", 4)
 	row.add_child(avail_col)
 	avail_col.add_child(UITheme.label("Можно положить:", "sans", 16, Palette.TEXT_DIM))
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(640, 228)
+	sc.custom_minimum_size = Vector2(640, 206)
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	avail_col.add_child(sc)
 	var avail := HBoxContainer.new()
@@ -541,7 +535,7 @@ func _build_pocket(y: float) -> void:
 		if c.card_kind(card) != "enhancement" or pocket.has(card):
 			continue
 		any = true
-		var small := CardView.make(card, Vector2(128, 219), false)
+		var small := CardView.make(card, slot, false)
 		small.tooltip_text = ""
 		var owner := _pocket_owner(card)
 		if owner != "":

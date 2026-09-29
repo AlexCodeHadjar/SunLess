@@ -26,6 +26,10 @@ var sky := ""
 
 var _clip: Control
 var _world: Control
+var _bg: TextureRect
+var _aspect := 2.0
+var _content: Content      # последнее состояние из sync — чтобы переложить места при смене размера окна
+var _state: RunState
 var _water: ColorRect
 var _ink: Control
 var _sprites_layer: Control
@@ -64,23 +68,16 @@ func _ready() -> void:
 	_clip.clip_contents = true
 	var base := _load("base")
 	var aspect := float(base.get_width()) / float(base.get_height()) if base != null else 2.0
-	# основа покрывает окно целиком и чуть больше — запас для сдвига мышью
-	var w := maxf(view.size.x, view.size.y * aspect) * float(cfg.get("zoom", 1.15))
-	rect.size = Vector2(w, w / aspect)
-	rect.position = Vector2.ZERO
+	_aspect = aspect
 	_world = _layer(_clip)
-	set_pan(Vector2((view.size.x - rect.size.x) / 2.0, -float(cfg.get("view_top", 0.08)) * rect.size.y))
-	var bg := TextureRect.new()
+	_bg = TextureRect.new()
+	var bg := _bg
 	bg.texture = base
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
-	bg.position = rect.position
-	bg.size = rect.size
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_world.add_child(bg)
 	_water = ColorRect.new()
-	_water.position = rect.position
-	_water.size = rect.size
 	_water.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var wm := ShaderMaterial.new()
 	wm.shader = WATER_SHADER
@@ -99,8 +96,6 @@ func _ready() -> void:
 	_shade = _layer(_world)
 	_shade.draw.connect(_draw_shade)
 	_fog = ColorRect.new()
-	_fog.position = rect.position
-	_fog.size = rect.size
 	_fog.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var fm := ShaderMaterial.new()
 	fm.shader = FOG_SHADER
@@ -108,6 +103,8 @@ func _ready() -> void:
 	fm.set_shader_parameter("aspect", aspect)
 	_fog.material = fm
 	_world.add_child(_fog)
+	_fit()
+	set_pan(Vector2((view.size.x - rect.size.x) / 2.0, -float(cfg.get("view_top", 0.08)) * rect.size.y))
 	_over = _layer(_world)
 	_over.draw.connect(_draw_over)
 	_weather = _layer(_clip)
@@ -116,6 +113,39 @@ func _ready() -> void:
 	for i in 5:
 		_clouds.append({"tex": Vfx.tex(names[i % names.size()]), "pos": Vector2(_rng.randf() * rect.size.x, _rng.randf() * rect.size.y),
 			"scale": _rng.randf_range(1.4, 2.4), "speed": _rng.randf_range(5.0, 11.0)})
+
+
+## Основа покрывает окно целиком и чуть больше — запас для сдвига мышью.
+func _fit() -> void:
+	_clip.position = view.position
+	_clip.size = view.size
+	var w := maxf(view.size.x, view.size.y * _aspect) * float(cfg.get("zoom", 1.15))
+	rect.size = Vector2(w, w / _aspect)
+	rect.position = Vector2.ZERO
+	for layer: Control in [_bg, _water, _fog]:
+		layer.position = rect.position
+		layer.size = rect.size
+
+
+## Окно сменило размер: основа, места и сдвиг — под новую область. Сдвиг сохраняет середину окна.
+func relayout(area: Rect2) -> void:
+	if area == view or _clip == null:
+		return
+	var mid := (view.size / 2.0 - pan) / rect.size
+	view = area
+	_fit()
+	for lid: String in _sprites:
+		var tr: TextureRect = _sprites[lid]
+		if _content == null or not is_instance_valid(tr):
+			continue
+		var sz := _sprite_size(_content, _state, lid)
+		tr.size = Vector2(sz, sz)
+		tr.position = center(_content, _state, lid) - view.position - tr.size / 2.0
+		tr.pivot_offset = tr.size / 2.0
+	if _content != null:
+		sync(_content, _state, sky)
+	set_pan(view.size / 2.0 - mid * rect.size)
+	panned.emit(pan)
 
 
 func _layer(parent: Control) -> Control:
@@ -180,6 +210,8 @@ func _sprite_size(content: Content, state: RunState, lid: String) -> float:
 
 ## Привести карту к состоянию прохождения: облики мест, вода, туман, небо.
 func sync(content: Content, state: RunState, sky_now: String) -> void:
+	_content = content
+	_state = state
 	if sky_now != sky:
 		_set_sky(sky_now, sky != "")
 	var revealed: Array = []
