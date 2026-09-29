@@ -8,8 +8,13 @@ extends RefCounted
 ## 2) Дела лагеря — всегда доступны (каждое один раз в день): Разведка (открыть места в двух переходах и найти
 ##    встречу), Сбор (осколки; после отлива больше), Дозор (ночное нападение реже). Исполнитель тратит выход:
 ##    усталость как за миссию.
+## 3) Режиссёр напряжения (docs/17 §18, по мотивам режиссёра Left 4 Dead): напряжение отряда 0..1 — психика,
+##    грань смерти, Натиск, вода, кровавая луна. Вымотан (≥ CALM_FROM) — встречи спокойные (проверки), свеж
+##    (< FIGHT_BELOW) — с боем, и Натиск приходит на день раньше; между — по чётности дня.
 
 const TASKS := ["scout", "forage", "watch"]
+const CALM_FROM := 0.5
+const FIGHT_BELOW := 0.3
 
 
 static func min_options(content: Content) -> int:
@@ -63,7 +68,43 @@ static func ensure(content: Content, state: RunState) -> Array:
 			need -= 1
 	if not out.is_empty():
 		out.push_front({"kind": "planner", "text": "Рядом с лагерем неспокойно — появились местные встречи"})
+	# свежий отряд: Натиск не заставит себя ждать
+	var nd := OnslaughtRules.next_day(state)
+	if tension(content, state) < FIGHT_BELOW and nd > state.day + 1 and int(state.flags.get("onslaught_nudged", 0)) != nd:
+		state.flags["onslaught_day"] = nd - 1
+		state.flags["onslaught_nudged"] = nd - 1   # каждый Натиск — не больше чем на день раньше
 	return out
+
+
+## Напряжение отряда 0..1: низкая психика, герои на грани, Натиск, вода, кровавая луна.
+static func tension(content: Content, state: RunState) -> float:
+	var heroes := MissionFlow.heroes(content, state)
+	if heroes.is_empty():
+		return 0.0
+	var psy := 0.0
+	var edge := 0
+	for cid: String in heroes:
+		psy += PsycheRules.psyche(state, cid)
+		if EdgeRules.on_edge(state, cid):
+			edge += 1
+	var t := (1.0 - psy / heroes.size() / 100.0) * 0.5 + float(edge) / heroes.size() * 0.3
+	if MissionFlow.open_missions(state).any(func(m: String) -> bool: return str(content.missions.get(m, {}).get("type", "")) == "onslaught"):
+		t += 0.1
+	if TideRules.phase(state) != "":
+		t += 0.1
+	if str(DayRules.phase(content, state).get("id", "")) == "blood_moon":
+		t += 0.1
+	return clampf(t, 0.0, 1.0)
+
+
+## Какие встречи режиссёр ставит первыми: calm — вымотанному отряду, fight — свежему.
+static func preferred_kind(content: Content, state: RunState) -> String:
+	var t := tension(content, state)
+	if t >= CALM_FROM:
+		return "calm"
+	if t < FIGHT_BELOW:
+		return "fight"
+	return "calm" if state.day % 2 == 0 else "fight"
 
 
 ## Места для встречи: сухие, где можно встать лагерем, без открытой миссии; ближние — первыми.
@@ -86,7 +127,14 @@ static func _candidates(content: Content, state: RunState, max_steps: int) -> Ar
 ## Поднять встречу в месте: сначала местная (random.local), потом обычная встреча места. [] — нечего поднять.
 static func spawn_local(content: Content, state: RunState, lid: String) -> Array:
 	var rnd: Dictionary = content.locations.get(lid, {}).get("random", {})
-	var pool: Array = Array(rnd.get("local", [])) + Array(rnd.get("pool", []))
+	# местные встречи — нужного режиссёру вида первыми, потом обычные встречи места
+	var want := preferred_kind(content, state)
+	var local: Array = Array(rnd.get("local", [])).duplicate()
+	local.sort_custom(func(a: String, b: String) -> bool:
+		var ka := str(content.missions.get(a, {}).get("local_kind", "")) == want
+		var kb := str(content.missions.get(b, {}).get("local_kind", "")) == want
+		return ka and not kb if ka != kb else a < b)
+	var pool: Array = local + Array(rnd.get("pool", []))
 	for mid: String in pool:
 		if not content.missions.has(mid) or str(state.missions.get(mid, {}).get("status", "")) in ["open", "active"]:
 			continue

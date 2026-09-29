@@ -5747,92 +5747,60 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS02",
   "location": "low_tide",
   "type": "random",
-  "title": "Засада в кораллах: Отмель",
-  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
-  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "title": "Лужи отлива: Отмель",
+  "briefing": "Вода ушла и оставила лужи — в одних блестят осколки, в других что-то шевелится.",
+  "arrival": "Мокрый песок, запах соли и гнили. Лужи тянутся до самой кромки.",
   "rumors": [
    {
-    "text": "Тропа [узкая]",
-    "tag": "Узость"
+    "text": "Лужи [неглубокие]",
+    "tag": "Песок"
    },
    {
-    "text": "Они [ждут]",
-    "tag": "Засада"
+    "text": "Вода [вернётся]",
+    "tag": "Прилив / Отлив"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
    "max": 3
   },
-  "enemies": [
-   "M03"
-  ],
-  "field": "F_08",
+  "enemies": [],
+  "field": "F_17",
   "known_tags": [
-   "Узость",
-   "Коралл"
+   "Песок",
+   "Прилив / Отлив"
   ],
-  "hidden_tags": [
-   "Засада"
-  ],
+  "hidden_tags": [],
   "context": [
-   "combat",
-   "stealth"
+   "survival"
   ],
   "actions": [
    {
-    "id": "LS02_fight",
-    "label": "Ударить первыми",
-    "text": "Пока они думают, что вы не знаете.",
+    "id": "LS02_search",
+    "label": "Обыскать лужи",
+    "text": "По краю, не залезая глубоко.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_08"
-      },
-      "tags": [
-       "combat"
-      ],
-      "ok": "Засада кончилась для них.",
-      "fail": "Кораллы режут не хуже когтей."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS02_around",
-    "label": "Обойти по кромке",
-    "text": "Долго, но тихо.",
-    "stages": [
-     {
-      "name": "Обход",
+      "name": "Поиск",
       "req": {
-       "cunning": 6
+       "cunning": 5
       },
       "tags": [
-       "stealth",
        "survival"
       ],
-      "ok": "Вы выходите им в спину — и к их кладовой.",
-      "fail": "Хитин поворачивается на звук."
+      "ok": "Горсть осколков в иле.",
+      "fail": "Ил засасывает находку."
      }
     ],
     "on_success": [
@@ -5840,6 +5808,32 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS02_deep",
+    "label": "Лезть в глубокую",
+    "text": "Там блестит сильнее.",
+    "stages": [
+     {
+      "name": "Глубина",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival",
+       "climb"
+      ],
+      "ok": "Со дна — целый мешок осколков.",
+      "fail": "Холодная вода сводит руки."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
      }
     ]
    },
@@ -5852,7 +5846,8 @@
   ],
   "expires": 1,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS03",
@@ -5948,66 +5943,90 @@
    }
   ],
   "expires": 1,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS04",
   "location": "shelter",
   "type": "random",
-  "title": "Падальщик у Расщелина-укрытие",
-  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
-  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "title": "Дозор: Расщелина-укрытие",
+  "briefing": "С высоты видно, где ночью шевелилось море и куда ушли твари. Час на камнях — и берег станет понятнее.",
+  "arrival": "Ветер свистит в щелях камня. Внизу, у кромки воды, — свежие следы.",
   "rumors": [
    {
-    "text": "Он [один]",
-    "tag": "Одиночка"
+    "text": "Внизу [чьи-то следы]",
+    "tag": "Засада"
    },
    {
-    "text": "Он [голоден]",
-    "tag": "Когти"
+    "text": "Камень [сухой и тёплый]",
+    "tag": "Высота"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
-   "max": 3
+   "max": 2
   },
-  "enemies": [
-   "M03"
-  ],
+  "enemies": [],
   "field": "F_03",
   "known_tags": [
-   "Одиночка",
-   "Высота"
+   "Высота",
+   "Камень"
   ],
   "hidden_tags": [
-   "Когти"
+   "Засада"
   ],
   "context": [
-   "combat",
-   "lure"
+   "survival",
+   "climb"
   ],
   "actions": [
    {
-    "id": "LS04_fight",
-    "label": "Встретить на камнях",
-    "text": "Сверху бить удобнее.",
+    "id": "LS04_watch",
+    "label": "Высмотреть тропы",
+    "text": "Не спеша, пока светло.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_03"
+      "name": "Дозор",
+      "req": {
+       "cunning": 5
       },
       "tags": [
-       "combat"
+       "survival",
+       "stealth"
       ],
-      "ok": "Хитин треснул. Лагерь спокоен.",
-      "fail": "Тварь уходит вниз, унося добычу."
+      "ok": "Тропы как на ладони: кто-то прятал здесь добычу.",
+      "fail": "Туман съел половину берега."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS04_climb",
+    "label": "Спуститься к следам",
+    "text": "Узнать, кто ходит под скалой.",
+    "stages": [
+     {
+      "name": "Спуск",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb",
+       "survival"
+      ],
+      "ok": "Внизу — тайник Спящего, которому он больше не нужен.",
+      "fail": "Камень осыпается под ногой."
      }
     ],
     "on_success": [
@@ -6015,32 +6034,6 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS04_lure",
-    "label": "Отвести от лагеря",
-    "text": "Пусть уйдёт за приманкой.",
-    "stages": [
-     {
-      "name": "Приманка",
-      "req": {
-       "cunning": 6
-      },
-      "tags": [
-       "lure",
-       "stealth"
-      ],
-      "ok": "Падальщик уходит по ложному следу.",
-      "fail": "Он не купился."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 1
      }
     ]
    },
@@ -6053,7 +6046,8 @@
   ],
   "expires": 2,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS05",
@@ -6150,66 +6144,90 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS06",
   "location": "spire_view",
   "type": "random",
-  "title": "Падальщик у Костяной хребет",
-  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
-  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "title": "Дозор: Костяной хребет",
+  "briefing": "С высоты видно, где ночью шевелилось море и куда ушли твари. Час на камнях — и берег станет понятнее.",
+  "arrival": "Ветер свистит в щелях камня. Внизу, у кромки воды, — свежие следы.",
   "rumors": [
    {
-    "text": "Он [один]",
-    "tag": "Одиночка"
+    "text": "Внизу [чьи-то следы]",
+    "tag": "Засада"
    },
    {
-    "text": "Он [голоден]",
-    "tag": "Когти"
+    "text": "Камень [сухой и тёплый]",
+    "tag": "Высота"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
-   "max": 3
+   "max": 2
   },
-  "enemies": [
-   "M03"
-  ],
+  "enemies": [],
   "field": "F_03",
   "known_tags": [
-   "Одиночка",
-   "Высота"
+   "Высота",
+   "Камень"
   ],
   "hidden_tags": [
-   "Когти"
+   "Засада"
   ],
   "context": [
-   "combat",
-   "lure"
+   "survival",
+   "climb"
   ],
   "actions": [
    {
-    "id": "LS06_fight",
-    "label": "Встретить на камнях",
-    "text": "Сверху бить удобнее.",
+    "id": "LS06_watch",
+    "label": "Высмотреть тропы",
+    "text": "Не спеша, пока светло.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_03"
+      "name": "Дозор",
+      "req": {
+       "cunning": 5
       },
       "tags": [
-       "combat"
+       "survival",
+       "stealth"
       ],
-      "ok": "Хитин треснул. Лагерь спокоен.",
-      "fail": "Тварь уходит вниз, унося добычу."
+      "ok": "Тропы как на ладони: кто-то прятал здесь добычу.",
+      "fail": "Туман съел половину берега."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS06_climb",
+    "label": "Спуститься к следам",
+    "text": "Узнать, кто ходит под скалой.",
+    "stages": [
+     {
+      "name": "Спуск",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb",
+       "survival"
+      ],
+      "ok": "Внизу — тайник Спящего, которому он больше не нужен.",
+      "fail": "Камень осыпается под ногой."
      }
     ],
     "on_success": [
@@ -6217,32 +6235,6 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS06_lure",
-    "label": "Отвести от лагеря",
-    "text": "Пусть уйдёт за приманкой.",
-    "stages": [
-     {
-      "name": "Приманка",
-      "req": {
-       "cunning": 6
-      },
-      "tags": [
-       "lure",
-       "stealth"
-      ],
-      "ok": "Падальщик уходит по ложному следу.",
-      "fail": "Он не купился."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 1
      }
     ]
    },
@@ -6255,7 +6247,8 @@
   ],
   "expires": 2,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS07",
@@ -6355,66 +6348,90 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS08",
   "location": "high_ground",
   "type": "random",
-  "title": "Падальщик у Высота",
-  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
-  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "title": "Дозор: Высота",
+  "briefing": "С высоты видно, где ночью шевелилось море и куда ушли твари. Час на камнях — и берег станет понятнее.",
+  "arrival": "Ветер свистит в щелях камня. Внизу, у кромки воды, — свежие следы.",
   "rumors": [
    {
-    "text": "Он [один]",
-    "tag": "Одиночка"
+    "text": "Внизу [чьи-то следы]",
+    "tag": "Засада"
    },
    {
-    "text": "Он [голоден]",
-    "tag": "Когти"
+    "text": "Камень [сухой и тёплый]",
+    "tag": "Высота"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
-   "max": 3
+   "max": 2
   },
-  "enemies": [
-   "M03"
-  ],
+  "enemies": [],
   "field": "F_03",
   "known_tags": [
-   "Одиночка",
-   "Высота"
+   "Высота",
+   "Камень"
   ],
   "hidden_tags": [
-   "Когти"
+   "Засада"
   ],
   "context": [
-   "combat",
-   "lure"
+   "survival",
+   "climb"
   ],
   "actions": [
    {
-    "id": "LS08_fight",
-    "label": "Встретить на камнях",
-    "text": "Сверху бить удобнее.",
+    "id": "LS08_watch",
+    "label": "Высмотреть тропы",
+    "text": "Не спеша, пока светло.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_03"
+      "name": "Дозор",
+      "req": {
+       "cunning": 5
       },
       "tags": [
-       "combat"
+       "survival",
+       "stealth"
       ],
-      "ok": "Хитин треснул. Лагерь спокоен.",
-      "fail": "Тварь уходит вниз, унося добычу."
+      "ok": "Тропы как на ладони: кто-то прятал здесь добычу.",
+      "fail": "Туман съел половину берега."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS08_climb",
+    "label": "Спуститься к следам",
+    "text": "Узнать, кто ходит под скалой.",
+    "stages": [
+     {
+      "name": "Спуск",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb",
+       "survival"
+      ],
+      "ok": "Внизу — тайник Спящего, которому он больше не нужен.",
+      "fail": "Камень осыпается под ногой."
      }
     ],
     "on_success": [
@@ -6422,32 +6439,6 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS08_lure",
-    "label": "Отвести от лагеря",
-    "text": "Пусть уйдёт за приманкой.",
-    "stages": [
-     {
-      "name": "Приманка",
-      "req": {
-       "cunning": 6
-      },
-      "tags": [
-       "lure",
-       "stealth"
-      ],
-      "ok": "Падальщик уходит по ложному следу.",
-      "fail": "Он не купился."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 1
      }
     ]
    },
@@ -6460,7 +6451,8 @@
   ],
   "expires": 2,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS09",
@@ -6556,66 +6548,62 @@
    }
   ],
   "expires": 1,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS10",
   "location": "centurion_gate",
   "type": "random",
-  "title": "Щупальца в руинах: Коралловые врата",
-  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
-  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "title": "Завал: Коралловые врата",
+  "briefing": "Ночью в руинах что-то обрушилось. Под свежим завалом — проход, которого вчера не было.",
+  "arrival": "Пыль ещё не осела. Под плитой — пустота и запах старого железа.",
   "rumors": [
    {
-    "text": "В нише [мокро]",
-    "tag": "Вода"
+    "text": "Под плитой [пустота]",
+    "tag": "Камень"
    },
    {
-    "text": "Что-то [хватает]",
-    "tag": "Захват"
+    "text": "Железо [Легиона]",
+    "tag": "Укрытия"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
    "max": 3
   },
-  "enemies": [
-   "M12"
-  ],
+  "enemies": [],
   "field": "F_06",
   "known_tags": [
-   "Вода",
-   "Узость"
+   "Камень",
+   "Укрытия"
   ],
-  "hidden_tags": [
-   "Захват"
-  ],
+  "hidden_tags": [],
   "context": [
-   "combat",
-   "stealth"
+   "survival",
+   "knowledge"
   ],
   "actions": [
    {
-    "id": "LS10_fight",
-    "label": "Выжечь нишу",
-    "text": "Бой в узком проходе.",
+    "id": "LS10_lift",
+    "label": "Разобрать завал",
+    "text": "Силой — плиту за плитой.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M12"
-       ],
-       "field": "F_06"
+      "name": "Завал",
+      "req": {
+       "power": 6
       },
       "tags": [
-       "combat"
+       "climb",
+       "survival"
       ],
-      "ok": "Ниша пуста — и в ней блестит.",
-      "fail": "Щупальца утаскивают добычу в глубину."
+      "ok": "Под завалом — ниша с чужими запасами.",
+      "fail": "Плита не поддаётся."
      }
     ],
     "on_success": [
@@ -6627,20 +6615,20 @@
     ]
    },
    {
-    "id": "LS10_sneak",
-    "label": "Проскользнуть мимо",
-    "text": "Тихо, вдоль стены.",
+    "id": "LS10_read",
+    "label": "Прочесть знаки",
+    "text": "На стенах — метки Легиона.",
     "stages": [
      {
-      "name": "Мимо ниши",
+      "name": "Знаки",
       "req": {
        "cunning": 6
       },
       "tags": [
-       "stealth"
+       "knowledge"
       ],
-      "ok": "Вы забираете то, что лежало у входа.",
-      "fail": "Щупальце задевает ногу."
+      "ok": "Знаки ведут к тайнику за колонной.",
+      "fail": "Знаки стёрты водой."
      }
     ],
     "on_success": [
@@ -6660,7 +6648,8 @@
   ],
   "expires": 2,
   "local": true,
-  "from_event": "M12"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS11",
@@ -6757,92 +6746,60 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS12",
   "location": "leviathan_ribs",
   "type": "random",
-  "title": "Засада в кораллах: Рёбра Левиафана",
-  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
-  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "title": "Лужи отлива: Рёбра Левиафана",
+  "briefing": "Вода ушла и оставила лужи — в одних блестят осколки, в других что-то шевелится.",
+  "arrival": "Мокрый песок, запах соли и гнили. Лужи тянутся до самой кромки.",
   "rumors": [
    {
-    "text": "Тропа [узкая]",
-    "tag": "Узость"
+    "text": "Лужи [неглубокие]",
+    "tag": "Песок"
    },
    {
-    "text": "Они [ждут]",
-    "tag": "Засада"
+    "text": "Вода [вернётся]",
+    "tag": "Прилив / Отлив"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
    "max": 3
   },
-  "enemies": [
-   "M03"
-  ],
-  "field": "F_08",
+  "enemies": [],
+  "field": "F_17",
   "known_tags": [
-   "Узость",
-   "Коралл"
+   "Песок",
+   "Прилив / Отлив"
   ],
-  "hidden_tags": [
-   "Засада"
-  ],
+  "hidden_tags": [],
   "context": [
-   "combat",
-   "stealth"
+   "survival"
   ],
   "actions": [
    {
-    "id": "LS12_fight",
-    "label": "Ударить первыми",
-    "text": "Пока они думают, что вы не знаете.",
+    "id": "LS12_search",
+    "label": "Обыскать лужи",
+    "text": "По краю, не залезая глубоко.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_08"
-      },
-      "tags": [
-       "combat"
-      ],
-      "ok": "Засада кончилась для них.",
-      "fail": "Кораллы режут не хуже когтей."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS12_around",
-    "label": "Обойти по кромке",
-    "text": "Долго, но тихо.",
-    "stages": [
-     {
-      "name": "Обход",
+      "name": "Поиск",
       "req": {
-       "cunning": 6
+       "cunning": 5
       },
       "tags": [
-       "stealth",
        "survival"
       ],
-      "ok": "Вы выходите им в спину — и к их кладовой.",
-      "fail": "Хитин поворачивается на звук."
+      "ok": "Горсть осколков в иле.",
+      "fail": "Ил засасывает находку."
      }
     ],
     "on_success": [
@@ -6850,6 +6807,32 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS12_deep",
+    "label": "Лезть в глубокую",
+    "text": "Там блестит сильнее.",
+    "stages": [
+     {
+      "name": "Глубина",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival",
+       "climb"
+      ],
+      "ok": "Со дна — целый мешок осколков.",
+      "fail": "Холодная вода сводит руки."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
      }
     ]
    },
@@ -6862,7 +6845,8 @@
   ],
   "expires": 1,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS13",
@@ -6959,92 +6943,60 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS14",
   "location": "current_sink",
   "type": "random",
-  "title": "Засада в кораллах: Воронка течения",
-  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
-  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "title": "Лужи отлива: Воронка течения",
+  "briefing": "Вода ушла и оставила лужи — в одних блестят осколки, в других что-то шевелится.",
+  "arrival": "Мокрый песок, запах соли и гнили. Лужи тянутся до самой кромки.",
   "rumors": [
    {
-    "text": "Тропа [узкая]",
-    "tag": "Узость"
+    "text": "Лужи [неглубокие]",
+    "tag": "Песок"
    },
    {
-    "text": "Они [ждут]",
-    "tag": "Засада"
+    "text": "Вода [вернётся]",
+    "tag": "Прилив / Отлив"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
    "max": 3
   },
-  "enemies": [
-   "M03"
-  ],
-  "field": "F_08",
+  "enemies": [],
+  "field": "F_17",
   "known_tags": [
-   "Узость",
-   "Коралл"
+   "Песок",
+   "Прилив / Отлив"
   ],
-  "hidden_tags": [
-   "Засада"
-  ],
+  "hidden_tags": [],
   "context": [
-   "combat",
-   "stealth"
+   "survival"
   ],
   "actions": [
    {
-    "id": "LS14_fight",
-    "label": "Ударить первыми",
-    "text": "Пока они думают, что вы не знаете.",
+    "id": "LS14_search",
+    "label": "Обыскать лужи",
+    "text": "По краю, не залезая глубоко.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_08"
-      },
-      "tags": [
-       "combat"
-      ],
-      "ok": "Засада кончилась для них.",
-      "fail": "Кораллы режут не хуже когтей."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS14_around",
-    "label": "Обойти по кромке",
-    "text": "Долго, но тихо.",
-    "stages": [
-     {
-      "name": "Обход",
+      "name": "Поиск",
       "req": {
-       "cunning": 6
+       "cunning": 5
       },
       "tags": [
-       "stealth",
        "survival"
       ],
-      "ok": "Вы выходите им в спину — и к их кладовой.",
-      "fail": "Хитин поворачивается на звук."
+      "ok": "Горсть осколков в иле.",
+      "fail": "Ил засасывает находку."
      }
     ],
     "on_success": [
@@ -7052,6 +7004,32 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS14_deep",
+    "label": "Лезть в глубокую",
+    "text": "Там блестит сильнее.",
+    "stages": [
+     {
+      "name": "Глубина",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival",
+       "climb"
+      ],
+      "ok": "Со дна — целый мешок осколков.",
+      "fail": "Холодная вода сводит руки."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
      }
     ]
    },
@@ -7064,7 +7042,8 @@
   ],
   "expires": 1,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS15",
@@ -7161,92 +7140,60 @@
    }
   ],
   "expires": 2,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS16",
   "location": "sea_stair",
   "type": "random",
-  "title": "Засада в кораллах: Лестница в море",
-  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
-  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "title": "Лужи отлива: Лестница в море",
+  "briefing": "Вода ушла и оставила лужи — в одних блестят осколки, в других что-то шевелится.",
+  "arrival": "Мокрый песок, запах соли и гнили. Лужи тянутся до самой кромки.",
   "rumors": [
    {
-    "text": "Тропа [узкая]",
-    "tag": "Узость"
+    "text": "Лужи [неглубокие]",
+    "tag": "Песок"
    },
    {
-    "text": "Они [ждут]",
-    "tag": "Засада"
+    "text": "Вода [вернётся]",
+    "tag": "Прилив / Отлив"
    }
   ],
-  "threat": 2,
-  "duration": 6,
-  "rest": 12,
+  "threat": 1,
+  "duration": 5,
+  "rest": 10,
   "squad": {
    "min": 1,
    "max": 3
   },
-  "enemies": [
-   "M03"
-  ],
-  "field": "F_08",
+  "enemies": [],
+  "field": "F_17",
   "known_tags": [
-   "Узость",
-   "Коралл"
+   "Песок",
+   "Прилив / Отлив"
   ],
-  "hidden_tags": [
-   "Засада"
-  ],
+  "hidden_tags": [],
   "context": [
-   "combat",
-   "stealth"
+   "survival"
   ],
   "actions": [
    {
-    "id": "LS16_fight",
-    "label": "Ударить первыми",
-    "text": "Пока они думают, что вы не знаете.",
+    "id": "LS16_search",
+    "label": "Обыскать лужи",
+    "text": "По краю, не залезая глубоко.",
     "stages": [
      {
-      "name": "Бой",
-      "combat": {
-       "enemies": [
-        "M03"
-       ],
-       "field": "F_08"
-      },
-      "tags": [
-       "combat"
-      ],
-      "ok": "Засада кончилась для них.",
-      "fail": "Кораллы режут не хуже когтей."
-     }
-    ],
-    "on_success": [
-     {
-      "cmd": "adjust_resource",
-      "resource": "shards",
-      "value": 3
-     }
-    ]
-   },
-   {
-    "id": "LS16_around",
-    "label": "Обойти по кромке",
-    "text": "Долго, но тихо.",
-    "stages": [
-     {
-      "name": "Обход",
+      "name": "Поиск",
       "req": {
-       "cunning": 6
+       "cunning": 5
       },
       "tags": [
-       "stealth",
        "survival"
       ],
-      "ok": "Вы выходите им в спину — и к их кладовой.",
-      "fail": "Хитин поворачивается на звук."
+      "ok": "Горсть осколков в иле.",
+      "fail": "Ил засасывает находку."
      }
     ],
     "on_success": [
@@ -7254,6 +7201,32 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS16_deep",
+    "label": "Лезть в глубокую",
+    "text": "Там блестит сильнее.",
+    "stages": [
+     {
+      "name": "Глубина",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival",
+       "climb"
+      ],
+      "ok": "Со дна — целый мешок осколков.",
+      "fail": "Холодная вода сводит руки."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
      }
     ]
    },
@@ -7266,7 +7239,8 @@
   ],
   "expires": 1,
   "local": true,
-  "from_event": "M03"
+  "local_kind": "calm",
+  "xp_mult": 1.5
  },
  {
   "id": "LS17",
@@ -7362,6 +7336,1822 @@
    }
   ],
   "expires": 1,
-  "local": true
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS18",
+  "location": "stone_isle",
+  "type": "random",
+  "title": "Падальщик у Каменная платформа",
+  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
+  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "rumors": [
+   {
+    "text": "Он [один]",
+    "tag": "Одиночка"
+   },
+   {
+    "text": "Он [голоден]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Одиночка",
+   "Высота"
+  ],
+  "hidden_tags": [
+   "Когти"
+  ],
+  "context": [
+   "combat",
+   "lure"
+  ],
+  "actions": [
+   {
+    "id": "LS18_fight",
+    "label": "Встретить на камнях",
+    "text": "Сверху бить удобнее.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хитин треснул. Лагерь спокоен.",
+      "fail": "Тварь уходит вниз, унося добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS18_lure",
+    "label": "Отвести от лагеря",
+    "text": "Пусть уйдёт за приманкой.",
+    "stages": [
+     {
+      "name": "Приманка",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "lure",
+       "stealth"
+      ],
+      "ok": "Падальщик уходит по ложному следу.",
+      "fail": "Он не купился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "LS18_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS19",
+  "location": "low_tide",
+  "type": "random",
+  "title": "Засада в кораллах: Отмель",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS19_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS19_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS19_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS20",
+  "location": "coral_maze",
+  "type": "random",
+  "title": "Засада в кораллах: Багровый лабиринт",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS20_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS20_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS20_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS21",
+  "location": "shelter",
+  "type": "random",
+  "title": "Падальщик у Расщелина-укрытие",
+  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
+  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "rumors": [
+   {
+    "text": "Он [один]",
+    "tag": "Одиночка"
+   },
+   {
+    "text": "Он [голоден]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Одиночка",
+   "Высота"
+  ],
+  "hidden_tags": [
+   "Когти"
+  ],
+  "context": [
+   "combat",
+   "lure"
+  ],
+  "actions": [
+   {
+    "id": "LS21_fight",
+    "label": "Встретить на камнях",
+    "text": "Сверху бить удобнее.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хитин треснул. Лагерь спокоен.",
+      "fail": "Тварь уходит вниз, унося добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS21_lure",
+    "label": "Отвести от лагеря",
+    "text": "Пусть уйдёт за приманкой.",
+    "stages": [
+     {
+      "name": "Приманка",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "lure",
+       "stealth"
+      ],
+      "ok": "Падальщик уходит по ложному следу.",
+      "fail": "Он не купился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "LS21_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS22",
+  "location": "drowned_hall",
+  "type": "random",
+  "title": "Щупальца в руинах: Затопленный зал",
+  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
+  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "rumors": [
+   {
+    "text": "В нише [мокро]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Что-то [хватает]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Вода",
+   "Узость"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS22_fight",
+    "label": "Выжечь нишу",
+    "text": "Бой в узком проходе.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ниша пуста — и в ней блестит.",
+      "fail": "Щупальца утаскивают добычу в глубину."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS22_sneak",
+    "label": "Проскользнуть мимо",
+    "text": "Тихо, вдоль стены.",
+    "stages": [
+     {
+      "name": "Мимо ниши",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Вы забираете то, что лежало у входа.",
+      "fail": "Щупальце задевает ногу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS22_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M12",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS23",
+  "location": "spire_view",
+  "type": "random",
+  "title": "Падальщик у Костяной хребет",
+  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
+  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "rumors": [
+   {
+    "text": "Он [один]",
+    "tag": "Одиночка"
+   },
+   {
+    "text": "Он [голоден]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Одиночка",
+   "Высота"
+  ],
+  "hidden_tags": [
+   "Когти"
+  ],
+  "context": [
+   "combat",
+   "lure"
+  ],
+  "actions": [
+   {
+    "id": "LS23_fight",
+    "label": "Встретить на камнях",
+    "text": "Сверху бить удобнее.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хитин треснул. Лагерь спокоен.",
+      "fail": "Тварь уходит вниз, унося добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS23_lure",
+    "label": "Отвести от лагеря",
+    "text": "Пусть уйдёт за приманкой.",
+    "stages": [
+     {
+      "name": "Приманка",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "lure",
+       "stealth"
+      ],
+      "ok": "Падальщик уходит по ложному следу.",
+      "fail": "Он не купился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "LS23_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS24",
+  "location": "statue_hill",
+  "type": "random",
+  "title": "Падальщик у Холм у статуи",
+  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
+  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "rumors": [
+   {
+    "text": "Он [один]",
+    "tag": "Одиночка"
+   },
+   {
+    "text": "Он [голоден]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Одиночка",
+   "Высота"
+  ],
+  "hidden_tags": [
+   "Когти"
+  ],
+  "context": [
+   "combat",
+   "lure"
+  ],
+  "actions": [
+   {
+    "id": "LS24_fight",
+    "label": "Встретить на камнях",
+    "text": "Сверху бить удобнее.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хитин треснул. Лагерь спокоен.",
+      "fail": "Тварь уходит вниз, унося добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS24_lure",
+    "label": "Отвести от лагеря",
+    "text": "Пусть уйдёт за приманкой.",
+    "stages": [
+     {
+      "name": "Приманка",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "lure",
+       "stealth"
+      ],
+      "ok": "Падальщик уходит по ложному следу.",
+      "fail": "Он не купился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "LS24_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS25",
+  "location": "high_ground",
+  "type": "random",
+  "title": "Падальщик у Высота",
+  "briefing": "Одинокий Падальщик Карапакса повадился к камням — туда, где ночует отряд. Пока он один.",
+  "arrival": "Хитин скребёт по камню где-то рядом. Он знает, что вы здесь.",
+  "rumors": [
+   {
+    "text": "Он [один]",
+    "tag": "Одиночка"
+   },
+   {
+    "text": "Он [голоден]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Одиночка",
+   "Высота"
+  ],
+  "hidden_tags": [
+   "Когти"
+  ],
+  "context": [
+   "combat",
+   "lure"
+  ],
+  "actions": [
+   {
+    "id": "LS25_fight",
+    "label": "Встретить на камнях",
+    "text": "Сверху бить удобнее.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хитин треснул. Лагерь спокоен.",
+      "fail": "Тварь уходит вниз, унося добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS25_lure",
+    "label": "Отвести от лагеря",
+    "text": "Пусть уйдёт за приманкой.",
+    "stages": [
+     {
+      "name": "Приманка",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "lure",
+       "stealth"
+      ],
+      "ok": "Падальщик уходит по ложному следу.",
+      "fail": "Он не купился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 1
+     }
+    ]
+   },
+   {
+    "id": "LS25_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS26",
+  "location": "hunting_grounds",
+  "type": "random",
+  "title": "Засада в кораллах: Охотничьи коридоры",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS26_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS26_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS26_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS27",
+  "location": "centurion_gate",
+  "type": "random",
+  "title": "Щупальца в руинах: Коралловые врата",
+  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
+  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "rumors": [
+   {
+    "text": "В нише [мокро]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Что-то [хватает]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Вода",
+   "Узость"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS27_fight",
+    "label": "Выжечь нишу",
+    "text": "Бой в узком проходе.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ниша пуста — и в ней блестит.",
+      "fail": "Щупальца утаскивают добычу в глубину."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS27_sneak",
+    "label": "Проскользнуть мимо",
+    "text": "Тихо, вдоль стены.",
+    "stages": [
+     {
+      "name": "Мимо ниши",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Вы забираете то, что лежало у входа.",
+      "fail": "Щупальце задевает ногу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS27_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M12",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS28",
+  "location": "legion_ruins",
+  "type": "random",
+  "title": "Щупальца в руинах: Обломки Легиона",
+  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
+  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "rumors": [
+   {
+    "text": "В нише [мокро]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Что-то [хватает]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Вода",
+   "Узость"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS28_fight",
+    "label": "Выжечь нишу",
+    "text": "Бой в узком проходе.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ниша пуста — и в ней блестит.",
+      "fail": "Щупальца утаскивают добычу в глубину."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS28_sneak",
+    "label": "Проскользнуть мимо",
+    "text": "Тихо, вдоль стены.",
+    "stages": [
+     {
+      "name": "Мимо ниши",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Вы забираете то, что лежало у входа.",
+      "fail": "Щупальце задевает ногу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS28_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M12",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS29",
+  "location": "leviathan_ribs",
+  "type": "random",
+  "title": "Засада в кораллах: Рёбра Левиафана",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS29_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS29_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS29_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS30",
+  "location": "sunken_watch",
+  "type": "random",
+  "title": "Щупальца в руинах: Затонувший дозор",
+  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
+  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "rumors": [
+   {
+    "text": "В нише [мокро]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Что-то [хватает]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Вода",
+   "Узость"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS30_fight",
+    "label": "Выжечь нишу",
+    "text": "Бой в узком проходе.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ниша пуста — и в ней блестит.",
+      "fail": "Щупальца утаскивают добычу в глубину."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS30_sneak",
+    "label": "Проскользнуть мимо",
+    "text": "Тихо, вдоль стены.",
+    "stages": [
+     {
+      "name": "Мимо ниши",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Вы забираете то, что лежало у входа.",
+      "fail": "Щупальце задевает ногу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS30_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M12",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS31",
+  "location": "current_sink",
+  "type": "random",
+  "title": "Засада в кораллах: Воронка течения",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS31_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS31_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS31_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS32",
+  "location": "carapace_nest",
+  "type": "random",
+  "title": "Щупальца в руинах: Гнездовье",
+  "briefing": "Вода отступила, а в затопленных нишах остались обитатели глубины. Они не любят гостей.",
+  "arrival": "В тёмной нише что-то медленно разворачивается.",
+  "rumors": [
+   {
+    "text": "В нише [мокро]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Что-то [хватает]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Вода",
+   "Узость"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS32_fight",
+    "label": "Выжечь нишу",
+    "text": "Бой в узком проходе.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ниша пуста — и в ней блестит.",
+      "fail": "Щупальца утаскивают добычу в глубину."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS32_sneak",
+    "label": "Проскользнуть мимо",
+    "text": "Тихо, вдоль стены.",
+    "stages": [
+     {
+      "name": "Мимо ниши",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Вы забираете то, что лежало у входа.",
+      "fail": "Щупальце задевает ногу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS32_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "from_event": "M12",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS33",
+  "location": "sea_stair",
+  "type": "random",
+  "title": "Засада в кораллах: Лестница в море",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS33_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS33_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS33_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "LS34",
+  "location": "shell_field",
+  "type": "random",
+  "title": "Засада в кораллах: Поле раковин",
+  "briefing": "Падальщики учатся: теперь они ждут у троп, по которым ходят Спящие. Эта тропа — ваша.",
+  "arrival": "Коралл трещит слишком ровно — так трещит хитин.",
+  "rumors": [
+   {
+    "text": "Тропа [узкая]",
+    "tag": "Узость"
+   },
+   {
+    "text": "Они [ждут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 12,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_08",
+  "known_tags": [
+   "Узость",
+   "Коралл"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "LS34_fight",
+    "label": "Ударить первыми",
+    "text": "Пока они думают, что вы не знаете.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_08"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Засада кончилась для них.",
+      "fail": "Кораллы режут не хуже когтей."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "LS34_around",
+    "label": "Обойти по кромке",
+    "text": "Долго, но тихо.",
+    "stages": [
+     {
+      "name": "Обход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Вы выходите им в спину — и к их кладовой.",
+      "fail": "Хитин поворачивается на звук."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     }
+    ]
+   },
+   {
+    "id": "LS34_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 1,
+  "local": true,
+  "from_event": "M03",
+  "local_kind": "fight",
+  "xp_mult": 1.5
  }
 ]

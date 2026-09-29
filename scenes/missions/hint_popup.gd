@@ -5,15 +5,16 @@ extends PanelContainer
 ##    в золотой рамке с уголками;
 ## 2) карточка подсказки встаёт рядом с целью (справа, слева, снизу или сверху — где есть место),
 ##    маленький золотой уголок на её краю смотрит на цель;
-## 3) затемнение плавно уходит, рамка тихо пульсирует до «Понятно». Играть подсказка не мешает:
-##    затемнение не ловит щелчки. Без цели — карточка у правого края, без затемнения.
+## 3) затемнение и рамка держатся, пока игрок не щёлкнет мышью или не нажмёт клавишу (просьба владельца
+##    29.09) — тогда подсказка плавно уходит, а щелчок проходит дальше, куда попал: затемнение щелчки не ловит.
+##    Без цели — карточка у правого края, без затемнения.
 
 const W := 300.0
 const GOLD := Color("#D9B870")
 const GOLD_BRIGHT := Color("#FFE7A8")
 const DIM := 0.62          # сила затемнения
-const DIM_HOLD := 2.4      # сколько держится затемнение, с
-const DIM_FADE := 0.9      # как долго уходит
+const DIM_FADE := 0.35     # как долго уходит после щелчка или клавиши
+const MIN_SHOW := 0.35     # первые доли секунды щелчок не закрывает (не проскочить подсказку случайно)
 const PAD := 10.0          # поля светлого окна вокруг цели
 const GAP := 26.0          # от цели до карточки
 
@@ -26,6 +27,7 @@ var _age := 0.0            # сколько показывается текущ�
 var _t := 0.0
 var _side := ""            # с какой стороны цели стоит карточка: right|left|below|above
 var _missing := 0.0        # сколько цели не видно (ушла под окно, ещё не появилась)
+var _out := -1.0           # подсказка уходит: 0..1 (−1 — на месте)
 
 
 func _ready() -> void:
@@ -103,6 +105,7 @@ func _next() -> void:
 	_age = 0.0
 	_side = ""
 	_missing = 0.0
+	_out = -1.0
 	modulate.a = 0.0
 	visible = true
 	AudioManager.play("open", -10.0, 1.3)
@@ -113,9 +116,26 @@ func _next() -> void:
 	_place()
 
 
+## Щелчок мышью или клавиша — подсказка уходит (событие не поглощается).
+func _input(event: InputEvent) -> void:
+	if not visible or _out >= 0.0 or _age < MIN_SHOW:
+		return
+	var hit := (event is InputEventMouseButton and (event as InputEventMouseButton).pressed) 		or (event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo)
+	if hit:
+		_out = 0.0
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	if not visible:
+		return
+	if _out >= 0.0:
+		_out += delta / DIM_FADE
+		modulate.a = maxf(0.0, 1.0 - _out)
+		_spot.queue_redraw()
+		if _out >= 1.0:
+			_out = -1.0
+			_next()
 		return
 	# цели нет: следующая подсказка — вперёд; если очереди нет, карточка прячется и ждёт цель
 	if _target != "" and _target_rect().size == Vector2.ZERO:
@@ -192,9 +212,9 @@ func _draw_spot() -> void:
 	if r.size == Vector2.ZERO:
 		return
 	var vp := _spot.size
-	var appear := minf(1.0, _age * 3.0)
-	# затемнение вокруг окна: держится DIM_HOLD, потом уходит
-	var dim := DIM * appear * clampf(1.0 - (_age - DIM_HOLD) / DIM_FADE, 0.0, 1.0)
+	var appear := minf(1.0, _age * 3.0) * (1.0 - maxf(_out, 0.0))
+	# затемнение вокруг окна: держится, пока игрок не щёлкнет или не нажмёт клавишу
+	var dim := DIM * appear
 	if dim > 0.005:
 		var c := Color(0.0, 0.0, 0.02, dim)
 		_spot.draw_rect(Rect2(0, 0, vp.x, r.position.y), c)

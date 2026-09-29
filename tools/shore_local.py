@@ -1,4 +1,4 @@
-"""Местные встречи Забытого Берега (docs/17 §5): по одной повторяемой короткой встрече на каждое место.
+"""Местные встречи Забытого Берега (docs/17 §5): по две повторяемых коротких встречи на каждое место.
 Их поднимает планировщик дня (core/rules/day_planner.gd), когда утром рядом с лагерем мало дел,
 и Разведка из дел лагеря. Шаблоны — по высоте места: высота, средние руины, низины.
 Подключается из tools/gen_shore.py: missions(g) → список миссий, LOCAL → {место: [id]}.
@@ -119,12 +119,18 @@ def _low(g, mid, loc, name, variant):
 
 
 def missions(g):
+	"""Две встречи на место: спокойная (проверки) — LS01…LS17, с боем — LS18…LS34.
+	Режиссёр напряжения (DayPlanner.tension) выбирает: отряд вымотан — спокойную, свеж — с боем."""
 	out = []
-	for i, (loc, h, name) in enumerate(PLACES):
-		mid = "LS%02d" % (i + 1)
-		make = {"high": _high, "mid": _mid, "low": _low}[h]
-		m = make(g, mid, loc, name, i % 2)
-		m["from_event"] = m["enemies"][0] if m.get("enemies") else None
-		out.append(m)
-		LOCAL[loc] = [mid]
+	n = len(PLACES)
+	for kind, variant, base in (("calm", 0, 0), ("fight", 1, n)):
+		for i, (loc, h, name) in enumerate(PLACES):
+			mid = "LS%02d" % (base + i + 1)
+			make = {"high": _high, "mid": _mid, "low": _low}[h]
+			m = make(g, mid, loc, name, variant)
+			m["from_event"] = m["enemies"][0] if m.get("enemies") else None
+			m["local_kind"] = kind
+			m["xp_mult"] = 1.5   # решение владельца 29.09: местные встречи — осколки и опыт тегов
+			out.append(m)
+			LOCAL.setdefault(loc, []).append(mid)
 	return out

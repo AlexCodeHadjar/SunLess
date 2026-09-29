@@ -221,6 +221,7 @@ static func apply(content: Content, state: RunState, run: Dictionary, heroes: Ar
 		var bag: Dictionary = ch.get("tag_xp", {})
 		var growth: Dictionary = ch.get("growth", {})
 		var boost := 2.0 if Array(run.get("uplifted", [])).has(cid) else 1.0   # подъём духа — рост вдвое
+		boost *= float(run.get("xp_mult", 1.0))   # у миссии свой множитель опыта (местные встречи)
 		for tag: String in MissionFlow._sorted(per[cid]):
 			var before := float(bag.get(tag, 0.0))
 			var after := before + float(per[cid][tag]) * boost

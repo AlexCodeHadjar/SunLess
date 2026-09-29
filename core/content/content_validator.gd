@@ -123,6 +123,14 @@ static func dry_spine_errors(c: Content) -> Array[String]:
 			for lid: String in nodes:
 				if not seen.has(lid):
 					out.append("maps/%s: тупик — %s: место %s не связано тропами с %s" % [region, pair[1], lid, nodes[0]])
+		# у каждой высоты не меньше двух троп (docs/17 §15, как маяки FTL): одна тропа — тупик, если её отрежет вода
+		for lid: String in dry:
+			var deg := 0
+			for e: Array in m.get("paths", []):
+				if str(e[0]) == lid or str(e[1]) == lid:
+					deg += 1
+			if deg < 2 and not c.shops.has(lid):
+				out.append("maps/%s: тупик — у высоты %s одна тропа (нужно не меньше двух)" % [region, lid])
 	return out
 
 

@@ -133,6 +133,14 @@ static func schedule(content: Content, state: RunState, warn: int, flood: int, t
 	if chosen.is_empty():
 		return []
 	state.tide["phase"] = "warn"
+	# сюжетная вода рядом с недельным штормом (за день до или после) — приходит вместе со штормом:
+	# иначе вода стояла бы два дня подряд (docs/17 G6)
+	if source == "story":
+		for dd: int in [0, 1, -1]:
+			var fd := state.day + maxi(1, warn) + dd
+			if fd > state.day and str(DayRules.phase_at(content, state.chapter, fd).get("tide", "")) == "flood":
+				warn = fd - state.day
+				break
 	state.tide["left"] = maxi(1, warn)
 	state.tide["flood"] = maxi(1, flood)
 	state.tide["places"] = chosen

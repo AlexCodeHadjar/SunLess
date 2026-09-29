@@ -564,7 +564,29 @@ func _notes(m: Dictionary) -> VBoxContainer:
 
 # --- отчёт -----------------------------------------------------------------------------
 
+## Показ боёв миссии по очереди: экран боя сам начинает запись; закрыли — следующий бой или отчёт.
+func _play_fights(rep: Dictionary, i: int) -> void:
+	var cbs: Array = rep.get("combats", [])
+	if i >= cbs.size() or not is_instance_valid(get_parent()):
+		show_report(rep)
+		return
+	var cs := CombatScreen.new()
+	get_parent().add_child(cs)
+	cs.open_replay(cbs[i]["setup"])
+	get_tree().create_timer(1.0).timeout.connect(func() -> void:
+		if is_instance_valid(cs) and cs.phase == CombatScreen.Phase.PREP:
+			cs.call("_on_action"))
+	cs.closed.connect(func() -> void: _play_fights(rep, i + 1))
+
+
 func show_report(rep: Dictionary) -> void:
+	# бои показываются всегда (решение владельца 29.09): сначала запись каждого боя миссии, потом отчёт
+	if not bool(rep.get("_fights_shown", false)) and not Array(rep.get("combats", [])).is_empty() and get_parent() != null:
+		rep["_fights_shown"] = true
+		visible = false
+		_play_fights(rep, 0)
+		return
+	visible = true
 	mode = "report"
 	report = rep
 	GameState.tutorial("report")
@@ -756,6 +778,7 @@ func _squad_for(mid: String) -> Dictionary:
 func _art(m: Dictionary, sz: Vector2 = Vector2(300, 470)) -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = sz
+	holder.clip_contents = true   # фон региона (нет своего рисунка) рисуется во весь экран — не пускать его под текст
 	var path := "res://art/cards/%s.webp" % str(m.get("from_event", ""))
 	if ResourceLoader.exists(path):
 		var tr := TextureRect.new()
@@ -785,6 +808,8 @@ func _intel(m: Dictionary) -> Control:
 	var cells: Array = [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))]]
 	if DayRules.restricted(_content(), GameState.state):
 		cells.append(["Путь", _path_text(str(m.get("id", "")))])
+	if float(m.get("xp_mult", 1.0)) > 1.0:
+		cells.append(["Опыт тегов", "×%s" % str(snappedf(float(m["xp_mult"]), 0.1)).replace(".", ",")])
 	cells.append_array([["Выход", _sortie_text()], ["Отряд", _squad_size(m)], ["Противники", ", ".join(names) if not names.is_empty() else "не видно"]])
 	for pair: Array in cells:
 		var v := VBoxContainer.new()

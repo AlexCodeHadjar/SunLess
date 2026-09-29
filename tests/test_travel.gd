@@ -152,6 +152,7 @@ func test_no_dead_ends_simulation() -> void:
 	var worst_story_wait := 0
 	var finished := 0
 	var days_total := 0
+	var wait_note := ""
 	for sd in runs:
 		var s := MissionFlow.new_run(c, 3000 + sd * 7, "shore")
 		var last_day := 0
@@ -173,6 +174,10 @@ func test_no_dead_ends_simulation() -> void:
 				if cut.any(func(m: String) -> bool: return str(c.missions[m]["type"]) == "story"):
 					story_wait += 1
 					worst_story_wait = maxi(worst_story_wait, story_wait)
+					if story_wait >= 2:
+						wait_note = "зерно %d, день %d, фаза %s, вода %s (%s), лагерь %s, сюжет %s" % [3000 + sd * 7, s.day,
+							DayRules.phase(c, s)["id"], TideRules.phase(s), str(s.tide.get("source", "")), s.party_at,
+							str(cut.filter(func(m: String) -> bool: return str(c.missions[m]["type"]) == "story"))]
 				else:
 					story_wait = 0
 			var r := AutoPlay.step(c, s)
@@ -187,5 +192,41 @@ func test_no_dead_ends_simulation() -> void:
 		% [runs, finished, float(days_total) / runs, empty_mornings, hidden, worst_story_wait])
 	eq(empty_mornings, 0, "пустых утр (нечего делать):")
 	eq(hidden, 0, "открытых миссий, скрытых туманом:")
-	check(worst_story_wait <= 1, "сюжет ждёт воду не дольше дня подряд: %d" % worst_story_wait)
+	check(worst_story_wait <= 1, "сюжет ждёт воду не дольше дня подряд: %d · %s" % [worst_story_wait, wait_note])
 	check(finished >= runs * 9 / 10, "глава проходится: %d из %d" % [finished, runs])
+
+
+## Режиссёр напряжения (docs/17 §18): вымотанному отряду — спокойные встречи, свежему — с боем.
+func test_director_tension() -> void:
+	var c := content()
+	var s := _shore()
+	s.party_at = "shelter"
+	s.day = 1
+	check(DayPlanner.tension(c, s) < DayPlanner.FIGHT_BELOW, "свежий отряд — низкое напряжение: %.2f" % DayPlanner.tension(c, s))
+	eq(DayPlanner.preferred_kind(c, s), "fight", "свежему — с боем:")
+	var ev := DayPlanner.spawn_local(c, s, "shelter")
+	check(not ev.is_empty() and str(c.missions[str(ev[0]["card"])].get("local_kind", "")) == "fight", "в Расщелине поднялась встреча с боем")
+	# вымотанный: психика низкая, герой на грани
+	var s2 := _shore(11)
+	s2.party_at = "shelter"
+	PsycheRules.change(c, s2, "P01", -80, "тест", [], null, "mission", false)
+	s2.character("P01")["edge"] = true
+	check(DayPlanner.tension(c, s2) >= DayPlanner.CALM_FROM, "вымотанный отряд — высокое напряжение: %.2f" % DayPlanner.tension(c, s2))
+	eq(DayPlanner.preferred_kind(c, s2), "calm", "вымотанному — спокойные:")
+	var ev2 := DayPlanner.spawn_local(c, s2, "shelter")
+	check(not ev2.is_empty() and str(c.missions[str(ev2[0]["card"])].get("local_kind", "")) == "calm", "в Расщелине поднялась спокойная встреча")
+
+
+func test_local_encounters_data() -> void:
+	var c := content()
+	for lid: String in _shore_places(c):
+		var kinds := {}
+		for mid: String in c.locations[lid].get("random", {}).get("local", []):
+			kinds[str(c.missions[mid].get("local_kind", ""))] = true
+			eq(float(c.missions[mid].get("xp_mult", 1.0)), 1.5, "%s — опыт тегов ×1,5:" % mid)
+		check(kinds.has("calm") and kinds.has("fight"), "у %s есть спокойная и боевая встречи" % lid)
+
+
+func test_high_places_two_paths() -> void:
+	var c := content()
+	check(not ContentValidator.dry_spine_errors(c).any(func(e: String) -> bool: return e.contains("одна тропа")), "у каждой высоты не меньше двух троп")

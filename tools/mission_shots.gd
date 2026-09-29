@@ -324,6 +324,18 @@ func _run() -> void:
 	GameState.missions_changed.emit()
 	await _wait(0.8)
 	await _shot("m21h_day_plan")
+	# подсказка обучения: затемнение и рамка держатся, пока игрок не щёлкнет (проверка через 4 с)
+	EventBus.tutorial_hint.emit({"id": "shot", "title": "Дела лагеря", "text": "Проверка подсказки: затемнение держится до щелчка.", "target": "tasks"})
+	await _wait(0.6)
+	await _shot("m21h2_hint")
+	await _wait(4.0)
+	await _shot("m21h3_hint_hold")
+	var click := InputEventKey.new()
+	click.keycode = KEY_SPACE
+	click.pressed = true
+	Input.parse_input_event(click)
+	await _wait(0.8)
+	await _shot("m21h4_hint_gone")
 	gsc.call("_show_travel", "statue_hill")
 	await _wait(0.4)
 	await _shot("m21i_travel")

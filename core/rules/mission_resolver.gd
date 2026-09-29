@@ -29,7 +29,8 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 	var report := {"mission": mid, "action": action_id, "heroes": heroes, "stages": [], "outcome": "",
 		"entries": [], "edge": {}, "deaths": [], "rest": {}, "combats": [], "opened": [], "forks": []}
 	var run := {"action": action_id, "stages": Array(a.get("stages", [])).duplicate(true), "done": 0, "outcomes": [],
-		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false)), "shielded": {}}
+		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false)), "shielded": {},
+		"xp_mult": float(m.get("xp_mult", 1.0))}   # местные встречи — опыт тегов ×1,5 (docs/17 §5)
 	if bool(a.get("retreat", false)):
 		report["outcome"] = "retreat"
 		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})

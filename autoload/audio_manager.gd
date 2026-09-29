@@ -30,6 +30,11 @@ var _music: AudioStreamPlayer
 var _ambient: AudioStreamPlayer
 var _pool: Array[AudioStreamPlayer] = []
 var _last_hover_ms := 0
+## Пока что (просьба владельца 29.09): фоновая музыка играет только первую минуту игры, потом затихает
+## и до конца сеанса больше не включается. Убрать ограничение — MUSIC_LIMIT = 0.
+const MUSIC_LIMIT := 60.0
+var _music_time := 0.0
+var _music_off := false
 
 
 func _ready() -> void:
@@ -108,7 +113,20 @@ func _free_player() -> AudioStreamPlayer:
 
 
 func play_music(path: String = "res://audio/music/longing.ogg") -> void:
+	if _music_off:
+		return
 	_start_loop(_music, path, -8.0)
+
+
+func _process(delta: float) -> void:
+	if MUSIC_LIMIT <= 0.0 or _music_off or not _music.playing:
+		return
+	_music_time += delta
+	if _music_time >= MUSIC_LIMIT:
+		_music_off = true
+		var tw := create_tween()
+		tw.tween_property(_music, "volume_db", -40.0, 4.0)
+		tw.tween_callback(_music.stop)
 
 
 func play_ambient(path: String = "res://audio/ambient/wind_drips.ogg") -> void:
