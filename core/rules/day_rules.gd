@@ -4,8 +4,8 @@ extends RefCounted
 ## Ход — день. За день отряд делает сколько угодно выходов, но герои устают: каждый следующий выход героя
 ## за день стоит психики (fatigue), с третьего вещи в кармашке изнашиваются сильнее — рано или поздно
 ## придётся «Закончить день». Пути нет: отряд сразу на месте.
-## Отряд один. Где он остановился последним — там и лагерь (state.party_at). На карте-плане идти можно
-## в само место и соседние по тропам; переход без миссии стоит психики всем (move_psyche).
+## Отряд один. Где он остановился последним — там и лагерь (state.party_at). На карте-плане отряд ходит
+## шагами дня по тропам (TravelRules, docs/17 §2): steps_free переходов бесплатно, дальше — марш-бросок.
 ## Неделя региона — фазы по дням (data/days.json; Берег: Ночь, Рассвет-отлив, Прилив и шторм, Кровавая луна
 ## по 2 дня): небо, вода, усталость, психика за выход.
 ## Ночь — в лагере: нападение (опасность места × фаза), отдых (отдых места; койка лечит грань), починка;
@@ -96,7 +96,7 @@ static func restricted(content: Content, state: RunState) -> bool:
 static func reachable(content: Content, state: RunState, lid: String) -> bool:
 	if not restricted(content, state):
 		return true
-	return lid == state.party_at or MapRules.neighbors(content, state, state.party_at).has(lid)
+	return lid == state.party_at or TravelRules.distance(content, state, lid) > 0
 
 
 ## Миссия в досягаемости отряда. Натиск приходит сам — до него дойти можно всегда.
@@ -114,25 +114,9 @@ static func shop_near(content: Content, state: RunState, sid: String) -> bool:
 	return MapRules.neighbors(content, state, sid).has(state.party_at)
 
 
-## Переход без миссии в соседнее место. "" — перешли, иначе причина. Записи — в out.
+## Переход без миссии по маршруту (TravelRules.travel). "" — перешли, иначе причина. Записи — в out.
 static func move(content: Content, state: RunState, lid: String, out: Array) -> String:
-	if not state.squads.is_empty():
-		return "Сначала закончите миссию"
-	if lid == state.party_at:
-		return ""
-	if not content.locations.has(lid) or not MapRules.present(content, state, lid):
-		return "Туда не пройти"
-	if not reachable(content, state, lid):
-		return "Далеко: идти можно только в соседние места"
-	if TideRules.flooded(state, lid):
-		return "Место под водой"
-	var cost := int(cfg(content).get("move_psyche", -4))
-	for cid: String in MissionFlow.heroes(content, state):
-		out.append_array(PsycheRules.change(content, state, cid, cost, "переход", [], null, "mission", false))
-	state.party_at = lid
-	state.clock += 1.0
-	out.append({"kind": "move", "text": "Отряд перешёл: %s" % content.locations[lid].get("name", lid)})
-	return ""
+	return TravelRules.travel(content, state, lid, out)
 
 
 # --- усталость ------------------------------------------------------------------------
@@ -164,6 +148,7 @@ static func on_launch(content: Content, state: RunState, mid: String, heroes: Ar
 	var lid := str(content.missions.get(mid, {}).get("location", ""))
 	if content.locations.has(lid):
 		state.party_at = lid
+		TravelRules.visit(state, lid)
 	var from := int(cfg(content).get("tired_wear_from", 3))
 	var extra := int(cfg(content).get("tired_wear", 5))
 	for cid: String in heroes:
@@ -207,6 +192,8 @@ static func end_day(content: Content, state: RunState) -> Array:
 	# 1. ночное нападение: опасность места × фаза
 	var att: Dictionary = cfg(content).get("night_attack", {})
 	var chance := float(c.get("danger", 0.0)) * float(att.get("phase_mult", {}).get(str(ph["id"]), 1.0))
+	if bool(state.flags.get("watch", false)):   # дело лагеря «Дозор»
+		chance *= float(cfg(content).get("tasks", {}).get("watch", {}).get("danger_mult", 0.5))
 	if chance > 0.0 and not heroes.is_empty() and rng.randf() < chance:
 		out.append_array(_ordeal(content, state, att, "На лагерь напали ночью", "нападение", rng))
 	# 2. отдых: психика по месту, койка лечит грань, починка
@@ -228,7 +215,9 @@ static func end_day(content: Content, state: RunState) -> Array:
 		if fixed > 0:
 			out.append({"kind": "repair", "text": "Починили вещи: %d" % fixed})
 	state.camp["beds"] = []
-	# 3. новый день
+	# 3. новый день: шаги и дела лагеря снова свободны
+	TravelRules.new_day(state)
+	DayPlanner.new_day(state)
 	state.day += 1
 	state.clock = float(state.day) * 100.0
 	var today := phase(content, state)
@@ -242,6 +231,8 @@ static func end_day(content: Content, state: RunState) -> Array:
 	out.append_array(MissionFlow.expire_day(content, state))
 	out.append_array(MissionFlow.spawn_day(content, state))
 	out.append_array(OnslaughtRules.tick(content, state))
+	# 4. утро: планировщик проверяет, что сегодня есть чем заняться (docs/17 §4)
+	out.append_array(DayPlanner.ensure(content, state))
 	return out
 
 
@@ -274,7 +265,7 @@ static func _flee(content: Content, state: RunState, rng: RandomNumberGenerator)
 	var best := ""
 	var bd := INF
 	for lid: String in MapRules.config(content, state.chapter).get("places", {}):
-		if not content.locations.has(lid) or not MapRules.present(content, state, lid) or TideRules.flooded(state, lid):
+		if not TravelRules.can_stop(content, state, lid):
 			continue
 		var d := MapRules.anchor(content, state, lid).distance_to(here)
 		if d < bd:
@@ -282,5 +273,6 @@ static func _flee(content: Content, state: RunState, rng: RandomNumberGenerator)
 			best = lid
 	if best != "":
 		state.party_at = best
+		TravelRules.visit(state, best)
 		out.append({"kind": "move", "text": "Отряд бежал от воды: %s" % content.locations[best].get("name", best)})
 	return out

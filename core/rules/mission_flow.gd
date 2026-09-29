@@ -36,11 +36,13 @@ static func open_chapter(content: Content, state: RunState, chapter: String) -> 
 			out.append_array(open(content, state, mid))
 			if state.party_at == "":
 				state.party_at = str(m.get("location", ""))   # отряд начинает главу у первой миссии
+				TravelRules.visit(state, state.party_at)
 	for lid: String in _sorted(content.locations):
 		var loc: Dictionary = content.locations[lid]
 		var every := int(loc.get("random", {}).get("every", 0))
 		if str(loc.get("chapter", "")) == chapter and every > 0:
 			state.loc_timers[lid] = state.day + every
+	out.append_array(DayPlanner.ensure(content, state))   # в первый же день есть чем заняться (docs/17 §4)
 	return out
 
 
@@ -59,6 +61,8 @@ static func start_chapter(content: Content, state: RunState, chapter: String) ->
 	state.day = 1            # неделя новой главы начинается сначала
 	state.party_at = ""
 	state.camp = {}
+	for k: String in ["visited", "scouted", "steps", "tasks_done", "watch"]:
+		state.flags.erase(k)
 	for cid: String in state.characters:
 		state.characters[cid]["sorties"] = 0
 	for lid: String in _sorted(content.locations):
@@ -222,7 +226,7 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	if not state.squads.is_empty():
 		return "Отряд уже на миссии — сначала решите, что он делает"
 	if not DayRules.mission_reachable(content, state, mission_id):
-		return "Далеко: сначала перейдите в соседнее место"
+		return TravelRules.why_not(content, state, str(m.get("location", "")))
 	var sq: Dictionary = m.get("squad", {})
 	if heroes_ids.size() < int(sq.get("min", 1)):
 		return "Нужно героев: не меньше %d" % int(sq.get("min", 1))
@@ -262,7 +266,12 @@ static func launch(content: Content, state: RunState, mission_id: String, heroes
 	state.next_squad += 1
 	for cid: String in heroes_ids:
 		CampRules.take(state, cid)
-	var entries := DayRules.on_launch(content, state, mission_id, heroes_ids)
+	# миссия дальше лагеря: отряд идёт по маршруту (шаги дня, марш-бросок сверх бесплатных) — docs/17 §2
+	var entries: Array = []
+	var lid := str(content.missions.get(mission_id, {}).get("location", ""))
+	if DayRules.restricted(content, state) and lid != state.party_at and str(content.missions[mission_id].get("type", "")) != "onslaught":
+		TravelRules.travel(content, state, lid, entries)
+	entries.append_array(DayRules.on_launch(content, state, mission_id, heroes_ids))
 	state.squads.append(sq)
 	state.missions[mission_id]["status"] = "active"
 	return {"ok": true, "error": "", "squad": sq, "entries": entries}

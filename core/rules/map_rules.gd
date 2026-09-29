@@ -236,16 +236,55 @@ static func neighbors(content: Content, state: RunState, lid: String) -> Array:
 	return out
 
 
-## Место открыто на карте (туман неизвестного расступился): сюжет туда приводил, место поднялось или это лавка.
+## Место открыто на карте (туман неизвестного расступился) — docs/17 §2. Видно:
+## лавки; где отряд бывал и куда сюжет приводил; соседей этих мест (тропы от знакомых мест видны);
+## весь путь до каждой открытой миссии (игрок всегда видит, как дойти); разведанное (дело лагеря «Разведка»);
+## с высоты (служба view у лагеря) — ещё и места в двух переходах. Появившееся место — пока оно на карте.
 static func revealed(content: Content, state: RunState, lid: String) -> bool:
 	if is_emerging(content, lid):
 		return emerged(state).has(lid)
 	if content.shops.has(lid):
 		return true
-	if MissionFlow.reached(content, state, lid) or lid == state.party_at:
-		return true
-	# с высоты (служба view у лагеря) видны соседние места
-	return DayRules.camp(content, state).get("services", []).has("view") and neighbors(content, state, state.party_at).has(lid)
+	return known(content, state).has(lid)
+
+
+## Все открытые места разом (для отрисовки и проверок).
+static func known(content: Content, state: RunState) -> Dictionary:
+	var out := {}
+	var cfg := config(content, state.chapter)
+	var places: Dictionary = cfg.get("places", {})
+	var seen: Array = TravelRules.visited(state).duplicate()
+	seen.append_array(Array(state.flags.get("scouted", [])))
+	if state.party_at != "":
+		seen.append(state.party_at)
+	for lid: String in places:
+		if content.locations.has(lid) and MissionFlow.reached(content, state, lid):
+			seen.append(lid)
+	var adj := TravelRules.adjacency(content, state)
+	for lid: String in seen:
+		if not places.has(lid) or not present(content, state, lid):
+			continue
+		out[lid] = true
+		for n: String in adj.get(lid, []):
+			out[n] = true
+	# с высоты — ещё кольцо дальше
+	if DayRules.camp(content, state).get("services", []).has("view"):
+		for n: String in adj.get(state.party_at, []):
+			for n2: String in adj.get(n, []):
+				out[n2] = true
+	# путь к каждой открытой миссии главы (и через воду — чтобы было видно, что отрезано)
+	if state.party_at != "":
+		for mid: String in MissionFlow.open_missions(state):
+			var loc := str(content.missions.get(mid, {}).get("location", ""))
+			if MissionFlow.chapter_of(content, mid) != state.chapter or not places.has(loc):
+				continue
+			out[loc] = true
+			for p: String in TravelRules.route(content, state, state.party_at, loc, false):
+				out[p] = true
+	for lid: String in out.keys():
+		if is_emerging(content, lid) and not emerged(state).has(lid):
+			out.erase(lid)
+	return out
 
 
 static func _sorted(d: Dictionary) -> Array:

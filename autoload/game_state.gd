@@ -123,6 +123,18 @@ func move_party(lid: String) -> String:
 	return ""
 
 
+## Дело лагеря (DayPlanner, docs/17 §6): "" — сделано; иначе причина.
+func do_task(task: String, cid: String) -> String:
+	var r := DayPlanner.do_task(content(), state, task, cid)
+	if not r["ok"]:
+		return str(r["error"])
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	mission_events.emit(r["entries"])
+	return ""
+
+
 ## "" — отряд ушёл; иначе причина.
 func launch_squad(mission_id: String, heroes: Array) -> String:
 	var r: Dictionary = MissionFlow.launch(content(), state, mission_id, heroes)

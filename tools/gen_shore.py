@@ -545,22 +545,25 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from shore_deck import missions as deck_missions
 M.extend(deck_missions(globals()))
+# местные встречи (docs/17 §5): по одной на место — их поднимает планировщик дня и Разведка
+from shore_local import missions as local_missions, LOCAL
+M.extend(local_missions(globals()))
 
-# прилив (TideRules, docs/16 §11.1): море возвращается по сюжету — после этих миссий;
-# (сколько миссий до воды, сколько миссий вода стоит, текст)
+# прилив (TideRules, docs/16 §11.1, docs/17 §3): море возвращается по сюжету — после этих миссий;
+# (сколько дней до воды, сколько дней вода стоит, текст). Решение владельца 29.09: затопление — одна фаза (1 день)
 TIDES = {
-	"SH20": (2, 2, "Солнце клонится — вода возвращается."),
-	"SH23": (2, 2, "Касси вздрагивает: «Вода идёт»."),
-	"SH25": (2, 2, "Лабиринт гудит: море возвращается."),
-	"SH27": (1, 3, "Шторм гонит воду в лабиринт."),
-	"SH30": (2, 2, "Ночь. Чёрное море поднимается снова."),
+	"SH20": (2, 1, "Солнце клонится — вода возвращается."),
+	"SH23": (2, 1, "Касси вздрагивает: «Вода идёт»."),
+	"SH25": (2, 1, "Лабиринт гудит: море возвращается."),
+	"SH27": (1, 1, "Шторм гонит воду в лабиринт."),
+	"SH30": (2, 1, "Ночь. Чёрное море поднимается снова."),
 }
 for m in M:
 	if m["id"] in TIDES:
 		w, f, t = TIDES[m["id"]]
 		m["on_complete"] = m.get("on_complete", []) + [{"cmd": "tide", "warn": w, "flood": f, "text": t}]
 	if m["id"] == "NS01":
-		m["on_expire"] = m.get("on_expire", []) + [{"cmd": "tide", "warn": 1, "flood": 2, "text": "Прилив пришёл раньше срока."}]
+		m["on_expire"] = m.get("on_expire", []) + [{"cmd": "tide", "warn": 1, "flood": 1, "text": "Прилив пришёл раньше срока."}]
 
 # следы на карте-плане (MapRules): набег и шторм оставляют место разорённым / после шторма на N миссий;
 # набег стаи поднимает Гнездовье у Охотничьих коридоров
@@ -616,6 +619,8 @@ _locs = (
 		"emerge": True, "random": {"pool": pool}}, **({"raid_only": True} if raid else {})) for i, n, t, h, pool, raid in EMERGE_LOC])
 for _l in _locs:
 	_l["camp"] = CAMP[_l["id"]]
+	if _l["id"] in LOCAL:
+		_l.setdefault("random", {})["local"] = LOCAL[_l["id"]]
 	if "every" in _l.get("random", {}):   # случайные встречи мест — раз в N дней (было в секундах)
 		_l["random"]["every"] = max(2, round(_l["random"]["every"] / 50))
 dump(P("locations.json"), upsert(load(P("locations.json")), _locs))

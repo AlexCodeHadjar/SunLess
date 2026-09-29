@@ -217,6 +217,7 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 	var revealed: Array = []
 	var flooded: Array = []
 	var warn: Array = []
+	var kn := MapRules.known(content, state)
 	for lid: String in cfg.get("places", {}):
 		var here := MapRules.present(content, state, lid)
 		var st := MapRules.place_state(content, state, lid, sky_now) if here else ""
@@ -225,7 +226,7 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 		if not here:
 			_reveal.erase(lid)
 			continue
-		if MapRules.revealed(content, state, lid):
+		if content.shops.has(lid) or kn.has(lid):
 			revealed.append(lid)
 			if not _reveal.has(lid):
 				_reveal[lid] = 0.0 if not _info.is_empty() else 1.0

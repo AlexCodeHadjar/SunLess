@@ -65,6 +65,22 @@ static func state_events(content: Content, state: RunState) -> Array:
 			out.append("boss")
 		if str(m.get("type", "")) == "onslaught":
 			out.append("onslaught")
+	# дни, переходы, лагерь-стоянка (docs/16 §12, docs/17)
+	out.append("day")
+	if DayRules.restricted(content, state):
+		out.append("travel")
+		out.append("camp_place")
+		if not MapRules.emerged(state).is_empty():
+			out.append("emerge")
+		var opt := DayPlanner.options(content, state)
+		if not (opt["march"] as Array).is_empty() or not (opt["today"] as Array).is_empty() and (opt["today"] as Array).any(func(m: String) -> bool: return TravelRules.distance(content, state, str(content.missions.get(m, {}).get("location", ""))) > 0):
+			out.append("far")
+		if (opt["today"] as Array).size() < DayPlanner.min_options(content) and not DayPlanner.tasks_left(content, state).is_empty():
+			out.append("tasks")
+	for cid2: String in MissionFlow.heroes(content, state):
+		if DayRules.sorties(state, cid2) >= 1:
+			out.append("fatigue")
+			break
 	var sky := Atmosphere.sky(content, state)
 	if sky in ["eclipse", "blood_moon"]:
 		out.append("sky_" + sky)

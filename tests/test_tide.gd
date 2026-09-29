@@ -86,11 +86,11 @@ func test_story_flood_by_days() -> void:
 
 
 func test_week_cycle() -> void:
-	# неделя Берега: ночь 2 · рассвет 2 · прилив и шторм 2 · кровавая луна 2
+	# неделя Берега (решение владельца 29.09): ночь 2 · рассвет 2 · прилив и шторм 1 · кровавая луна 2
 	var c := content()
 	var s := _shore()
 	s.party_at = _low_high(c)[1]
-	eq(DayRules.week_len(c, "shore"), 8, "неделя — 8 дней:")
+	eq(DayRules.week_len(c, "shore"), 7, "неделя — 7 дней:")
 	eq(str(DayRules.phase(c, s)["id"]), "night", "день 1 — ночь:")
 	s.day = 3
 	eq(str(DayRules.phase(c, s)["id"]), "dawn", "день 3 — рассвет:")
@@ -102,15 +102,13 @@ func test_week_cycle() -> void:
 	eq(str(DayRules.phase(c, s)["id"]), "storm", "день 5 — прилив и шторм:")
 	eq(TideRules.phase(s), "flood", "вода пришла сама:")
 	eq(Atmosphere.sky(c, s), "storm", "небо штормовое:")
-	DayRules.end_day(c, s)
-	eq(TideRules.phase(s), "flood", "стоит весь шторм:")
 	ev = DayRules.end_day(c, s)
-	eq(str(DayRules.phase(c, s)["id"]), "blood_moon", "день 7 — кровавая луна:")
-	eq(TideRules.phase(s), "", "после шторма вода сходит:")
+	eq(str(DayRules.phase(c, s)["id"]), "blood_moon", "день 6 — кровавая луна:")
+	eq(TideRules.phase(s), "", "затопление — один день, вода сходит:")
 	check(ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_ebb"), "событие схода воды")
 	for i in 4:
 		ev = DayRules.end_day(c, s)
-	eq(str(DayRules.phase(c, s)["id"]), "dawn", "день 11 — снова рассвет:")
+	eq(str(DayRules.phase(c, s)["id"]), "dawn", "день 10 — снова рассвет:")
 	check(not MapRules.emerged(s).is_empty(), "большой отлив поднял новые места")
 
 

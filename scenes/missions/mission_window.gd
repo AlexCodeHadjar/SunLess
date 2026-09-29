@@ -249,6 +249,8 @@ func _refresh_forecast() -> void:
 		ch.queue_free()
 	var err := MissionFlow.can_launch(_content(), GameState.state, mission_id, picked)
 	_go.disabled = err != ""
+	var far := TravelRules.distance(_content(), GameState.state, str(_content().missions.get(mission_id, {}).get("location", ""))) > 0
+	_go.text = "ИДТИ И ВЫСТУПИТЬ ›" if far and DayRules.restricted(_content(), GameState.state) else "ВЫСТУПИТЬ ›"
 	_go.tooltip_text = err
 	if err != "" and not picked.is_empty() and TrustRules.refusal(_content(), GameState.state, picked) != "":
 		_forecast_box.add_child(_rich(SquadLifeUI.squad_text(picked), 17))
@@ -780,8 +782,11 @@ func _intel(m: Dictionary) -> Control:
 	var names: Array = []
 	for e: String in enemies:
 		names.append(_content().card_name(e) + (" ×?" if int(enemies[e]) > 1 else ""))
-	for pair: Array in [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))], ["Выход", _sortie_text()],
-			["Отряд", _squad_size(m)], ["Противники", ", ".join(names) if not names.is_empty() else "не видно"]]:
+	var cells: Array = [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))]]
+	if DayRules.restricted(_content(), GameState.state):
+		cells.append(["Путь", _path_text(str(m.get("id", "")))])
+	cells.append_array([["Выход", _sortie_text()], ["Отряд", _squad_size(m)], ["Противники", ", ".join(names) if not names.is_empty() else "не видно"]])
+	for pair: Array in cells:
 		var v := VBoxContainer.new()
 		v.add_child(UITheme.label(str(pair[0]).to_upper(), "sans_bold", 13, Palette.TEXT_DIM))
 		v.add_child(UITheme.label(str(pair[1]), "title_bold", 24, Color("#D08A48") if pair[0] == "Угроза" else Palette.TEXT))
@@ -966,6 +971,22 @@ static func _sorted(d: Dictionary) -> Array:
 	var k: Array = d.keys()
 	k.sort()
 	return k
+
+
+## Путь от лагеря (TravelRules, docs/17 §2): «здесь», «2 перехода», «3 перехода · марш −6», «отрезан водой».
+func _path_text(mid: String) -> String:
+	var c := _content()
+	var s := GameState.state
+	var m: Dictionary = c.missions.get(mid, {})
+	var lid := str(m.get("location", ""))
+	if str(m.get("type", "")) == "onslaught" or lid == s.party_at:
+		return "здесь"
+	var d := TravelRules.distance(c, s, lid)
+	if d < 0:
+		return "отрезан водой"
+	var t := "%d %s" % [d, UITheme.plural(d, ["переход", "перехода", "переходов"])]
+	var cost := TravelRules.march_cost(c, s, d)
+	return t + (" · марш %d" % cost if cost < 0 else "")
 
 
 ## Во что обойдётся выход героям сегодня (усталость, DayRules): «без усталости» или «Санни −6 психики».

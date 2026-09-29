@@ -4,11 +4,11 @@ extends RefCounted
 ## и инструменту разработчика «к началу главы» (DevCheckpoints) — один и тот же код.
 
 
-## Один шаг игры (docs/16 §12 — дни): решить на месте, выйти на миссию рядом, подойти к сюжету по тропам,
-## не ночевать в низине перед приливом, закончить день, когда делать нечего или герои выдохлись.
+## Один шаг игры (docs/16 §12, docs/17 — дни): решить на месте, выйти на миссию (отряд сам идёт по маршруту;
+## видит только открытое на карте, как игрок), дела лагеря, не ночевать в низине перед приливом,
+## закончить день, когда делать нечего или герои выдохлись.
 ## on_report(mission_id, report) — вызывается на каждый завершённый ход миссии (для статистики).
 ## Возвращает {state, error, chapter_started} — резолвер отдаёт новое состояние, поэтому state надо заменить.
-const MOVES_PER_DAY := 4
 const TIRED := 3            # после стольких выходов за день на несюжетное не идёт
 const LOW_PSY := 35         # и с такой психикой — тоже
 
@@ -46,6 +46,12 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		if TideRules.mission_flooded(c, s, mid) or not DayRules.mission_reachable(c, s, mid):
 			continue
 		var story := str(c.missions[mid]["type"]) == "story"
+		# как игрок: видит только открытое на карте; на несюжетное — без марш-броска
+		if DayRules.restricted(c, s) and not MapRules.revealed(c, s, str(c.missions[mid].get("location", ""))):
+			s.flags["bot_hidden"] = int(s.flags.get("bot_hidden", 0)) + 1
+			continue
+		if not story and DayRules.restricted(c, s) and str(c.missions[mid]["type"]) != "onslaught" 				and TravelRules.march_steps(c, s, TravelRules.distance(c, s, str(c.missions[mid].get("location", "")))) > 0:
+			continue
 		var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) \
 			and (story or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED)))
 		if free.is_empty():
@@ -69,52 +75,22 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 			continue
 		MissionFlow.launch(c, s, mid, team)
 		return {"state": s, "error": "", "chapter_started": started}
-	# рядом делать нечего — подойти к сюжету по тропам (переход стоит психики — не больше MOVES_PER_DAY за день)
-	var moves := int(s.flags.get("bot_moves", 0))
-	if moves < MOVES_PER_DAY and DayRules.restricted(c, s):
-		var goal := ""
-		for mid: String in open:
-			if not TideRules.mission_flooded(c, s, mid) and not DayRules.mission_reachable(c, s, mid) \
-					and (str(c.missions[mid]["type"]) == "story" or goal == ""):
-				goal = str(c.missions[mid].get("location", ""))
-				if str(c.missions[mid]["type"]) == "story":
-					break
-		var nxt := _next_step(c, s, goal) if goal != "" else ""
-		if nxt != "" and DayRules.move(c, s, nxt, []) == "":
-			s.flags["bot_moves"] = moves + 1
-			return {"state": s, "error": "", "chapter_started": started}
+	# дела лагеря (DayPlanner): дозор в опасном месте, разведка, сбор — кем-то бодрым
+	for task: String in DayPlanner.tasks_left(c, s):
+		if task == "watch" and float(DayRules.camp(c, s).get("danger", 0.0)) < 0.15:
+			continue
+		for h: String in MissionFlow.free_heroes(c, s):
+			if PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED:
+				DayPlanner.do_task(c, s, task, h)
+				return {"state": s, "error": "", "chapter_started": started}
 	# не ночевать там, куда завтра придёт вода
 	if TideRules.threatened(s, s.party_at) or TideRules.flooded(s, s.party_at):
 		for n: String in MapRules.neighbors(c, s, s.party_at):
-			if c.locations.has(n) and not TideRules.threatened(s, n) and not TideRules.flooded(s, n):
-				DayRules.move(c, s, n, [])
+			if TravelRules.can_stop(c, s, n) and MapRules.revealed(c, s, n) and not TideRules.threatened(s, n):
+				TravelRules.travel(c, s, n, [])
 				break
 	DayRules.end_day(c, s)
-	s.flags["bot_moves"] = 0
 	return {"state": s, "error": "", "chapter_started": started}
-
-
-## Следующий шаг по тропам к месту goal (поиск в ширину, мимо воды). "" — пути нет.
-static func _next_step(c: Content, s: RunState, goal: String) -> String:
-	if goal == s.party_at:
-		return ""
-	var prev := {s.party_at: ""}
-	var queue: Array = [s.party_at]
-	while not queue.is_empty():
-		var cur: String = queue.pop_front()
-		if cur == goal:
-			break
-		for n: String in MapRules.neighbors(c, s, cur):
-			if prev.has(n) or not c.locations.has(n) or TideRules.flooded(s, n):
-				continue
-			prev[n] = cur
-			queue.append(n)
-	if not prev.has(goal):
-		return ""
-	var at := goal
-	while str(prev[at]) != s.party_at and str(prev[at]) != "":
-		at = str(prev[at])
-	return at
 
 
 ## Отряд на месте: выбрать действие с лучшим прогнозом (или отступить от безнадёжного).

@@ -87,6 +87,43 @@ static func _validate_maps(c: Content, errors: Array[String]) -> void:
 			for lid: String in pair:
 				if not places.has(lid):
 					errors.append("maps/%s: тропа ведёт в неизвестное место %s" % [region, lid])
+	errors.append_array(dry_spine_errors(c))
+
+
+## Карта без тупиков (docs/17 §2): все постоянные места связаны тропами; высоты и лавки связаны между собой
+## без низин и средних мест — в любой прилив от любой высоты можно дойти до любой другой.
+static func dry_spine_errors(c: Content) -> Array[String]:
+	var out: Array[String] = []
+	for region: String in c.maps:
+		var m: Dictionary = c.maps[region]
+		var places: Dictionary = m.get("places", {})
+		var all: Array = []
+		var dry: Array = []
+		for lid: String in places:
+			if c.shops.has(lid):
+				all.append(lid)
+				dry.append(lid)
+			elif c.locations.has(lid) and not bool(c.locations[lid].get("emerge", false)):
+				all.append(lid)
+				if str(c.locations[lid].get("height", "")) == "high":
+					dry.append(lid)
+		for pair: Array in [[all, "все места"], [dry, "высоты и лавки (в прилив)"]]:
+			var nodes: Array = pair[0]
+			if nodes.size() < 2:
+				continue
+			var seen := {nodes[0]: true}
+			var queue: Array = [nodes[0]]
+			while not queue.is_empty():
+				var cur: String = queue.pop_front()
+				for e: Array in m.get("paths", []):
+					for k in 2:
+						if str(e[k]) == cur and nodes.has(str(e[1 - k])) and not seen.has(str(e[1 - k])):
+							seen[str(e[1 - k])] = true
+							queue.append(str(e[1 - k]))
+			for lid: String in nodes:
+				if not seen.has(lid):
+					out.append("maps/%s: тупик — %s: место %s не связано тропами с %s" % [region, pair[1], lid, nodes[0]])
+	return out
 
 
 ## Колода событий (docs/16 §11.4): миссии существуют, из своей главы, не повторяются; pick не больше единиц.

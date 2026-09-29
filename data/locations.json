@@ -223,6 +223,11 @@
    "beds": 1,
    "danger": 0.05,
    "services": []
+  },
+  "random": {
+   "local": [
+    "LS01"
+   ]
   }
  },
  {
@@ -241,7 +246,10 @@
     "RS03",
     "RS05"
    ],
-   "every": 2
+   "every": 2,
+   "local": [
+    "LS02"
+   ]
   },
   "camp": {
    "rest": 12,
@@ -267,7 +275,10 @@
     "RS02",
     "RS06"
    ],
-   "every": 2
+   "every": 2,
+   "local": [
+    "LS03"
+   ]
   },
   "camp": {
    "rest": 6,
@@ -295,6 +306,11 @@
     "equip",
     "repair"
    ]
+  },
+  "random": {
+   "local": [
+    "LS04"
+   ]
   }
  },
  {
@@ -313,7 +329,10 @@
     "RS04",
     "RS08"
    ],
-   "after_missions": 4
+   "after_missions": 4,
+   "local": [
+    "LS05"
+   ]
   },
   "camp": {
    "rest": 16,
@@ -342,6 +361,11 @@
    "services": [
     "view"
    ]
+  },
+  "random": {
+   "local": [
+    "LS06"
+   ]
   }
  },
  {
@@ -363,6 +387,11 @@
     "equip",
     "view"
    ]
+  },
+  "random": {
+   "local": [
+    "LS07"
+   ]
   }
  },
  {
@@ -383,6 +412,11 @@
    "services": [
     "view"
    ]
+  },
+  "random": {
+   "local": [
+    "LS08"
+   ]
   }
  },
  {
@@ -400,7 +434,10 @@
    "pool": [
     "RS07"
    ],
-   "every": 2
+   "every": 2,
+   "local": [
+    "LS09"
+   ]
   },
   "camp": {
    "rest": 6,
@@ -424,7 +461,10 @@
    "pool": [
     "RS09"
    ],
-   "every": 3
+   "every": 3,
+   "local": [
+    "LS10"
+   ]
   },
   "camp": {
    "rest": 10,
@@ -448,7 +488,10 @@
    "pool": [
     "RS10"
    ],
-   "every": 3
+   "every": 3,
+   "local": [
+    "LS11"
+   ]
   },
   "camp": {
    "rest": 20,
@@ -475,6 +518,9 @@
   "random": {
    "pool": [
     "RS11"
+   ],
+   "local": [
+    "LS12"
    ]
   },
   "camp": {
@@ -499,6 +545,9 @@
   "random": {
    "pool": [
     "RS12"
+   ],
+   "local": [
+    "LS13"
    ]
   },
   "camp": {
@@ -525,6 +574,9 @@
   "random": {
    "pool": [
     "RS13"
+   ],
+   "local": [
+    "LS14"
    ]
   },
   "camp": {
@@ -549,6 +601,9 @@
   "random": {
    "pool": [
     "RS14"
+   ],
+   "local": [
+    "LS15"
    ]
   },
   "raid_only": true,
@@ -574,6 +629,9 @@
   "random": {
    "pool": [
     "RS15"
+   ],
+   "local": [
+    "LS16"
    ]
   },
   "camp": {
@@ -598,6 +656,9 @@
   "random": {
    "pool": [
     "RS16"
+   ],
+   "local": [
+    "LS17"
    ]
   },
   "camp": {

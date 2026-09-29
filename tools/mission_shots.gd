@@ -317,6 +317,23 @@ func _run() -> void:
 	sa.tide["left"] = 0
 	await _wait(3.0)
 	await _shot("m21e_tide_ebb")
+	# переходы и дела лагеря (docs/17): окно пути к месту, выбор героя для дела
+	var gsc := get_tree().current_scene
+	sa.tide = {}
+	sa.squads.clear()
+	GameState.missions_changed.emit()
+	await _wait(0.8)
+	await _shot("m21h_day_plan")
+	gsc.call("_show_travel", "statue_hill")
+	await _wait(0.4)
+	await _shot("m21i_travel")
+	gsc.call("_close_travel")
+	gsc.call("_pick_task_hero", "scout")
+	await _wait(0.4)
+	await _shot("m21j_task_pick")
+	for n in gsc.get_children():
+		if n == gsc.get("_picker"):
+			n.queue_free()
 	# Воспоминание-добыча (LootRules): выбор 1 из 3
 	var lrng := RandomNumberGenerator.new()
 	lrng.seed = 7
