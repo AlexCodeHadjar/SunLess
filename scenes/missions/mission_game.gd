@@ -1,11 +1,14 @@
 extends Control
-## Экран режима миссий (docs/15): карта главы — миссии лежат картами у своих локаций,
-## над картой с отрядом — кольцо таймера; внизу — герои.
-## Часы идут, пока открыт этот экран (таймеры только в игре).
+## Экран режима миссий (docs/15): карта главы — миссии лежат картами у своих локаций; внизу — герои.
+## Карта занимает всё окно: глава, день и фаза — надписями прямо на ней, меню — строкой в углу,
+## ряд героев — почти прозрачный. Карту-план можно чуть сдвинуть, зажав кнопку мыши.
 
-const MAP_TOP := 72.0
-const MAP_BOTTOM := 780.0
-const LEFT_W := 250.0
+const TRAY_TOP := 790.0         # верх ряда героев (ряд лежит поверх карты)
+# раскладка старой панорамы (главы без карты-плана): точки мест из locations.pos
+const PANO_LEFT := 250.0
+const PANO_TOP := 72.0
+const PANO_BOTTOM := 780.0
+const DRAG_START := 6.0         # столько пикселей мышь проходит, прежде чем карта поедет
 
 var _backdrop: MapBackdrop      # старый фон главы (панорама); у глав с картой-планом — null
 var _life: MapLife
@@ -37,6 +40,11 @@ var _day_label: Label           # фаза недели и завтрашний 
 var _camp_label: Label          # где стоит лагерь и что там за ночь
 var _end_btn: Button            # «Закончить день»
 var _night: Control             # окно «Ночь» после конца дня
+var _pan_layer: Control         # метки и лавки — едут вместе с картой-планом
+var _drag_from := Vector2.ZERO  # где зажали кнопку мыши
+var _drag_pan := Vector2.ZERO   # сдвиг карты в этот момент
+var _dragging := false
+var _drag_armed := false
 
 
 func _ready() -> void:
@@ -45,8 +53,8 @@ func _ready() -> void:
 	if not GameState.is_missions():
 		GameState.new_mission_run()
 	_build_map()
-	_build_left()
 	_build_top()
+	_build_nav()
 	_build_bottom()
 	_build_toast()
 	GameState.missions_changed.connect(_refresh)
@@ -107,37 +115,47 @@ func _process(delta: float) -> void:
 func _build_map() -> void:
 	var cfg := MapRules.config(ContentDB.data, GameState.state.chapter)
 	if not cfg.is_empty():
-		_sleeper = SleeperMap.make(cfg, Rect2(0, MAP_TOP, 1920, MAP_BOTTOM - MAP_TOP))
+		_sleeper = SleeperMap.make(cfg, Rect2(0, 0, 1920, 1080))
 		add_child(_sleeper)
+		_sleeper.panned.connect(func(off: Vector2) -> void:
+			if _pan_layer != null:
+				_pan_layer.position = off)
 	else:
 		_backdrop = MapBackdrop.new()
 		_backdrop.region = _region()
 		_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 		add_child(_backdrop)
 		_life = MapLife.new()
-		_life.size = Vector2(1920, MAP_BOTTOM)
+		_life.size = Vector2(1920, TRAY_TOP)
 		add_child(_life)
-	var area := Rect2(Vector2(LEFT_W - 200, MAP_TOP + 120), Vector2(1920 - LEFT_W + 400, MAP_BOTTOM - MAP_TOP - 120))
-	_fog = Vfx.fog(area, 0.07)
+	_fog = Vfx.fog(Rect2(Vector2(-200, 160), Vector2(2320, TRAY_TOP - 160)), 0.07)
 	add_child(_fog)
-	_embers = Vfx.ambient_embers(Rect2(Vector2(LEFT_W, MAP_TOP), Vector2(1920 - LEFT_W, MAP_BOTTOM - MAP_TOP)))
+	_embers = Vfx.ambient_embers(Rect2(Vector2(0, 0), Vector2(1920, TRAY_TOP)))
 	add_child(_embers)
 	_update_sky()
 	_tide = TideLayer.new()
 	add_child(_tide)
+	_pan_layer = Control.new()
+	_pan_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pan_layer.size = Vector2(1920, 1080)
+	add_child(_pan_layer)
 	_pins_layer = Control.new()
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_pins_layer)
+	_pan_layer.add_child(_pins_layer)
 	var c := ContentDB.data
 	for sid: String in ShopRules.shops_of(c, GameState.state):
 		var icon := ShopIcon.new()
 		icon.shop_id = sid
 		icon.title = str(c.shops[sid].get("name", sid))
 		icon.pressed.connect(_open_shop)
-		add_child(icon)
+		_pan_layer.add_child(icon)
 		icon.position = _shop_point(sid) - Vector2(110, 42)
 		_shops[sid] = icon
+	# лагерь — в середину видимой части карты
+	if _sleeper != null:
+		_sleeper.focus(_sleeper.center(c, GameState.state, GameState.state.party_at), Vector2(960, TRAY_TOP * 0.5))
+		_pan_layer.position = _sleeper.pan
 
 
 func _region() -> String:
@@ -164,107 +182,152 @@ func _shop_point(sid: String) -> Vector2:
 
 func _map_point(p: Array) -> Vector2:
 	var w := 1920.0
-	var x := LEFT_W + 60 + (w - LEFT_W - 200) * float(p[0])
-	var top := MAP_TOP + 280.0   # карты миссий стоят над точкой места — не залезать под верхнюю панель
-	var y := top + (MAP_BOTTOM - 80.0 - top) * float(p[1])
+	var x := PANO_LEFT + 60 + (w - PANO_LEFT - 200) * float(p[0])
+	var top := PANO_TOP + 280.0   # карты миссий стоят над точкой места — не залезать под надписи сверху
+	var y := top + (PANO_BOTTOM - 80.0 - top) * float(p[1])
 	return Vector2(x, y)
 
 
-func _build_left() -> void:
-	var col := Control.new()
-	col.size = Vector2(LEFT_W, MAP_BOTTOM)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(col)
-	var shade := ColorRect.new()
-	shade.color = Color(0.04, 0.045, 0.06, 0.55)
-	shade.size = Vector2(LEFT_W, MAP_BOTTOM)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(shade)
-	var logo := UITheme.label("SunLess", "title", 58, Palette.TEXT)
-	logo.position = Vector2(34, 14)
-	col.add_child(logo)
-	var sub := UITheme.label("И  ТЕНИ  ПОМНЯТ", "sans", 12, Palette.TEXT_DIM)
-	sub.position = Vector2(46, 86)
-	col.add_child(sub)
-	var nav := VBoxContainer.new()
-	nav.position = Vector2(22, 150)
-	nav.add_theme_constant_override("separation", 6)
-	col.add_child(nav)
-	for item: Array in [["✦  КАРТА", "map"], ["✚  ЛАГЕРЬ", "camp"], ["✎  ЖУРНАЛ", "journal"], ["⚙  НАСТРОЙКИ", "settings"], ["⟵  В МЕНЮ", "menu"]]:
+## Глава, осколки, день и фаза — надписями прямо на карте, без плашек.
+func _build_top() -> void:
+	var v := VBoxContainer.new()
+	v.position = Vector2(34, 16)
+	v.add_theme_constant_override("separation", 0)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(v)
+	_top_labels["chapter"] = _on_map_label(UITheme.label("", "title", 34, Palette.TEXT))
+	v.add_child(_top_labels["chapter"])
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 22)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(row)
+	_top_labels["squads"] = _on_map_label(UITheme.label("", "sans_bold", 20, Palette.SILVER))
+	row.add_child(_top_labels["squads"])
+	_top_labels["shards"] = _on_map_label(UITheme.label("", "sans_bold", 20, Palette.COINS))
+	_top_labels["shards"].tooltip_text = "Осколки душ: добыча с убитых тварей. Тратятся в магазине на карты усилений и персонажей."
+	_top_labels["shards"].mouse_filter = Control.MOUSE_FILTER_STOP
+	row.add_child(_top_labels["shards"])
+
+
+## Надпись поверх карты: тёмная обводка вместо плашки.
+func _on_map_label(l: Label) -> Label:
+	l.add_theme_constant_override("outline_size", 8)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	l.add_theme_constant_override("shadow_offset_x", 0)
+	l.add_theme_constant_override("shadow_offset_y", 2)
+	l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	return l
+
+
+## Меню — строкой в правом верхнем углу, без плашек.
+func _build_nav() -> void:
+	var nav := HBoxContainer.new()
+	nav.add_theme_constant_override("separation", 4)
+	nav.anchor_left = 1.0
+	nav.anchor_right = 1.0
+	nav.offset_left = -760
+	nav.offset_right = -24
+	nav.offset_top = 14
+	nav.alignment = BoxContainer.ALIGNMENT_END
+	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(nav)
+	for item: Array in [["✚ ЛАГЕРЬ", "camp"], ["✎ ЖУРНАЛ", "journal"], ["⚙ НАСТРОЙКИ", "settings"], ["⟵ МЕНЮ", "menu"]]:
 		if item[1] == "camp" and not TutorialRules.enabled(GameState.state, "camp"):
 			continue
 		var b := Button.new()
 		b.text = item[0]
 		b.flat = true
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(200, 44)
+		b.focus_mode = Control.FOCUS_NONE
 		b.add_theme_font_override("font", UITheme.font("caps"))
-		b.add_theme_font_size_override("font_size", 20)
-		b.add_theme_color_override("font_color", Palette.TEXT if item[1] == "map" else Palette.TEXT_DIM)
+		b.add_theme_font_size_override("font_size", 19)
+		b.add_theme_color_override("font_color", Palette.TEXT_DIM)
+		b.add_theme_color_override("font_hover_color", Palette.TEXT)
+		b.add_theme_color_override("font_pressed_color", Palette.TEXT)
+		b.add_theme_constant_override("outline_size", 7)
+		b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+		var empty := StyleBoxEmpty.new()
+		empty.content_margin_left = 10
+		empty.content_margin_right = 10
+		for st: String in ["normal", "hover", "pressed", "focus", "disabled", "hover_pressed"]:
+			b.add_theme_stylebox_override(st, empty)
 		b.pressed.connect(_on_nav.bind(item[1]))
 		nav.add_child(b)
 		HintTargets.put("nav_" + str(item[1]), [b])
 	HintTargets.put("nav", [nav])
 
 
-func _build_top() -> void:
-	var bar := PanelContainer.new()
-	var st := UITheme.box(Color(0.03, 0.035, 0.05, 0.88), Palette.LINE, 0, 0, 0)
-	st.border_width_bottom = 1
-	bar.add_theme_stylebox_override("panel", st)
-	bar.anchor_right = 1.0
-	bar.offset_left = LEFT_W
-	bar.offset_bottom = MAP_TOP
-	add_child(bar)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 26)
-	bar.add_child(row)
-	var pad := Control.new()
-	pad.custom_minimum_size.x = 8
-	row.add_child(pad)
-	for key: String in ["chapter", "shards", "squads"]:
-		var l := UITheme.label("", "title" if key == "chapter" else "sans", 24 if key == "chapter" else 19, Palette.TEXT)
-		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(l)
-		_top_labels[key] = l
-		var sep := ColorRect.new()
-		sep.color = Palette.LINE
-		sep.custom_minimum_size = Vector2(1, 30)
-		sep.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(sep)
-	_top_labels["shards"].add_theme_color_override("font_color", Palette.COINS)
-	_top_labels["shards"].tooltip_text = "Осколки душ: добыча с убитых тварей. Тратятся в магазине на карты усилений и персонажей."
-	_top_labels["shards"].mouse_filter = Control.MOUSE_FILTER_STOP
+## Карту-план можно чуть сдвинуть, зажав кнопку мыши на свободном месте карты.
+func _gui_input(event: InputEvent) -> void:
+	if _sleeper == null:
+		return
+	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_MIDDLE]:
+		var mb := event as InputEventMouseButton
+		_drag_armed = mb.pressed
+		if mb.pressed:
+			_drag_from = mb.position
+			_drag_pan = _sleeper.pan
+		elif _dragging:
+			_dragging = false
+			mouse_default_cursor_shape = Control.CURSOR_ARROW
+		accept_event()
+	elif event is InputEventMouseMotion and _drag_armed:
+		var d := (event as InputEventMouseMotion).position - _drag_from
+		if not _dragging and d.length() >= DRAG_START:
+			_dragging = true
+			mouse_default_cursor_shape = Control.CURSOR_DRAG
+		if _dragging:
+			_sleeper.set_pan(_drag_pan + d)
+			accept_event()
 
 
 func _build_bottom() -> void:
+	# ряд героев лежит поверх карты и почти прозрачен: снизу чуть темнее, чтобы читались надписи
+	var shade := TextureRect.new()
+	var grad := Gradient.new()
+	grad.set_color(0, Color(0.02, 0.025, 0.035, 0.0))
+	grad.set_color(1, Color(0.02, 0.025, 0.035, 0.45))
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	shade.texture = gt
+	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	shade.stretch_mode = TextureRect.STRETCH_SCALE
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shade.position = Vector2(0, TRAY_TOP - 60)
+	shade.size = Vector2(1920, 1080 - TRAY_TOP + 60)
+	add_child(shade)
 	var panel := PanelContainer.new()
-	var st := UITheme.box(Color(0.055, 0.06, 0.08, 0.95), Palette.LINE, 0, 0, 0)
-	st.border_width_top = 1
-	panel.add_theme_stylebox_override("panel", st)
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
 	panel.anchor_right = 1.0
-	panel.offset_top = -(1080 - MAP_BOTTOM)
+	panel.offset_top = -(1080 - TRAY_TOP)
 	add_child(panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 6)
+	v.add_theme_constant_override("separation", 2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(v)
 	_build_day_panel()
-	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · героя — на карту миссии · усиление — на героя (в кармашек) · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
-	head.custom_minimum_size.y = 34
+	var head := _on_map_label(UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · героя — на карту миссии · усиление — на героя (в кармашек) · правый щелчок — планшет карты", "sans", 15, Palette.TEXT_DIM))
+	head.add_theme_constant_override("outline_size", 6)
+	head.custom_minimum_size.y = 28
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	v.add_child(head)
 	var scroll := ScrollContainer.new()
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	v.add_child(scroll)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 48)
 	margin.add_theme_constant_override("margin_right", 48)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	scroll.add_child(margin)
 	_heroes_row = HBoxContainer.new()
 	_heroes_row.add_theme_constant_override("separation", 14)
+	_heroes_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(_heroes_row)
 
 
@@ -272,14 +335,15 @@ func _build_bottom() -> void:
 func _build_day_panel() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
-	box.position = Vector2(1430, MAP_BOTTOM + 18)
+	box.position = Vector2(1430, TRAY_TOP + 22)
 	box.custom_minimum_size = Vector2(460, 0)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
-	_day_label = UITheme.label("", "title", 21, Palette.TEXT)
+	_day_label = _on_map_label(UITheme.label("", "title", 21, Palette.TEXT))
 	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_day_label.custom_minimum_size.x = 460
 	box.add_child(_day_label)
-	_camp_label = UITheme.label("", "sans", 16, Palette.TEXT_DIM)
+	_camp_label = _on_map_label(UITheme.label("", "sans", 16, Palette.SILVER))
 	_camp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_camp_label.custom_minimum_size.x = 460
 	box.add_child(_camp_label)
@@ -312,7 +376,7 @@ func _update_day() -> void:
 	var line := CampWindow._camp_line(cp).strip_edges().trim_suffix(".")
 	_camp_label.text = "Лагерь: %s · ночью психика +%d · коек %d%s%s" % [where, int(cp.get("rest", 20)), int(cp.get("beds", 0)),
 		(" · " + line.to_lower()) if line != "" else "", warn]
-	_camp_label.add_theme_color_override("font_color", Palette.REQ_MISS if warn != "" else Palette.TEXT_DIM)
+	_camp_label.add_theme_color_override("font_color", Palette.REQ_MISS if warn != "" else Palette.SILVER)
 	_end_btn.disabled = DayRules.can_end(s) != ""
 
 
@@ -378,25 +442,25 @@ func _show_night(ev: Array) -> void:
 
 func _build_toast() -> void:
 	_toast = UITheme.label("", "sans_bold", 20, Palette.TEXT)
-	# справа в верхней панели — не перекрывает ни карту, ни окна миссий
+	# справа под строкой меню — не перекрывает окна миссий
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_toast.anchor_left = 1.0
 	_toast.anchor_right = 1.0
 	_toast.offset_left = -960
 	_toast.offset_right = -36
-	_toast.offset_top = 22
+	_toast.offset_top = 62
 	_toast.add_theme_constant_override("outline_size", 8)
 	_toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	_toast.modulate.a = 0.0
 	_toast.z_index = 50
 	add_child(_toast)
-	# прилив: строка с отсчётом под верхней панелью
+	# прилив: строка с отсчётом под надписями главы
 	_tide_banner = UITheme.label("", "sans_bold", 21, Color(0.72, 0.88, 1.0))
 	_tide_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tide_banner.anchor_right = 1.0
-	_tide_banner.offset_left = LEFT_W
-	_tide_banner.offset_top = MAP_TOP + 10
-	_tide_banner.offset_bottom = MAP_TOP + 44
+	_tide_banner.offset_left = 0
+	_tide_banner.offset_top = 104
+	_tide_banner.offset_bottom = 138
 	_tide_banner.add_theme_constant_override("outline_size", 8)
 	_tide_banner.add_theme_color_override("font_outline_color", Color(0, 0.02, 0.05, 0.95))
 	_tide_banner.mouse_filter = Control.MOUSE_FILTER_STOP

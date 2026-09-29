@@ -2,9 +2,10 @@ extends Node
 ## Настройки игрока в user://settings.cfg (ConfigFile). Применяются сразу.
 
 const PATH := "user://settings.cfg"
+const VERSION := 2          # 2: игра по умолчанию на весь экран (старый сохранённый оконный режим сбрасывается)
 
 var values := {
-	"fullscreen": false,
+	"fullscreen": true,
 	"roll_speed": 1.0,        # 1.0 обычная, 0.35 быстрая, 0.0 без анимации
 	"reduce_motion": false,
 	"chance_monochrome": false,
@@ -50,12 +51,16 @@ func load_settings() -> void:
 		return
 	for k: String in values:
 		values[k] = cfg.get_value("settings", k, values[k])
+	if int(cfg.get_value("meta", "version", 1)) < VERSION:
+		values["fullscreen"] = true
+		save_settings()
 
 
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	for k: String in values:
 		cfg.set_value("settings", k, values[k])
+	cfg.set_value("meta", "version", VERSION)
 	cfg.save(PATH)
 
 

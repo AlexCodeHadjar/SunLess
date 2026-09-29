@@ -6,6 +6,7 @@ extends Control
 ##   (облик — MapRules.place_state, смена — наплывом) → тени облаков → туман неизвестного (шейдер)
 ##   → кольца «вода идёт», подписи мест, дождь и молнии.
 ## Небо не рисуется: день, ночь, кровавая луна, шторм и затмение — цветом всей карты и эффектами.
+## Основа покрывает всё окно с запасом (`zoom`), карту можно чуть сдвинуть мышью (`pan`, сигнал `panned`).
 
 const WATER_SHADER := preload("res://scenes/map/sleeper_water.gdshader")
 const FOG_SHADER := preload("res://scenes/map/sleeper_fog.gdshader")
@@ -15,9 +16,12 @@ const LEVEL_SPEED := 18.0        # сколько единиц высоты во
 const SKY_TINT := {"night": Color(0.8, 0.84, 0.97), "day": Color(1.05, 1.03, 0.99), "eclipse": Color(0.5, 0.5, 0.64),
 	"blood_moon": Color(1.06, 0.62, 0.6), "storm": Color(0.62, 0.68, 0.8)}
 
+signal panned(offset: Vector2)
+
 var cfg: Dictionary = {}
-var view := Rect2(0, 72, 1920, 708)     # область экрана под карту
-var rect := Rect2()                      # где лежит основа (в координатах _clip)
+var view := Rect2(0, 0, 1920, 1080)     # область экрана под карту
+var rect := Rect2()                      # где лежит основа (в координатах _clip, без сдвига)
+var pan := Vector2.ZERO                  # сдвиг карты мышью (в пределах запаса основы)
 var sky := ""
 
 var _clip: Control
@@ -28,6 +32,7 @@ var _sprites_layer: Control
 var _shade: Control
 var _fog: ColorRect
 var _over: Control
+var _weather: Control
 var _sprites := {}        # место -> TextureRect
 var _shown := {}          # место -> облик на экране ("" — место скрыто)
 var _tex := {}            # путь -> Texture2D
@@ -59,9 +64,12 @@ func _ready() -> void:
 	_clip.clip_contents = true
 	var base := _load("base")
 	var aspect := float(base.get_width()) / float(base.get_height()) if base != null else 2.0
-	rect.size = Vector2(view.size.x, view.size.x / aspect)
-	rect.position = Vector2(0.0, -float(cfg.get("view_top", 0.08)) * rect.size.y)
+	# основа покрывает окно целиком и чуть больше — запас для сдвига мышью
+	var w := maxf(view.size.x, view.size.y * aspect) * float(cfg.get("zoom", 1.15))
+	rect.size = Vector2(w, w / aspect)
+	rect.position = Vector2.ZERO
 	_world = _layer(_clip)
+	set_pan(Vector2((view.size.x - rect.size.x) / 2.0, -float(cfg.get("view_top", 0.08)) * rect.size.y))
 	var bg := TextureRect.new()
 	bg.texture = base
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -100,11 +108,13 @@ func _ready() -> void:
 	fm.set_shader_parameter("aspect", aspect)
 	_fog.material = fm
 	_world.add_child(_fog)
-	_over = _layer(_clip)
+	_over = _layer(_world)
 	_over.draw.connect(_draw_over)
+	_weather = _layer(_clip)
+	_weather.draw.connect(_draw_weather)
 	var names := ["clouds/cloud_01", "clouds/cloud_02", "clouds/cloud_03", "clouds/cloud_04"]
 	for i in 5:
-		_clouds.append({"tex": Vfx.tex(names[i % names.size()]), "pos": Vector2(_rng.randf() * view.size.x, _rng.randf() * view.size.y),
+		_clouds.append({"tex": Vfx.tex(names[i % names.size()]), "pos": Vector2(_rng.randf() * rect.size.x, _rng.randf() * rect.size.y),
 			"scale": _rng.randf_range(1.4, 2.4), "speed": _rng.randf_range(5.0, 11.0)})
 
 
@@ -129,7 +139,23 @@ func _levels(key: String) -> float:
 
 # --- координаты -----------------------------------------------------------------------
 
-## Точка основы (доли) → экран.
+## Сдвинуть карту (в пределах запаса основы). Метки над картой двигает владелец по сигналу `panned`.
+func set_pan(offset: Vector2) -> void:
+	var lo := view.size - rect.size
+	var next := Vector2(clampf(offset.x, minf(lo.x, 0.0), 0.0), clampf(offset.y, minf(lo.y, 0.0), 0.0))
+	if next == pan and _world.position == pan:
+		return
+	pan = next
+	_world.position = pan
+	panned.emit(pan)
+
+
+## Поставить точку карты (координаты без сдвига) в заданное место окна — например, лагерь в центр.
+func focus(p: Vector2, at: Vector2) -> void:
+	set_pan(at - (p - view.position))
+
+
+## Точка основы (доли) → экран без сдвига (метки лежат в слое, который сдвигается вместе с картой).
 func to_screen(p: Vector2) -> Vector2:
 	return view.position + rect.position + p * rect.size
 
@@ -293,8 +319,8 @@ func _process(delta: float) -> void:
 	if not Vfx.reduced():
 		for cl: Dictionary in _clouds:
 			cl["pos"] += Vector2(cl["speed"] * delta, cl["speed"] * 0.25 * delta)
-			if cl["pos"].x > view.size.x + 400.0:
-				cl["pos"] = Vector2(-500.0, _rng.randf() * view.size.y)
+			if cl["pos"].x > rect.size.x + 400.0:
+				cl["pos"] = Vector2(-500.0, _rng.randf() * rect.size.y)
 		if sky == "storm":
 			_next_flash -= delta
 			if _next_flash <= 0.0:
@@ -303,6 +329,7 @@ func _process(delta: float) -> void:
 		_flash = maxf(0.0, _flash - delta * 2.6)
 	_shade.queue_redraw()
 	_over.queue_redraw()
+	_weather.queue_redraw()
 
 
 func _draw_shade() -> void:
@@ -391,15 +418,18 @@ func _draw_over() -> void:
 		var col := Color(0.6, 0.8, 1.0) if _info["flooded"].has(lid) else Palette.SILVER
 		_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.85))
 		_over.draw_string(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
-	# небо: кровавая луна пульсирует по краям, шторм — дождь и молнии
+
+
+## Небо поверх окна (не сдвигается с картой): кровавая луна пульсирует, шторм — дождь и молнии.
+func _draw_weather() -> void:
 	var full := Rect2(Vector2.ZERO, view.size)
 	if sky == "blood_moon":
 		var beat := 0.5 + 0.5 * sin(_t * 1.6)
-		_over.draw_rect(full, Color(0.5, 0.04, 0.06, 0.06 + 0.05 * beat))
+		_weather.draw_rect(full, Color(0.5, 0.04, 0.06, 0.06 + 0.05 * beat))
 	elif sky == "storm" and not Vfx.reduced():
 		for i in 90:
 			var x := fmod(i * 97.3 + _t * 520.0, view.size.x + 200.0) - 100.0
 			var y := fmod(i * 53.1 + _t * 900.0, view.size.y + 60.0) - 30.0
-			_over.draw_line(Vector2(x, y), Vector2(x - 7.0, y + 22.0), Color(0.75, 0.82, 0.92, 0.22), 1.2)
+			_weather.draw_line(Vector2(x, y), Vector2(x - 7.0, y + 22.0), Color(0.75, 0.82, 0.92, 0.22), 1.2)
 	if _flash > 0.0:
-		_over.draw_rect(full, Color(0.85, 0.9, 1.0, 0.22 * _flash))
+		_weather.draw_rect(full, Color(0.85, 0.9, 1.0, 0.22 * _flash))

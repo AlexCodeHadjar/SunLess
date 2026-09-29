@@ -55,6 +55,8 @@ static func left(state: RunState) -> int:
 ## «через 2 дня», «через 1 день».
 static func left_text(state: RunState) -> String:
 	var n := left(state)
+	if n <= 0:
+		return "ночь"   # «прилив через ночь»: придёт, когда закончится этот день
 	return "%d %s" % [n, ["день", "дня", "дней"][0 if n % 10 == 1 and n % 100 != 11 else (1 if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else 2)]]
 
 
