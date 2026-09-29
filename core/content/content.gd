@@ -29,6 +29,7 @@ var story: Dictionary = {}         # сюжетные окна по главам
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
 var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
 var deck: Dictionary = {}          # колода событий глав: data/deck.json (DeckRules) — {глава: [{name, pick, min_chains, units}]}
+var days: Dictionary = {}          # дни, неделя, лагерь-стоянка: data/days.json (DayRules)
 var maps: Dictionary = {}          # карты-планы регионов: data/maps/<регион>.json (MapRules, SleeperMap) — регион -> настройки
 var modifiers: Dictionary = {}     # модификаторы миссий: data/modifiers.json (ModifierRules) — {chapters, types, two_chance, list}
 var load_errors: Array[String] = []
@@ -82,6 +83,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.modifiers = ml
 		else:
 			c.load_errors.append("data/modifiers.json: ожидается словарь {chapters, types, list}")
+	if FileAccess.file_exists(dir + "/days.json"):
+		var dy: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/days.json"))
+		if dy is Dictionary:
+			c.days = dy
+		else:
+			c.load_errors.append("data/days.json: ожидается словарь {phases, weeks, …}")
 	if DirAccess.dir_exists_absolute(dir + "/maps"):
 		for f: String in DirAccess.get_files_at(dir + "/maps"):
 			if not f.ends_with(".json"):

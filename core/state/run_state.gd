@@ -27,7 +27,9 @@ var rng_seed: int = 0
 var rng_state: int = 0
 var chapter: String = ""            # текущая глава: nightmare, academy…
 var mode: String = "missions"
-var clock: float = 0.0              # игровые секунды (идут только в игре)
+var clock: float = 0.0              # счётчик действий: +1 за выход, день × 100 (зёрна случайности, порядок журнала)
+var day: int = 1                    # день главы (DayRules): ход — день, «Закончить день» — ночь в лагере
+var party_at: String = ""           # где стоит отряд — там и лагерь (DayRules)
 ## mission_id -> {status: "open"|"active"|"done", attempts, opened_at}
 var missions: Dictionary = {}
 ## [{id, mission, heroes:[], launched_at, arrive_at, phase: "travel"|"arrived"}]
@@ -75,6 +77,8 @@ func to_dict() -> Dictionary:
 		"chapter": chapter,
 		"mode": mode,
 		"clock": clock,
+		"day": day,
+		"party_at": party_at,
 		"missions": missions.duplicate(true),
 		"squads": squads.duplicate(true),
 		"next_squad": next_squad,
@@ -120,6 +124,8 @@ static func from_dict(d: Dictionary) -> RunState:
 	s.chapter = str(d.get("chapter", ""))
 	s.mode = str(d.get("mode", "missions"))
 	s.clock = float(d.get("clock", 0.0))
+	s.day = int(d.get("day", 1))
+	s.party_at = str(d.get("party_at", ""))
 	s.missions = Dictionary(d.get("missions", {})).duplicate(true)
 	for mid: String in s.missions:
 		s.missions[mid]["attempts"] = int(s.missions[mid].get("attempts", 0))

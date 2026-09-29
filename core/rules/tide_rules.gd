@@ -52,13 +52,13 @@ static func left(state: RunState) -> int:
 	return maxi(0, int(state.tide.get("left", 0)))
 
 
-## «через 2 миссии», «через 1 миссию».
+## «через 2 дня», «через 1 день».
 static func left_text(state: RunState) -> String:
 	var n := left(state)
-	return "%d %s" % [n, ["миссию", "миссии", "миссий"][0 if n % 10 == 1 and n % 100 != 11 else (1 if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else 2)]]
+	return "%d %s" % [n, ["день", "дня", "дней"][0 if n % 10 == 1 and n % 100 != 11 else (1 if n % 10 in [2, 3, 4] and not n % 100 in [12, 13, 14] else 2)]]
 
 
-## Выполнена миссия (MissionFlow.after_completion): счётчик прилива идёт вперёд. Смена фазы — в tick.
+## Прошла ночь (DayRules.end_day): счётчик прилива идёт вперёд. Смена фазы — в tick.
 static func count(state: RunState) -> void:
 	MapRules.count(state)
 	if phase(state) != "":
@@ -108,12 +108,15 @@ static func _rng(state: RunState, salt: int) -> RandomNumberGenerator:
 
 ## Команда `tide`: объявить прилив. Места выбираются сразу — игрок видит, что уйдёт под воду.
 ## Если вода уже стоит — прилив затягивается; если уже объявлен — второй не наслаивается.
-static func schedule(content: Content, state: RunState, warn: int, flood: int, text: String = "") -> Array:
+## source — чья вода: story (сюжет, своим счётом дней) или week (фаза недели; Рассвет её снимает).
+static func schedule(content: Content, state: RunState, warn: int, flood: int, text: String = "", source: String = "story") -> Array:
 	match phase(state):
 		"flood":
 			state.tide["left"] = maxi(left(state), flood)
 			return [{"kind": "tide", "text": "Вода не уходит: отлив позже"}]
 		"warn":
+			if source == "story":
+				state.tide["source"] = "story"   # сюжет удерживает объявленную воду до своего срока
 			return []
 	var rng := _rng(state, 1)
 	var chosen: Array = []
@@ -131,6 +134,7 @@ static func schedule(content: Content, state: RunState, warn: int, flood: int, t
 	state.tide["left"] = maxi(1, warn)
 	state.tide["flood"] = maxi(1, flood)
 	state.tide["places"] = chosen
+	state.tide["source"] = source
 	return [{"kind": "tide_warn", "text": (text + " " if text != "" else "") + "Прилив — через %s" % left_text(state)}]
 
 
@@ -141,7 +145,7 @@ static func tick(content: Content, state: RunState) -> Array:
 			if left(state) <= 0:
 				return _flood(content, state)
 		"flood":
-			if left(state) <= 0 or _stuck(content, state):
+			if left(state) <= 0:
 				return _ebb(content, state)
 	return []
 
@@ -246,9 +250,39 @@ static func _ebb_on_map(content: Content, state: RunState, old: Array, rng: Rand
 			keep[key] = state.tide[key]
 	state.tide = {"phase": "", "places": [], "count": int(state.tide.get("count", 0)) + 1}
 	state.tide.merge(keep)
-	var out: Array = [{"kind": "tide_ebb", "text": "Вода ушла. Лабиринт уже не тот: новые проходы, новые места"}]
+	var out: Array = [{"kind": "tide_ebb", "text": "Вода сошла. Лабиринт уже не тот: новые проходы"}]
 	out.append_array(MapRules.on_ebb(content, state, old, rng))
 	for lid: String in old:
 		if MapRules.present(content, state, lid):
 			out.append_array(MissionFlow.spawn_random(content, state, lid))
 	return out
+
+
+## Неделя (DayRules): в фазу «Прилив и шторм» вода приходит сама и стоит до её конца, накануне — предупреждение;
+## на «Рассвете» вода уходит, в первый день — большой отлив: новые места на площадках ила.
+## Сюжетные приливы (команда `tide`) идут поверх недели — по своим дням.
+static func week(content: Content, state: RunState, today: Dictionary, next: Dictionary, rng: RandomNumberGenerator) -> Array:
+	var out: Array = []
+	match str(today.get("tide", "")):
+		"flood":
+			if phase(state) == "flood":
+				state.tide["left"] = maxi(left(state), int(today.get("left", 1)))
+				state.tide["source"] = "week"
+			else:
+				if phase(state) != "warn":
+					out.append_array(schedule(content, state, 1, int(today.get("left", 1)), "", "week"))
+				if phase(state) == "warn":
+					state.tide["flood"] = maxi(int(state.tide.get("flood", 1)), int(today.get("left", 1)))
+					state.tide["source"] = "week"
+					out.append_array(_flood(content, state))
+		"ebb":
+			# Рассвет снимает недельную воду; сюжетная стоит своим счётом
+			if phase(state) == "flood" and str(state.tide.get("source", "week")) == "week":
+				state.tide["left"] = 0
+				out.append_array(_ebb(content, state))
+			if int(today.get("day_in", 1)) == 1:
+				out.append_array(MapRules.low_tide(content, state, rng))
+	if phase(state) == "" and str(next.get("tide", "")) == "flood":
+		out.append_array(schedule(content, state, 1, int(next.get("days", 1)), "", "week"))
+	return out
+

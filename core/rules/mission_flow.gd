@@ -1,7 +1,8 @@
 class_name MissionFlow
 extends RefCounted
-## Миссии и отряды (docs/15): открытые миссии, свободные герои, запуск отряда, игровые часы,
-## действия после прибытия. Итог действия считает MissionResolver, прогноз — MissionForecast.
+## Миссии и отряды (docs/15): открытые миссии, свободные герои, выход отряда (пути нет — сразу на месте),
+## действия после прибытия, сроки и встречи мест по дням. Итог действия считает MissionResolver, прогноз —
+## MissionForecast; дни, неделя и лагерь-стоянка — DayRules (docs/16 §12).
 
 const SCOUT_TAGS := ["Выслеживание", "Тень"]   # разведчик в отряде раскрывает скрытые теги заранее
 const DEFAULT_REST := 20.0
@@ -33,11 +34,13 @@ static func open_chapter(content: Content, state: RunState, chapter: String) -> 
 		var m: Dictionary = content.missions[mid]
 		if bool(m.get("start", false)) and chapter_of(content, mid) == chapter:
 			out.append_array(open(content, state, mid))
+			if state.party_at == "":
+				state.party_at = str(m.get("location", ""))   # отряд начинает главу у первой миссии
 	for lid: String in _sorted(content.locations):
 		var loc: Dictionary = content.locations[lid]
-		var every := float(loc.get("random", {}).get("every", 0))
+		var every := int(loc.get("random", {}).get("every", 0))
 		if str(loc.get("chapter", "")) == chapter and every > 0:
-			state.loc_timers[lid] = state.clock + every
+			state.loc_timers[lid] = state.day + every
 	return out
 
 
@@ -53,6 +56,11 @@ static func start_chapter(content: Content, state: RunState, chapter: String) ->
 	state.rest_until.clear()
 	state.loc_timers.clear()
 	state.tide = {}
+	state.day = 1            # неделя новой главы начинается сначала
+	state.party_at = ""
+	state.camp = {}
+	for cid: String in state.characters:
+		state.characters[cid]["sorties"] = 0
 	for lid: String in _sorted(content.locations):
 		if str(content.locations[lid].get("chapter", "")) == chapter:
 			state.region = str(content.locations[lid].get("region", state.region))
@@ -76,7 +84,7 @@ static func open(content: Content, state: RunState, mission_id: String, force: b
 	var cur: Dictionary = state.missions.get(mission_id, {})
 	if cur.get("status", "") in ["open", "active"]:
 		return []
-	state.missions[mission_id] = {"status": "open", "attempts": int(cur.get("attempts", 0)), "opened_at": state.clock}
+	state.missions[mission_id] = {"status": "open", "attempts": int(cur.get("attempts", 0)), "opened_at": state.clock, "opened_day": state.day}
 	# модификаторы (docs/16 §11.2): у побочных и случайных миссий основных глав
 	var mods := ModifierRules.roll(content, state, mission_id)
 	var extra := ""
@@ -105,13 +113,15 @@ static func heroes(content: Content, state: RunState) -> Array:
 	return out
 
 
-## "" — герой свободен; иначе причина («в пути», «отдыхает 12 с»).
+## "" — герой свободен; иначе причина («на миссии»).
 static func busy_reason(content: Content, state: RunState, cid: String) -> String:
 	if not state.is_alive(cid):
 		return "погиб"
 	for sq: Dictionary in state.squads:
 		if Array(sq.get("heroes", [])).has(cid):
 			return "на миссии"
+	if DayRules.exhausted(content, state, cid):
+		return "выдохся — до ночи"
 	return ""
 
 
@@ -209,6 +219,10 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	var m: Dictionary = content.missions.get(mission_id, {})
 	if TideRules.mission_flooded(content, state, mission_id):
 		return "Под водой — ждите отлива"
+	if not state.squads.is_empty():
+		return "Отряд уже на миссии — сначала решите, что он делает"
+	if not DayRules.mission_reachable(content, state, mission_id):
+		return "Далеко: сначала перейдите в соседнее место"
 	var sq: Dictionary = m.get("squad", {})
 	if heroes_ids.size() < int(sq.get("min", 1)):
 		return "Нужно героев: не меньше %d" % int(sq.get("min", 1))
@@ -235,22 +249,23 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	return TrustRules.refusal(content, state, heroes_ids)
 
 
-## Отправляет отряд. Возвращает {ok, error, squad}.
+## Отправляет отряд: пути нет — он сразу на месте (фаза arrived), лагерь переезжает туда,
+## герои устают (DayRules.on_launch). Возвращает {ok, error, squad, entries}.
 static func launch(content: Content, state: RunState, mission_id: String, heroes_ids: Array) -> Dictionary:
 	var err := can_launch(content, state, mission_id, heroes_ids)
 	if err != "":
 		return {"ok": false, "error": err}
-	var m: Dictionary = content.missions[mission_id]
 	var sq := {
 		"id": state.next_squad, "mission": mission_id, "heroes": heroes_ids.duplicate(),
-		"launched_at": state.clock, "arrive_at": state.clock + float(m.get("duration", 8)), "phase": "travel",
+		"launched_at": state.clock, "arrive_at": state.clock, "day": state.day, "phase": "arrived",
 	}
 	state.next_squad += 1
 	for cid: String in heroes_ids:
 		CampRules.take(state, cid)
+	var entries := DayRules.on_launch(content, state, mission_id, heroes_ids)
 	state.squads.append(sq)
 	state.missions[mission_id]["status"] = "active"
-	return {"ok": true, "error": "", "squad": sq}
+	return {"ok": true, "error": "", "squad": sq, "entries": entries}
 
 
 static func squad(state: RunState, squad_id: int) -> Dictionary:
@@ -262,33 +277,34 @@ static func squad(state: RunState, squad_id: int) -> Dictionary:
 
 ## Игровые часы идут вперёд на dt секунд: отряды прибывают, герои отдыхают, появляются случайные миссии.
 ## Возвращает события для интерфейса: [{kind: "arrived"|"rested"|"mission", ...}].
-static func tick(content: Content, state: RunState, dt: float) -> Array:
+## (устар.) Часов больше нет — время идёт днями (DayRules.end_day), отряд сразу на месте. Оставлено для
+## старых вызовов (тесты, снимки): ничего не делает.
+static func tick(_content: Content, _state: RunState, _dt: float) -> Array:
+	return []
+
+
+## Сроки по дням (DayRules.end_day): миссия уходит, когда прошло её `expires` дней с открытия.
+static func expire_day(content: Content, state: RunState) -> Array:
 	var out: Array = []
-	state.clock += maxf(0.0, dt)
-	for sq: Dictionary in state.squads:
-		if sq["phase"] == "travel" and float(sq["arrive_at"]) <= state.clock:
-			sq["phase"] = "arrived"
-			out.append({"kind": "arrived", "squad": int(sq["id"]), "mission": sq["mission"],
-				"text": "Отряд прибыл: %s" % content.missions.get(sq["mission"], {}).get("title", sq["mission"])})
-	PsycheRules.decay(state, dt, content)
-	out.append_array(CampRules.tick(content, state, dt))
-	out.append_array(OnslaughtRules.tick(content, state))
-	out.append_array(TideRules.tick(content, state))
-	# устаревающие миссии (docs/16 §4): не успели — ушла
 	for mid: String in _sorted(state.missions):
 		var stt: Dictionary = state.missions[mid]
 		var exp := ModifierRules.expires(content, state, mid)
-		if exp > 0.0 and str(stt.get("status", "")) == "open" and state.clock >= float(stt.get("opened_at", 0.0)) + exp:
+		if exp > 0 and str(stt.get("status", "")) == "open" and state.day >= int(stt.get("opened_day", 1)) + exp:
 			stt["status"] = "expired"
 			out.append({"kind": "expired", "card": mid, "text": "Упущено: %s" % content.missions[mid].get("title", mid)})
 			if str(content.missions[mid].get("type", "")) == "onslaught":
 				out.append_array(OnslaughtRules.expire(content, state, mid))
+	return out
+
+
+## Встречи мест раз в `random.every` дней (DayRules.end_day).
+static func spawn_day(content: Content, state: RunState) -> Array:
+	var out: Array = []
 	for lid: String in _sorted(state.loc_timers):
-		var at := float(state.loc_timers[lid])
-		if at <= state.clock:
+		if int(state.loc_timers[lid]) <= state.day:
 			var loc: Dictionary = content.locations.get(lid, {})
 			out.append_array(spawn_random(content, state, lid))
-			state.loc_timers[lid] = state.clock + maxf(1.0, float(loc.get("random", {}).get("every", 60)))
+			state.loc_timers[lid] = state.day + maxi(1, int(loc.get("random", {}).get("every", 2)))
 	return out
 
 
@@ -323,7 +339,6 @@ static func spawn_random(content: Content, state: RunState, lid: String) -> Arra
 static func after_completion(content: Content, state: RunState) -> Array:
 	var out: Array = []
 	state.completed_missions += 1
-	TideRules.count(state)   # прилив считает выполненные миссии
 	var n := state.completed_missions
 	for mid: String in _sorted(content.missions):
 		var m: Dictionary = content.missions[mid]
@@ -345,16 +360,15 @@ static func after_completion(content: Content, state: RunState) -> Array:
 
 # --- действия после прибытия -------------------------------------------------------------
 
-## Сколько секунд осталось до ухода устаревающей миссии (-1 — не устаревает).
-static func expires_in(content: Content, state: RunState, mission_id: String) -> float:
+## Сколько дней осталось до ухода миссии, считая сегодняшний (-1 — не устаревает). 1 — уйдёт этой ночью.
+static func expires_in(content: Content, state: RunState, mission_id: String) -> int:
 	var exp := ModifierRules.expires(content, state, mission_id)
 	var st: Dictionary = state.missions.get(mission_id, {})
-	if exp <= 0.0 or str(st.get("status", "")) != "open":
-		return -1.0
-	return maxf(0.0, float(st.get("opened_at", 0.0)) + exp - state.clock)
+	if exp <= 0 or str(st.get("status", "")) != "open":
+		return -1
+	return maxi(1, int(st.get("opened_day", state.day)) + exp - state.day)
 
 
-## Этап с учётом захода босса: у босса в несколько заходов поле боя меняется (docs/16 §4).
 static func boss_stage(state: RunState, m: Dictionary, st: Dictionary) -> Dictionary:
 	var phases: Array = m.get("boss", {}).get("phases", [])
 	if phases.is_empty() or not st.has("combat"):

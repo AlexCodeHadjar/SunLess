@@ -80,6 +80,6 @@ func test_checks_rewards_expires() -> void:
 	var rng := RandomNumberGenerator.new()
 	ModifierRules.on_success(c, s, "RS02", "P01", rng)
 	eq(int(s.resources["shards"]), before + 6, "тайник и спешка — +6 осколков:")
-	eq(ModifierRules.expires(c, s, "RS02"), float(c.missions["RS02"]["expires"]) * 0.5, "спешка — срок вдвое короче:")
+	eq(ModifierRules.expires(c, s, "RS02"), maxi(1, int(ceil(float(c.missions["RS02"]["expires"]) * 0.5))), "спешка — срок вдвое короче:")
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	eq(Array(s2.missions["RS02"]["mods"]), ["cache", "hurry"], "модификаторы сохраняются:")

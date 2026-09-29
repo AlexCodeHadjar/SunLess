@@ -1,5 +1,5 @@
 extends TestCase
-## Ядро миссий (docs/15, Ф2): отряды, часы, действия, этапы, прогноз, отдых, смерть навсегда.
+## Ядро миссий (docs/15, Ф2; docs/16 §12): отряды, дни, действия, этапы, прогноз, отдых, смерть навсегда.
 
 
 ## Прохождение, где уже открыт «Караван рабов» (MS02) — на нём проверяются правила.
@@ -9,11 +9,10 @@ func _run(seed_value: int = 7) -> RunState:
 	return s
 
 
-## Отправить отряд и промотать часы до прибытия. Возвращает id отряда.
+## Отправить отряд — пути нет, он сразу на месте. Возвращает id отряда.
 func _arrive(c: Content, s: RunState, mid: String, heroes: Array) -> int:
 	var r := MissionFlow.launch(c, s, mid, heroes)
 	check(r["ok"], "отряд должен уйти: %s" % r.get("error", ""))
-	MissionFlow.tick(c, s, float(c.missions[mid]["duration"]))
 	return int(r["squad"]["id"])
 
 
@@ -38,16 +37,17 @@ func test_launch_rules() -> void:
 	check(MissionFlow.can_launch(c, s, "MS02", ["P01"]) != "", "вторично ту же миссию не запустить")
 
 
-func test_clock_and_arrival() -> void:
+func test_no_travel_and_days() -> void:
 	var c := content()
 	var s := _run()
 	var r := MissionFlow.launch(c, s, "MS02", ["P01"])
-	var ev := MissionFlow.tick(c, s, 2.0)
-	eq(MissionFlow.squad(s, int(r["squad"]["id"]))["phase"], "travel", "через 2 с ещё в пути:")
-	check(ev.is_empty(), "событий пока нет")
-	ev = MissionFlow.tick(c, s, 10.0)
-	eq(MissionFlow.squad(s, int(r["squad"]["id"]))["phase"], "arrived", "прибыл:")
-	check(ev.size() == 1 and ev[0]["kind"] == "arrived", "событие «прибыл»")
+	eq(MissionFlow.squad(s, int(r["squad"]["id"]))["phase"], "arrived", "пути нет — отряд сразу на месте:")
+	eq(s.party_at, str(c.missions["MS02"]["location"]), "лагерь переехал к миссии:")
+	check(DayRules.can_end(s) != "", "пока отряд на месте, день не закончить")
+	s.squads.clear()
+	eq(DayRules.can_end(s), "", "решили — можно закончить день:")
+	DayRules.end_day(c, s)
+	eq(s.day, 2, "новый день:")
 
 
 func test_actions_depend_on_squad() -> void:
@@ -140,19 +140,19 @@ func test_rest_and_tick() -> void:
 	s = MissionResolver.resolve(c, s, sid, "MS02_lay_low")["state"]
 	# отдыха между событиями нет (решение владельца): герой свободен сразу, часы его не держат
 	eq(MissionFlow.busy_reason(c, s, "P01"), "", "Санни свободен сразу после миссии:")
-	var ev := MissionFlow.tick(c, s, 25.0)
-	check(not ev.any(func(e: Dictionary) -> bool: return e["kind"] == "rested"), "событий отдыха больше нет")
+	check(DayRules.sorties(s, "P01") == 1, "но выход засчитан — усталость копится за день")
 
 
 func test_save_roundtrip() -> void:
 	var c := content()
 	var s := _run()
 	MissionFlow.launch(c, s, "MS02", ["P01"])
-	MissionFlow.tick(c, s, 3.5)
+	s.day = 3
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	eq(s2.mode, "missions", "режим:")
-	eq(s2.clock, 3.5, "часы:")
-	eq(s2.squads.size(), 1, "отряд в пути сохранился:")
+	eq(s2.day, 3, "день:")
+	eq(s2.party_at, s.party_at, "лагерь:")
+	eq(s2.squads.size(), 1, "отряд на месте сохранился:")
 	eq(MissionFlow.busy_reason(c, s2, "P01"), "на миссии", "Санни всё ещё на миссии:")
 
 
@@ -265,7 +265,7 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 		return {"stuck": true, "error": "12000 шагов: глава %s, открыто %s, отряды %s, герои %s" % [s.chapter, MissionFlow.open_missions(s),
 			s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]]), MissionFlow.heroes(c, s)]}
 	var academy_done: bool = done["academy"]
-	return {"stuck": false, "over": s.game_over, "attempts": done["attempts"], "clock": s.clock, "grown": grown, "academy_done": academy_done,
+	return {"stuck": false, "over": s.game_over, "attempts": done["attempts"], "clock": s.day, "grown": grown, "academy_done": academy_done,
 		"shore_done": s.demo_complete and s.chapter == "shore",
 		"nightmare_done": done["nightmare"], "story_done": academy_done or (s.demo_complete and s.chapter == "academy"),
 		"heroes": MissionFlow.heroes(c, s).size()}
@@ -328,7 +328,7 @@ func test_mission_simulation() -> void:
 		total_attempts += int(r.get("attempts", 0))
 		total_clock += float(r.get("clock", 0.0))
 	print("   [миссии] прохождений: %d, Первый Кошмар пройден: %d, Академия пройдена: %d, Забытый Берег пройден: %d, конец игры: %d" % [n, nightmare, finished, shore, over])
-	print("   [миссии] попыток миссий в среднем: %.1f, игрового времени: %.0f с (~%.0f мин)" % [float(total_attempts) / n, total_clock / n, total_clock / n / 60.0])
+	print("   [миссии] попыток миссий в среднем: %.1f, дней последней главы в среднем: %.1f" % [float(total_attempts) / n, total_clock / n])
 	print("   [рост] на прохождение: опытных тегов %.1f, эволюций %.1f, мутаций %.2f" % [float(grown["vet"]) / n, float(grown["evo"]) / n, float(grown["mut"]) / n])
 	var ps: Dictionary = stats.get("_psy", {})
 	for ch: String in ps:

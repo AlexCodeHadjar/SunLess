@@ -117,6 +117,7 @@ func test_reset_and_mission() -> void:
 		s2.character("P10")["panic"] = 95
 		s2.character("P09")["panic"] = 95
 		s2.missions["SH21"] = {"status": "open", "attempts": 0}
+		s2.party_at = str(c.missions["SH21"]["location"])
 		var r := MissionFlow.launch(c, s2, "SH21", ["P01", "P10"])
 		if not r["ok"]:
 			continue
@@ -141,14 +142,28 @@ func test_tags_and_nightmare() -> void:
 	check(c.psyche_lines.has("panic") and c.psyche_lines.has("rally"), "реплики героев загружены")
 
 
-func test_rest_by_frames() -> void:
-	# часы игры тикают каждый кадр: доли копятся, психика вне миссий растёт (в лагере — быстрее)
+func test_rest_at_night() -> void:
+	# отдых — ночью в лагере (DayRules): по месту стоянки; на койке — больше
 	var c := content()
 	var s := _run()
-	s.character("P01")["panic"] = 60
-	s.character("P02")["panic"] = 60
+	s.character("P01")["panic"] = 70
+	s.character("P02")["panic"] = 70
 	CampRules.put(c, s, "P02")
-	for i in 600:   # 10 секунд по 1/60
-		MissionFlow.tick(c, s, 1.0 / 60.0)
-	eq(PsycheRules.psyche(s, "P01"), 41, "вне миссии +0,12 в секунду:")
-	check(PsycheRules.psyche(s, "P02") > PsycheRules.psyche(s, "P01"), "в лагере быстрее: %d" % PsycheRules.psyche(s, "P02"))
+	var rest := int(DayRules.camp(c, s).get("rest", 20))
+	DayRules.end_day(c, s)
+	eq(PsycheRules.psyche(s, "P01"), 30 + rest, "за ночь психика +%d:" % rest)
+	check(PsycheRules.psyche(s, "P02") > PsycheRules.psyche(s, "P01"), "на койке больше: %d" % PsycheRules.psyche(s, "P02"))
+
+
+func test_fatigue() -> void:
+	# каждый следующий выход за день стоит психики; после max_sorties герой выдохся до ночи
+	var c := content()
+	var s := _run()
+	s.chapter = "academy"
+	eq(DayRules.fatigue_cost(c, s, "P01"), 0, "первый выход — без усталости:")
+	s.character("P01")["sorties"] = 2
+	check(DayRules.fatigue_cost(c, s, "P01") < 0, "третий — уже тяжело")
+	s.character("P01")["sorties"] = int(c.days.get("max_sorties", 4))
+	check(MissionFlow.busy_reason(c, s, "P01").begins_with("выдохся"), "выдохся до ночи")
+	DayRules.end_day(c, s)
+	eq(DayRules.sorties(s, "P01"), 0, "ночью силы вернулись:")

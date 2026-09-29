@@ -2,20 +2,21 @@ extends TestCase
 ## Небо над картой (docs/15 §19), герои Академии, купленные спутники после Кошмара.
 
 
-func test_day_and_night_by_clock() -> void:
+func test_day_and_night_by_week() -> void:
+	# небо задаёт фаза недели (DayRules): в Кошмаре — две ночи, два дня
 	var c := content()
 	var s := MissionFlow.new_run(c, 1)
 	eq(Atmosphere.sky(c, s), "night", "в начале — ночь:")
-	s.clock = Atmosphere.DAY_CYCLE * 0.6
-	eq(Atmosphere.sky(c, s), "day", "полцикла спустя — день:")
-	s.clock = Atmosphere.DAY_CYCLE * 1.1
+	s.day = 3
+	eq(Atmosphere.sky(c, s), "day", "третий день — день:")
+	s.day = 5
 	eq(Atmosphere.sky(c, s), "night", "и снова ночь:")
 
 
 func test_story_sky() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 1)
-	s.clock = Atmosphere.DAY_CYCLE * 0.6
+	s.day = 3
 	MissionFlow.open(c, s, "MS05")
 	eq(Atmosphere.sky(c, s), "blood_moon", "Горный Король — кровавая луна даже днём:")
 	MissionFlow.open(c, s, "MS09")

@@ -1,7 +1,7 @@
 class_name ShopRules
 extends RefCounted
 ## Магазины глав (docs/15 §11): отдельная иконка на карте, за осколки душ — карты усилений и персонажей.
-## Ассортимент — `slots` карт из `stock`, обновляется раз в `refresh_every` завершённых миссий.
+## Ассортимент — `slots` карт из `stock`, обновляется раз в `refresh_every` дней (DayRules).
 ## Выбор ассортимента детерминирован: зерно прохождения + номер обновления.
 
 ## Цена по умолчанию, если в stock не задана своя.
@@ -22,13 +22,13 @@ static func shops_of(content: Content, state: RunState) -> Array:
 
 ## Номер ассортимента: сколько раз магазин уже обновлялся.
 static func generation(content: Content, state: RunState, sid: String) -> int:
-	return state.completed_missions / maxi(1, int(content.shops[sid].get("refresh_every", 7)))
+	return (state.day - 1) / maxi(1, int(content.shops[sid].get("refresh_every", 3)))
 
 
 ## Сколько миссий осталось до нового товара.
-static func missions_to_refresh(content: Content, state: RunState, sid: String) -> int:
-	var every := maxi(1, int(content.shops[sid].get("refresh_every", 7)))
-	return every - state.completed_missions % every
+static func days_to_refresh(content: Content, state: RunState, sid: String) -> int:
+	var every := maxi(1, int(content.shops[sid].get("refresh_every", 3)))
+	return every - (state.day - 1) % every
 
 
 static func price_of(content: Content, entry: Dictionary) -> int:

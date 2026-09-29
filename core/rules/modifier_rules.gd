@@ -120,11 +120,14 @@ static func threat(content: Content, state: RunState, mid: String) -> int:
 	return clampi(t, 1, 5)
 
 
-static func expires(content: Content, state: RunState, mid: String) -> float:
+## Срок миссии в днях (0 — не устаревает); «Спешка» — вдвое короче, но не меньше дня.
+static func expires(content: Content, state: RunState, mid: String) -> int:
 	var e := float(content.missions.get(mid, {}).get("expires", 0))
+	if e <= 0.0:
+		return 0
 	for d: Dictionary in of(content, state, mid):
 		e *= float(d.get("expires_mult", 1.0))
-	return e
+	return maxi(1, int(ceil(e)))
 
 
 static func loot_mult(content: Content, state: RunState, mid: String) -> float:

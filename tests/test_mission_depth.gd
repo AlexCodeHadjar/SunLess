@@ -82,8 +82,11 @@ func test_expires() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 5)
 	MissionFlow.open(c, s, "SM02")
-	check(MissionFlow.expires_in(c, s, "SM02") > 100.0, "срок идёт")
-	var ev := MissionFlow.tick(c, s, 151.0)
+	var left := MissionFlow.expires_in(c, s, "SM02")
+	check(left >= 1, "срок идёт: %d дн." % left)
+	var ev: Array = []
+	for i in left:
+		ev.append_array(DayRules.end_day(c, s))
 	eq(s.missions["SM02"]["status"], "expired", "не успели — ушла:")
 	check(ev.any(func(e: Dictionary) -> bool: return e["kind"] == "expired"), "игроку сказано")
 	check(not MissionFlow.open_missions(s).has("SM02"), "с карты убрана")
@@ -114,7 +117,7 @@ func test_sky_affects_checks() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 1)
 	var night: Dictionary = StatResolver.resolve(c, s, "P01", [], {"tags": []}, {"tags": ["stealth"]})["totals"]
-	s.clock = Atmosphere.DAY_CYCLE * 0.6
+	s.day = 3   # Кошмар: две ночи, потом день
 	var day: Dictionary = StatResolver.resolve(c, s, "P01", [], {"tags": []}, {"tags": ["stealth"]})["totals"]
 	eq(int(night["cunning"]) - int(day["cunning"]), 1, "ночью скрытность +1 Хитрость:")
 	var plain: Dictionary = StatResolver.resolve(c, s, "P01", [], {"tags": []}, {"tags": []})["totals"]

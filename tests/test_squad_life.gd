@@ -96,8 +96,8 @@ func test_panic() -> void:
 	eq(PsycheRules.psyche(s, "P01"), 74, "Хладнокровие: психика теряется медленнее (×0,65):")
 	PsycheRules.change(c, s, "P09", -40, "тест")
 	var before := PsycheRules.value(s, "P09")
-	MissionFlow.tick(c, s, 40.0)
-	check(PsycheRules.value(s, "P09") < before, "на отдыхе психика восстанавливается")
+	DayRules.end_day(c, s)
+	check(PsycheRules.value(s, "P09") < before, "за ночь в лагере психика восстанавливается")
 	# Гордыня в панике не отступает
 	s.missions["MS03"] = {"status": "open", "attempts": 0}
 	var r := MissionFlow.launch(c, s, "MS03", ["P04"])

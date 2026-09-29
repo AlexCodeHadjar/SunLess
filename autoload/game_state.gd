@@ -6,7 +6,7 @@ signal mission_events(events: Array)
 
 var state: RunState
 var combat: CombatSession   # бой, который сейчас показывает экран «Столкновение» (просмотр автобоя)
-var _autosave_at := 0.0
+var last_launch: Dictionary = {}   # последний выход: {squad, entries} — окно миссии сразу показывает прибытие
 var story_open := false     # идёт сюжетное окно: часы стоят, подсказки ждут
 
 
@@ -37,6 +37,8 @@ func pocket_add(character_id: String, card: String) -> String:
 		return ""
 	if is_missions():
 		var lock := MissionFlow.pocket_lock(ContentDB.data, state, character_id, card)
+		if lock == "":
+			lock = DayRules.can_equip(ContentDB.data, state)
 		if lock != "":
 			EventBus.toast.emit(lock)
 			return "locked"
@@ -56,6 +58,8 @@ func pocket_remove(character_id: String, card: String) -> void:
 	var ch := state.character(character_id)
 	if is_missions():
 		var lock := MissionFlow.pocket_lock(ContentDB.data, state, character_id, card)
+		if lock == "":
+			lock = DayRules.can_equip(ContentDB.data, state)
 		if lock != "":
 			EventBus.toast.emit(lock)
 			return
@@ -88,19 +92,35 @@ func new_mission_run(seed_value: int = -1) -> void:
 	EventBus.state_changed.emit()
 
 
-## Игровые часы: вызывается экраном миссий каждый кадр. События — прибытие, отдых, новые миссии.
-func mission_tick(dt: float) -> void:
-	if not is_missions() or state.game_over:
-		return
-	var ev: Array = MissionFlow.tick(content(), state, dt)
-	if not ev.is_empty():
-		mission_events.emit(ev)
-		missions_changed.emit()
-		SaveService.save_state(state)
-		_autosave_at = state.clock
-	elif state.clock - _autosave_at > 10.0:
-		SaveService.save_state(state)
-		_autosave_at = state.clock
+## Часов больше нет (docs/16 §12): время идёт днями — «Закончить день». Оставлено для совместимости.
+func mission_tick(_dt: float) -> void:
+	pass
+
+
+## «Закончить день»: ночь в лагере и новое утро. Возвращает записи ночи (для окна «Ночь»).
+func end_day() -> Array:
+	var why := DayRules.can_end(state)
+	if why != "":
+		EventBus.toast.emit(why)
+		return []
+	var ev: Array = DayRules.end_day(content(), state)
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	return ev
+
+
+## Переход отряда в соседнее место без миссии. "" — перешли, иначе причина.
+func move_party(lid: String) -> String:
+	var out: Array = []
+	var why := DayRules.move(content(), state, lid, out)
+	if why != "":
+		return why
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	mission_events.emit(out)
+	return ""
 
 
 ## "" — отряд ушёл; иначе причина.
@@ -108,6 +128,7 @@ func launch_squad(mission_id: String, heroes: Array) -> String:
 	var r: Dictionary = MissionFlow.launch(content(), state, mission_id, heroes)
 	if not r["ok"]:
 		return r["error"]
+	last_launch = r
 	SaveService.save_state(state)
 	missions_changed.emit()
 	EventBus.state_changed.emit()

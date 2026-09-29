@@ -60,20 +60,21 @@ func test_buy_character() -> void:
 	check(ShopRules.buy(c, s, SHOP, "U14_нет") != "", "того, чего нет на прилавке, не купить")
 
 
-func test_refresh_every_7_missions() -> void:
+func test_refresh_by_days() -> void:
 	var c := content()
 	var s := _run()
-	eq(ShopRules.missions_to_refresh(c, s, SHOP), 7, "до обновления 7 миссий:")
+	var every := int(c.shops[SHOP]["refresh_every"])
+	eq(ShopRules.days_to_refresh(c, s, SHOP), every, "до обновления %d дня:" % every)
 	check(ShopRules.has_news(c, s, SHOP), "первый ассортимент — новый")
 	ShopRules.mark_seen(c, s, SHOP)
 	check(not ShopRules.has_news(c, s, SHOP), "после визита — не новый")
 	var first := _items(s)
-	s.completed_missions = 6
-	eq(_items(s), first, "после 6 миссий витрина та же:")
-	eq(ShopRules.missions_to_refresh(c, s, SHOP), 1, "осталась одна миссия:")
-	s.completed_missions = 7
+	s.day = every
+	eq(_items(s), first, "в последний день витрина та же:")
+	eq(ShopRules.days_to_refresh(c, s, SHOP), 1, "остался один день:")
+	s.day = every + 1
 	ShopRules.ensure(c, s, SHOP)
-	eq(int(s.shops[SHOP]["gen"]), 1, "после 7 миссий — новое обновление:")
+	eq(int(s.shops[SHOP]["gen"]), 1, "новый цикл дней — новое обновление:")
 	check(ShopRules.has_news(c, s, SHOP), "новый товар подсвечен")
 	check(Array(s.shops[SHOP]["items"]).all(func(it: Dictionary) -> bool: return not it["sold"]), "в новой витрине ничего не продано")
 
@@ -91,26 +92,20 @@ func test_dead_hero_not_sold() -> void:
 		check(not _items(s).has("P09"), "погибший не появляется на витрине")
 
 
-func test_two_squads_at_once() -> void:
+func test_one_mission_at_a_time() -> void:
+	# отряд один (docs/16 §12): пока он на месте, второй выход не начать; решили — можно дальше
 	var c := content()
 	var s := _run(5)
 	EffectApplier.add_card(c, s, "P09")
 	s.missions["MS03"] = {"status": "open", "attempts": 0}
 	var a := MissionFlow.launch(c, s, "MS02", ["P01"])
-	check(a["ok"], "первый отряд ушёл")
-	check(MissionFlow.can_launch(c, s, "MS03", ["P01"]) != "", "занятый герой не уходит во второй отряд")
-	var b := MissionFlow.launch(c, s, "MS03", ["P09"])
-	check(b["ok"], "второй отряд ушёл одновременно: %s" % b.get("error", ""))
-	eq(s.squads.size(), 2, "в пути два отряда:")
-	MissionFlow.tick(c, s, 30.0)
-	check(s.squads.all(func(sq: Dictionary) -> bool: return sq["phase"] == "arrived"), "оба прибыли")
+	check(a["ok"], "первый выход")
+	check(MissionFlow.can_launch(c, s, "MS03", ["P09"]).contains("уже на миссии"), "второй — только после решения")
 	var r1 := MissionResolver.resolve(c, s, int(a["squad"]["id"]), "MS02_lay_low")
 	check(r1["ok"], "первый отряд отчитался")
 	s = r1["state"]
-	eq(s.squads.size(), 1, "второй отряд всё ещё ждёт выбора:")
-	var r2 := MissionResolver.resolve(c, s, int(b["squad"]["id"]), "MS03_retreat")
-	check(r2["ok"], "второй отряд отчитался")
-	eq(Array(r2["state"].squads).size(), 0, "отрядов не осталось:")
+	var b := MissionFlow.launch(c, s, "MS03", ["P09"])
+	check(b["ok"], "теперь второй выход: %s" % b.get("error", ""))
 
 
 func test_pocket_lock_on_mission() -> void:

@@ -33,6 +33,10 @@ var _memory: MemoryChoice      # выбор Воспоминания (LootRules)
 var _tide_banner: Label
 var _shown_tide := ""     # прилив, при котором построены метки (новые проходы — перестроить)
 var _badge_timer := 0.0
+var _day_label: Label           # фаза недели и завтрашний день (DayRules)
+var _camp_label: Label          # где стоит лагерь и что там за ночь
+var _end_btn: Button            # «Закончить день»
+var _night: Control             # окно «Ночь» после конца дня
 
 
 func _ready() -> void:
@@ -82,7 +86,7 @@ func _process(delta: float) -> void:
 		_update_badges()
 		_update_sky()
 		_update_tide()
-	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open and _memory == null
+	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open and _memory == null and _night == null
 	# Воспоминание-добыча: выбор 1 из 3, как только отчёт закрыт
 	if quiet and not GameState.state.game_over and not LootRules.pending(GameState.state).is_empty():
 		_memory = MemoryChoice.open(self, LootRules.pending(GameState.state))
@@ -246,6 +250,7 @@ func _build_bottom() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	panel.add_child(v)
+	_build_day_panel()
 	var head := UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · героя — на карту миссии · усиление — на героя (в кармашек) · правый щелчок — планшет карты", "sans", 16, Palette.TEXT_DIM)
 	head.custom_minimum_size.y = 34
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -261,6 +266,114 @@ func _build_bottom() -> void:
 	_heroes_row = HBoxContainer.new()
 	_heroes_row.add_theme_constant_override("separation", 14)
 	margin.add_child(_heroes_row)
+
+
+## День и лагерь (docs/16 §12): фаза недели, стоянка, «Закончить день».
+func _build_day_panel() -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	box.position = Vector2(1430, MAP_BOTTOM + 18)
+	box.custom_minimum_size = Vector2(460, 0)
+	add_child(box)
+	_day_label = UITheme.label("", "title", 21, Palette.TEXT)
+	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_day_label.custom_minimum_size.x = 460
+	box.add_child(_day_label)
+	_camp_label = UITheme.label("", "sans", 16, Palette.TEXT_DIM)
+	_camp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_camp_label.custom_minimum_size.x = 460
+	box.add_child(_camp_label)
+	_end_btn = Button.new()
+	_end_btn.text = "ЗАКОНЧИТЬ ДЕНЬ ›"
+	_end_btn.custom_minimum_size = Vector2(460, 64)
+	_end_btn.add_theme_font_override("font", UITheme.font("caps"))
+	_end_btn.add_theme_font_size_override("font_size", 24)
+	_end_btn.tooltip_text = "Ночь в лагере: отдых, лечение на койках, починка; ночью может прийти беда. Утром — новый день недели."
+	_end_btn.pressed.connect(_on_end_day)
+	box.add_child(_end_btn)
+	HintTargets.put("end_day", [_end_btn])
+
+
+func _update_day() -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	var ph := DayRules.phase(c, s)
+	var nx := DayRules.tomorrow(c, s)
+	var more := int(ph["left"]) - 1
+	var tail := ("ещё %d %s" % [more, UITheme.plural(more, ["день", "дня", "дней"])]) if more > 0 else "последний день"
+	_day_label.text = "День %d · %s — %s · завтра: %s" % [s.day, ph["name"], tail, nx["name"]]
+	_day_label.tooltip_text = str(ph["hint"])
+	_day_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cp := DayRules.camp(c, s)
+	var where := str(c.locations.get(s.party_at, {}).get("name", "—"))
+	var warn := ""
+	if TideRules.threatened(s, s.party_at):
+		warn = " · ≈ СЮДА ПРИДЁТ ВОДА"
+	var line := CampWindow._camp_line(cp).strip_edges().trim_suffix(".")
+	_camp_label.text = "Лагерь: %s · ночью психика +%d · коек %d%s%s" % [where, int(cp.get("rest", 20)), int(cp.get("beds", 0)),
+		(" · " + line.to_lower()) if line != "" else "", warn]
+	_camp_label.add_theme_color_override("font_color", Palette.REQ_MISS if warn != "" else Palette.TEXT_DIM)
+	_end_btn.disabled = DayRules.can_end(s) != ""
+
+
+func _on_end_day() -> void:
+	if _night != null or _window != null:
+		return
+	var ev := GameState.end_day()
+	if ev.is_empty():
+		return
+	AudioManager.play("bell", -6.0, 0.5)
+	_show_night(ev)
+
+
+## Окно ночи: что случилось в лагере, какая фаза пришла.
+func _show_night(ev: Array) -> void:
+	_night = Control.new()
+	_night.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_night)
+	var shade := ColorRect.new()
+	shade.color = Color(0.01, 0.012, 0.02, 0.0)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_night.add_child(shade)
+	create_tween().tween_property(shade, "color:a", 0.9, 0.6 if not Vfx.reduced() else 0.0)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.045, 0.06, 0.97), Palette.LINE, 1, 12, 26))
+	panel.position = Vector2(560, 170)
+	panel.custom_minimum_size = Vector2(800, 0)
+	_night.add_child(panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	panel.add_child(v)
+	var ph := DayRules.phase(ContentDB.data, GameState.state)
+	v.add_child(UITheme.label("Ночь прошла · утро дня %d" % GameState.state.day, "title", 32, Palette.TEXT))
+	v.add_child(UITheme.label("%s · %s" % [ph["name"], ph["hint"]], "serif_italic", 19, Palette.SILVER))
+	for e: Dictionary in ev:
+		var t := str(e.get("text", ""))
+		if t == "" or str(e.get("kind", "")) == "psyche":
+			continue
+		var col := Palette.TEXT
+		match str(e.get("kind", "")):
+			"night_ordeal":
+				col = Palette.STAT_UP if bool(e.get("ok", false)) else Palette.REQ_MISS
+			"edge", "death", "lost", "expired":
+				col = Palette.REQ_MISS
+			"phase", "tide_flood", "tide_warn", "tide_ebb", "emerge":
+				col = Palette.SILVER
+		var l := UITheme.label("• " + t, "sans", 18, col)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 740
+		v.add_child(l)
+	var b := Button.new()
+	b.text = "УТРО ›"
+	b.custom_minimum_size = Vector2(240, 56)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_END
+	b.add_theme_font_override("font", UITheme.font("caps"))
+	b.add_theme_font_size_override("font_size", 22)
+	b.pressed.connect(func() -> void:
+		_night.queue_free()
+		_night = null
+		_refresh())
+	v.add_child(b)
 
 
 func _build_toast() -> void:
@@ -371,9 +484,9 @@ func _refresh() -> void:
 	_top_labels["chapter"].text = str(c.regions.get(_region(), {}).get("arc_name", "Глава"))
 	var shards := int(s.resources.get("shards", 0))
 	_top_labels["shards"].text = "✧ %d %s душ" % [shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])]
-	var travelling := s.squads.filter(func(sq: Dictionary) -> bool: return sq["phase"] == "travel").size()
-	var arrived := s.squads.size() - travelling
-	_top_labels["squads"].text = "Отрядов в пути: %d%s" % [travelling, (" · прибыли: %d" % arrived) if arrived > 0 else ""]
+	var ph := DayRules.phase(c, s)
+	_top_labels["squads"].text = "День %d · неделя %d · %s" % [s.day, int(ph["week"]), ph["name"]]
+	_update_day()
 	if _tray_cards() != _shown_collection:
 		_rebuild_cards()
 	_update_badges()
@@ -419,7 +532,8 @@ func _update_tide() -> void:
 
 func _tide_key() -> String:
 	var t: Dictionary = GameState.state.tide
-	return "%s|%s|%s|%s" % [TideRules.phase(GameState.state), str(t.get("slot", {})), str(t.get("shift", {})), str(t.get("emerged", {}))]
+	return "%s|%s|%s|%s|%s|%d" % [TideRules.phase(GameState.state), str(t.get("slot", {})), str(t.get("shift", {})), str(t.get("emerged", {})),
+		GameState.state.party_at, GameState.state.day]
 
 
 ## Небо над картой: день и ночь по часам, кровавая луна и затмение — по сюжету (Atmosphere).
@@ -591,6 +705,30 @@ func _rebuild_markers() -> void:
 		name.position = Vector2(foot.x - name.size.x / 2.0, foot.y + 6.0)
 		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_pins_layer.add_child(name)
+	_add_move_buttons()
+
+
+## Кнопки «Перейти» у соседних мест (карта-план): переход без миссии стоит психики всем.
+func _add_move_buttons() -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	if _sleeper == null or not DayRules.restricted(c, s):
+		return
+	var cost := int(c.days.get("move_psyche", -4))
+	for lid: String in MapRules.neighbors(c, s, s.party_at):
+		if not c.locations.has(lid) or not MapRules.revealed(c, s, lid) or TideRules.flooded(s, lid):
+			continue
+		var b := Button.new()
+		b.text = "⇢ перейти"
+		b.tooltip_text = "Перейти сюда без миссии: психика %d всем. Лагерь переедет сюда." % cost
+		b.add_theme_font_size_override("font_size", 14)
+		b.custom_minimum_size = Vector2(110, 28)
+		b.position = _place_point(lid) + Vector2(-55, 32)
+		b.pressed.connect(func() -> void:
+			var why := GameState.move_party(lid)
+			if why != "":
+				_show_toast(why))
+		_pins_layer.add_child(b)
 
 
 func _update_pins() -> void:
@@ -604,26 +742,26 @@ func _update_pins() -> void:
 		for sq: Dictionary in s.squads:
 			if sq["mission"] != mid:
 				continue
-			if sq["phase"] == "arrived" or sq["phase"] == "fork":
-				arrived = true
-				mk.fork_wait = sq["phase"] == "fork"
-			else:
-				var total := maxf(0.1, float(sq["arrive_at"]) - float(sq["launched_at"]))
-				progress = clampf((s.clock - float(sq["launched_at"])) / total, 0.0, 1.0)
-				remaining = maxf(0.0, float(sq["arrive_at"]) - s.clock)
+			arrived = true   # пути нет: отряд сразу на месте
+			mk.fork_wait = sq["phase"] == "fork"
 		mk.set_state(progress, remaining, arrived)
 		# устаревающая миссия: срок — меткой на карте
 		var left := MissionFlow.expires_in(ContentDB.data, s, mid)
-		var badge := ("⌛ %d с" % int(ceil(left))) if left >= 0.0 and progress < 0.0 and not arrived else ""
+		var badge := ""
+		if left >= 0 and not arrived:
+			badge = "⌛ до ночи" if left <= 1 else "⌛ %d %s" % [left, UITheme.plural(left, ["день", "дня", "дней"])]
 		if badge != "" and str(ContentDB.data.missions.get(mid, {}).get("type", "")) == "onslaught":
 			badge = "НАТИСК · " + badge
 		# прилив: место под водой — ждать отлива; вода идёт — успеет ли отряд
 		var under := TideRules.mission_flooded(ContentDB.data, s, mid)
+		var far := not arrived and not DayRules.mission_reachable(ContentDB.data, s, mid)
 		if under:
 			badge = "ПОД ВОДОЙ"
-		elif progress < 0.0 and not arrived and TideRules.risky(ContentDB.data, s, mid):
-			badge = "≈ ВОДА СКОРО"
-		var tint := Color(0.5, 0.64, 0.86, 0.8) if under else Color(1, 1, 1, 1)
+		elif far:
+			badge = "ДАЛЕКО"
+		elif not arrived and TideRules.threatened(s, str(ContentDB.data.missions.get(mid, {}).get("location", ""))):
+			badge = "≈ ВОДА ЗАВТРА"
+		var tint := Color(0.5, 0.64, 0.86, 0.8) if under else (Color(0.62, 0.62, 0.66, 0.85) if far else Color(1, 1, 1, 1))
 		if mk.modulate != tint:
 			mk.modulate = tint
 		if mk.card.badge != badge:
@@ -631,7 +769,7 @@ func _update_pins() -> void:
 			mk.card.queue_redraw()
 	for sid: String in _shops:
 		var icon: ShopIcon = _shops[sid]
-		icon.set_state(ShopRules.has_news(ContentDB.data, s, sid), ShopRules.missions_to_refresh(ContentDB.data, s, sid))
+		icon.set_state(ShopRules.has_news(ContentDB.data, s, sid), ShopRules.days_to_refresh(ContentDB.data, s, sid))
 
 
 func _on_events(events: Array) -> void:
@@ -644,7 +782,7 @@ func _on_events(events: Array) -> void:
 				_show_toast(str(e["text"]))
 			"onslaught":
 				AudioManager.play("bell", -2.0, 0.7)
-				_show_toast("%s — 60 с на ответ" % e["text"])
+				_show_toast("%s — отбить, пока не истёк срок" % e["text"])
 				GameState.tutorial("onslaught")
 			"mission":
 				AudioManager.play("open", -8.0)
@@ -676,11 +814,8 @@ func _open_mission(mid: String) -> void:
 	for sq: Dictionary in GameState.state.squads:
 		if sq["mission"] != mid:
 			continue
-		if sq["phase"] == "arrived" or sq["phase"] == "fork":
-			_open_window()
-			_window.show_arrival(int(sq["id"]))
-		else:
-			_show_toast("Отряд ещё в пути: %d с" % int(ceil(float(sq["arrive_at"]) - GameState.state.clock)))
+		_open_window()
+		_window.show_arrival(int(sq["id"]))
 		return
 	_open_window()
 	_window.show_brief(mid)
@@ -695,6 +830,9 @@ func _on_pocket_drop(_at: Vector2, data: Variant, cid: String) -> void:
 
 
 func _open_shop(sid: String) -> void:
+	if not DayRules.shop_near(ContentDB.data, GameState.state, sid):
+		_show_toast("%s далеко: подойдите к соседнему с ним месту" % ContentDB.data.shops[sid].get("name", "Лавка"))
+		return
 	if is_instance_valid(_shop_window):
 		_shop_window.queue_free()
 	_shop_window = ShopWindow.open_for(self, sid)

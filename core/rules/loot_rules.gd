@@ -108,6 +108,8 @@ static func roll_fight(content: Content, state: RunState, mid: String, enemies: 
 		return ""
 	var tier := tier_of(content, enemies)
 	var chance := float(cfg(content).get("chance", {}).get(tier, 0.0)) + ModifierRules.memory_bonus(content, state, mid)
+	if Atmosphere.sky(content, state) == "blood_moon":
+		chance *= Atmosphere.BLOOD_MEMORY
 	return tier if rng.randf() < chance else ""
 
 

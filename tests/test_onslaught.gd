@@ -1,5 +1,5 @@
 extends TestCase
-## Ф11 (docs/16 §9): Натиск Кошмара — приходит по часам, не отбит — последствия, отбит — доверие.
+## Ф11 (docs/16 §9): Натиск Кошмара — приходит по дням, не отбит — последствия, отбит — доверие.
 
 
 func _academy() -> RunState:
@@ -20,16 +20,20 @@ func test_arrives() -> void:
 	check(not cfg.is_empty(), "у Академии есть натиск")
 	var none := _academy()
 	none.missions.erase("MA14")
-	MissionFlow.tick(c, none, 1.0)
-	MissionFlow.tick(c, none, 400.0)
+	for i in 12:
+		DayRules.end_day(c, none)
 	eq(OnslaughtRules.active(c, none), "", "до %d миссий главы натиска нет:" % int(cfg["first_after"]))
-	MissionFlow.tick(c, s, 1.0)
-	check(OnslaughtRules.next_at(s) > s.clock, "натиск назначен")
-	var ev := MissionFlow.tick(c, s, OnslaughtRules.next_at(s) - s.clock + 0.1)
+	DayRules.end_day(c, s)
+	check(OnslaughtRules.next_day(s) > s.day, "натиск назначен")
+	var ev: Array = []
+	for i in 8:
+		ev.append_array(DayRules.end_day(c, s))
+		if OnslaughtRules.active(c, s) != "":
+			break
 	var mid := OnslaughtRules.active(c, s)
 	check(mid != "", "натиск пришёл")
 	check(ev.any(func(e: Dictionary) -> bool: return e["kind"] == "onslaught"), "событие для карты")
-	check(MissionFlow.expires_in(c, s, mid) > 0.0, "у натиска срок")
+	check(MissionFlow.expires_in(c, s, mid) > 0, "у натиска срок")
 
 
 func test_expire_and_reward() -> void:
@@ -37,7 +41,9 @@ func test_expire_and_reward() -> void:
 	var s := _academy()
 	s.resources["shards"] = 10
 	MissionFlow.open(c, s, "NA01")
-	MissionFlow.tick(c, s, float(c.missions["NA01"]["expires"]) + 1.0)
+	s.flags["onslaught_day"] = 999
+	for i in int(c.missions["NA01"]["expires"]):
+		DayRules.end_day(c, s)
 	eq(str(s.missions["NA01"]["status"]), "expired", "не ответили — ушло:")
 	eq(int(s.resources["shards"]), 7, "потеряно 3 осколка:")
 	check(PsycheRules.psyche(s, "P01") < PsycheRules.MAX, "психика героев задета")

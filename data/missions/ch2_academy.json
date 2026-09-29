@@ -2212,7 +2212,7 @@
   "threat": 2,
   "duration": 5,
   "rest": 20,
-  "expires": 60,
+  "expires": 1,
   "squad": {
    "min": 1,
    "max": 3
@@ -2328,7 +2328,7 @@
   "threat": 2,
   "duration": 5,
   "rest": 20,
-  "expires": 60,
+  "expires": 1,
   "squad": {
    "min": 1,
    "max": 3
@@ -2590,7 +2590,7 @@
   "context": [
    "knowledge"
   ],
-  "expires": 90,
+  "expires": 2,
   "arrival": "Трибуны гудят. Кастер разминает запястья, будто ему скучно.",
   "actions": [
    {

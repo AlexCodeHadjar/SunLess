@@ -154,8 +154,7 @@ static func emerge(content: Content, state: RunState, lid: String, rng: RandomNu
 	return out
 
 
-## Отлив на карте-плане: смытые появившиеся места уходят, коридоры перестраиваются, остаётся ил,
-## на свободных площадках поднимаются 1–2 новых места.
+## Вода сошла на карте-плане: смытые появившиеся места уходят, коридоры перестраиваются, остаётся ил.
 static func on_ebb(content: Content, state: RunState, was_flooded: Array, rng: RandomNumberGenerator) -> Array:
 	var cfg := config(content, state.chapter)
 	var out: Array = []
@@ -177,7 +176,16 @@ static func on_ebb(content: Content, state: RunState, was_flooded: Array, rng: R
 	state.tide["variant"] = variants
 	if not silt.is_empty():
 		state.tide["silt"] = silt
-	# новые места: из тех, что сейчас не стоят на карте (Гнездовье поднимает только набег)
+	return out
+
+
+## Большой отлив (фаза «Рассвет», DayRules): на свободных площадках ила поднимаются 1–2 новых места
+## (из тех, что сейчас не стоят на карте; Гнездовье поднимает только набег).
+static func low_tide(content: Content, state: RunState, rng: RandomNumberGenerator) -> Array:
+	var out: Array = []
+	if not has_map(content, state.chapter):
+		return out
+	var em := emerged(state)
 	var pool: Array = []
 	for lid: String in _sorted(content.locations):
 		var loc: Dictionary = content.locations[lid]
@@ -194,13 +202,50 @@ static func on_ebb(content: Content, state: RunState, was_flooded: Array, rng: R
 	return out
 
 
+## Тропы главы: пары мест из карты-плана и тропа от каждого поднявшегося места к ближайшему обычному.
+static func links(content: Content, state: RunState) -> Array:
+	var cfg := config(content, state.chapter)
+	var out: Array = []
+	for pair: Array in cfg.get("paths", []):
+		if present(content, state, str(pair[0])) and present(content, state, str(pair[1])):
+			out.append([str(pair[0]), str(pair[1])])
+	for lid: String in emerged(state):
+		var a := anchor(content, state, lid)
+		var best := ""
+		var bd := INF
+		for other: String in cfg.get("places", {}):
+			if other == lid or is_emerging(content, other) or not content.locations.has(other):
+				continue
+			var d := anchor(content, state, other).distance_to(a)
+			if d < bd:
+				bd = d
+				best = other
+		if best != "":
+			out.append([lid, best])
+	return out
+
+
+## Соседи места по тропам.
+static func neighbors(content: Content, state: RunState, lid: String) -> Array:
+	var out: Array = []
+	for pair: Array in links(content, state):
+		if pair[0] == lid and not out.has(pair[1]):
+			out.append(pair[1])
+		elif pair[1] == lid and not out.has(pair[0]):
+			out.append(pair[0])
+	return out
+
+
 ## Место открыто на карте (туман неизвестного расступился): сюжет туда приводил, место поднялось или это лавка.
 static func revealed(content: Content, state: RunState, lid: String) -> bool:
 	if is_emerging(content, lid):
 		return emerged(state).has(lid)
 	if content.shops.has(lid):
 		return true
-	return MissionFlow.reached(content, state, lid)
+	if MissionFlow.reached(content, state, lid) or lid == state.party_at:
+		return true
+	# с высоты (служба view у лагеря) видны соседние места
+	return DayRules.camp(content, state).get("services", []).has("view") and neighbors(content, state, state.party_at).has(lid)
 
 
 static func _sorted(d: Dictionary) -> Array:

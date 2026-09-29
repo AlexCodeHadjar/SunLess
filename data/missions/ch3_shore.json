@@ -2402,7 +2402,7 @@
     "SH22"
    ]
   },
-  "expires": 240
+  "expires": 4
  },
  {
   "id": "SS02",
@@ -2487,7 +2487,7 @@
     "SH24"
    ]
   },
-  "expires": 200
+  "expires": 3
  },
  {
   "id": "SS03",
@@ -2567,7 +2567,7 @@
     "SH24"
    ]
   },
-  "expires": 200
+  "expires": 3
  },
  {
   "id": "RS01",
@@ -2636,7 +2636,7 @@
     "retreat": true
    }
   ],
-  "expires": 120,
+  "expires": 2,
   "from_event": "M03"
  },
  {
@@ -2745,7 +2745,7 @@
     "retreat": true
    }
   ],
-  "expires": 120,
+  "expires": 2,
   "from_event": "M06"
  },
  {
@@ -2842,7 +2842,7 @@
     "retreat": true
    }
   ],
-  "expires": 110,
+  "expires": 2,
   "from_event": "M09"
  },
  {
@@ -2913,7 +2913,7 @@
     "retreat": true
    }
   ],
-  "expires": 140,
+  "expires": 2,
   "from_event": "M07"
  },
  {
@@ -3017,7 +3017,7 @@
     "retreat": true
    }
   ],
-  "expires": 60,
+  "expires": 1,
   "expire_panic": 25,
   "on_expire": [
    {
@@ -3139,7 +3139,7 @@
     "retreat": true
    }
   ],
-  "expires": 60,
+  "expires": 1,
   "expire_panic": 25,
   "on_expire": [
    {
@@ -3250,7 +3250,7 @@
     "retreat": true
    }
   ],
-  "expires": 60,
+  "expires": 1,
   "expire_panic": 30,
   "on_expire": [
    {
@@ -3402,7 +3402,7 @@
     "retreat": true
    }
   ],
-  "expires": 100
+  "expires": 2
  },
  {
   "id": "RS06",
@@ -3511,7 +3511,7 @@
     "retreat": true
    }
   ],
-  "expires": 120,
+  "expires": 2,
   "from_event": "M06"
  },
  {
@@ -3613,7 +3613,7 @@
     "retreat": true
    }
   ],
-  "expires": 110,
+  "expires": 2,
   "from_event": "M03"
  },
  {
@@ -3717,7 +3717,7 @@
     "retreat": true
    }
   ],
-  "expires": 130
+  "expires": 2
  },
  {
   "id": "RS09",
@@ -3826,7 +3826,7 @@
     "retreat": true
    }
   ],
-  "expires": 120,
+  "expires": 2,
   "from_event": "M04"
  },
  {
@@ -3924,7 +3924,7 @@
     "retreat": true
    }
   ],
-  "expires": 120
+  "expires": 2
  },
  {
   "id": "SS04",
@@ -4033,7 +4033,7 @@
     "SH23"
    ]
   },
-  "expires": 220
+  "expires": 4
  },
  {
   "id": "SS05",
@@ -4169,7 +4169,7 @@
     "SH24"
    ]
   },
-  "expires": 220,
+  "expires": 4,
   "memory": "strong",
   "from_event": "M03"
  },
@@ -4292,7 +4292,7 @@
     "SH27"
    ]
   },
-  "expires": 220
+  "expires": 4
  },
  {
   "id": "SC01",
@@ -4401,7 +4401,7 @@
     "SH22"
    ]
   },
-  "expires": 220,
+  "expires": 4,
   "chain": "deep_song"
  },
  {
@@ -4769,7 +4769,7 @@
     "SH23"
    ]
   },
-  "expires": 240,
+  "expires": 4,
   "chain": "last_legion"
  },
  {
@@ -5120,7 +5120,7 @@
     "retreat": true
    }
   ],
-  "expires": 100,
+  "expires": 2,
   "from_event": "M09"
  },
  {
@@ -5229,7 +5229,7 @@
     "retreat": true
    }
   ],
-  "expires": 100
+  "expires": 2
  },
  {
   "id": "RS13",
@@ -5332,7 +5332,7 @@
     "retreat": true
    }
   ],
-  "expires": 90,
+  "expires": 2,
   "from_event": "M12"
  },
  {
@@ -5437,7 +5437,7 @@
     "retreat": true
    }
   ],
-  "expires": 140,
+  "expires": 2,
   "from_event": "M03"
  },
  {
@@ -5544,7 +5544,7 @@
     "retreat": true
    }
   ],
-  "expires": 100
+  "expires": 2
  },
  {
   "id": "RS16",
@@ -5646,7 +5646,7 @@
     "retreat": true
    }
   ],
-  "expires": 100,
+  "expires": 2,
   "from_event": "M09"
  }
 ]

@@ -114,6 +114,33 @@ LOC = [
 		{"pool": ["RS10"], "every": 130}, "mid"),
 ]
 
+# лагерь-стоянка (docs/16 §12, DayRules): где отряд заночевал — там и отдых. rest — психика за ночь,
+# beds — сколько героев лечится на койке (снимает грань), danger — шанс ночного нападения (× фаза),
+# services: equip — переснарядиться, repair — чинить вещи за ночь, view — с высоты виден туман вокруг
+def camp(rest, beds, danger, *services):
+	return {"rest": rest, "beds": beds, "danger": danger, "services": list(services)}
+
+
+CAMP = {
+	"stone_isle": camp(18, 1, 0.05),
+	"low_tide": camp(12, 0, 0.15),
+	"coral_maze": camp(6, 0, 0.3),
+	"shelter": camp(35, 2, 0.05, "equip", "repair"),
+	"drowned_hall": camp(16, 1, 0.15, "equip"),
+	"spire_view": camp(10, 0, 0.1, "view"),
+	"statue_hill": camp(26, 1, 0.1, "equip", "view"),
+	"high_ground": camp(16, 0, 0.1, "view"),
+	"hunting_grounds": camp(6, 0, 0.35),
+	"centurion_gate": camp(10, 0, 0.25),
+	"legion_ruins": camp(20, 1, 0.15, "equip", "repair"),
+	"leviathan_ribs": camp(8, 0, 0.2),
+	"sunken_watch": camp(14, 1, 0.1, "view"),
+	"current_sink": camp(4, 0, 0.3),
+	"carapace_nest": camp(2, 0, 0.5),
+	"sea_stair": camp(10, 0, 0.15),
+	"shell_field": camp(8, 0, 0.2),
+}
+
 # появляющиеся места «Карты Спящего» (docs/16 §11.6, MapRules): встают на площадки ила при отливе и уходят
 # со следующим приливом; Гнездовье поднимает набег стаи. (id, имя, текст, высота, пул встреч, только набег)
 EMERGE_LOC = [
@@ -155,11 +182,11 @@ ENH = [
 
 SHOP = {"id": "shore_altar", "chapter": "shore", "name": "Разбитый алтарь",
 	"text": "Плита с полустёртыми звёздами Легиона. Положишь на неё осколки душ — и к утру рядом лежит вещь, будто море вернуло её тому, кто заплатил. Кто её приносит, не видел никто.",
-	"pos": [1.0, 0.5], "slots": 3, "min_characters": 1, "refresh_every": 7,
+	"pos": [1.0, 0.5], "slots": 3, "min_characters": 1, "refresh_every": 3,
 	"stock": [{"card": "U11", "price": 12}, {"card": "K07", "price": 9}, {"card": "K08", "price": 5}, {"card": "U15"}, {"card": "U01"}, {"card": "K02"}],
 	"services": ["sharpen", "unwear"]}
 
-ONSLAUGHT = {"id": "shore", "chapter": "shore", "first_after": 2, "every": [200, 320], "pool": ["NS01", "NS02", "NS03"],
+ONSLAUGHT = {"id": "shore", "chapter": "shore", "first_after": 2, "every": [3, 5], "pool": ["NS01", "NS02", "NS03"],
 	"text": "На Берегу угроза приходит сама: прилив, стая, шторм."}
 
 # --- миссии ---------------------------------------------------------------------------------
@@ -444,7 +471,7 @@ A(mission("SS01", "legion_ruins", "Обломки Легиона",
 		[{"cmd": "add_codex", "entry": "legion_oath", "text": "Клятва Звёздного Легиона"}, shards(3)], story=False),
 	 retreat("SS01_retreat")],
 	typ="side", field="F_06", known_tags=["Укрытия", "Камень"], hidden_tags=["Нежить"], context=["survival", "knowledge"],
-	unlock={"after_all": ["SH22"]}, expires=240))
+	unlock={"after_all": ["SH22"]}, expires=4))
 
 A(mission("SS02", "drowned_hall", "Чужой лагерь: помочь",
 	"В затопленном зале — чужой лагерь: трое Спящих, один ранен. Они просят помощи — вывести раненого к высоте до прилива.",
@@ -456,7 +483,7 @@ A(mission("SS02", "drowned_hall", "Чужой лагерь: помочь",
 		[shards(3), temp("will", 2, "Спасли чужих")], story=False),
 	 retreat("SS02_retreat")],
 	typ="side", field="F_16", known_tags=["Вода", "Прилив"], context=["survival"], exclusive=["SS03"],
-	unlock={"after_all": ["SH24"]}, expires=200))
+	unlock={"after_all": ["SH24"]}, expires=3))
 
 A(mission("SS03", "drowned_hall", "Чужой лагерь: забрать",
 	"Тот же лагерь. Раненый не жилец, а у его товарищей — Воспоминание, которое им не удержать. Можно забрать. Никто не узнает.",
@@ -468,27 +495,27 @@ A(mission("SS03", "drowned_hall", "Чужой лагерь: забрать",
 		[card("U07"), shards(2)], story=False),
 	 retreat("SS03_retreat")],
 	typ="side", field="F_16", known_tags=["Тишина"], context=["stealth"], exclusive=["SS02"],
-	unlock={"after_all": ["SH24"]}, expires=200))
+	unlock={"after_all": ["SH24"]}, expires=3))
 
 # случайные
 A(mission("RS01", "coral_maze", "Падальщик в тупике", "В тупике лабиринта — Падальщик над добычей. Мясо и осколки.",
 	"Хруст хитина.", [rum("Он [один]", "Одиночка")], 2, 6, 15, (1, 3),
 	[act("RS01_hunt", "Охотиться", "Взять его.", [fight("Бой", ["M03"], "F_08", "Добыча.", "Сорвалось.")], [shards(2)], story=False),
-	 retreat("RS01_retreat")], typ="random", enemies=["M03"], known_tags=["Панцирь"], context=["combat"], expires=120))
+	 retreat("RS01_retreat")], typ="random", enemies=["M03"], known_tags=["Панцирь"], context=["combat"], expires=2))
 A(mission("RS02", "coral_maze", "Красные многоножки", "Из щели в коралле лезут красные многоножки. Их укус жжёт, как кислота.",
 	"Шорох сотен ног.", [rum("Их [много]", "Стая"), rum("Укус [жжёт]", "Кислота")], 2, 6, 15, (1, 3),
 	[act("RS02_burn", "Выжечь гнездо", "Разом.", [fight("Бой", ["M06"], "F_08", "Гнездо пусто.", "Многоножки везде.")], [shards(2)], story=False),
 	 act("RS02_sneak", "Проскользнуть", "Не будить.", [chk("Тихо", {"cunning": 7}, ["stealth"], "Проскользнули — и нашли тайник.", "Разбудили.")], [shards(1), temp("cunning", 1, "Тихий шаг")], story=False),
-	 retreat("RS02_retreat")], typ="random", enemies=["M06"], known_tags=["Стая"], hidden_tags=["Кислота", "Засада"], context=["combat", "stealth"], expires=120))
+	 retreat("RS02_retreat")], typ="random", enemies=["M06"], known_tags=["Стая"], hidden_tags=["Кислота", "Засада"], context=["combat", "stealth"], expires=2))
 A(mission("RS03", "low_tide", "Лужи с щупальцами", "В приливных лужах остались прозрачные щупальца. В их глубине блестит что-то ценное.",
 	"Вода в луже неподвижна. Слишком неподвижна.", [rum("Щупальца [хватают за ноги]", "Захват")], 2, 5, 15, (1, 2),
 	[act("RS03_grab", "Выхватить блестящее", "Быстро.", [chk("Рывок", {"cunning": 6, "power": 4}, ["survival"], "Осколки в кулаке.", "Щупальце хватает.")], [shards(3)], story=False),
 	 act("RS03_fight", "Вычистить лужу", "Бой.", [fight("Бой", ["M09"], "F_17", "Лужа чиста.", "Щупальца утаскивают.")], [shards(3)], story=False),
-	 retreat("RS03_retreat")], typ="random", enemies=["M09"], field="F_17", known_tags=["Щупальца", "Засада"], context=["survival"], expires=110))
+	 retreat("RS03_retreat")], typ="random", enemies=["M09"], field="F_17", known_tags=["Щупальца", "Засада"], context=["survival"], expires=2))
 A(mission("RS04", "drowned_hall", "Черви под полом", "Под плитами затопленного зала шевелятся плотоядные черви. Плиты — старые, могут не выдержать.",
 	"Пол вибрирует.", [rum("Они [под землёй]", "Подземный")], 3, 6, 20, (1, 3),
 	[act("RS04_fight", "Спуститься к ним", "Бой в темноте.", [fight("Бой", ["M07"], "F_21", "Черви затихли. В их норе — кости и осколки.", "Земля уходит из-под ног.")], [shards(4)], story=False),
-	 retreat("RS04_retreat")], typ="random", enemies=["M07"], field="F_21", known_tags=["Подземный", "Рой"], context=["combat"], expires=140))
+	 retreat("RS04_retreat")], typ="random", enemies=["M07"], field="F_21", known_tags=["Подземный", "Рой"], context=["combat"], expires=2))
 
 # натиски Берега
 A(mission("NS01", "low_tide", "Прилив", "Вода возвращается раньше, чем должна, — и с ней щупальцевый обитатель глубин. Он идёт на запах тех, кто остался внизу.",
@@ -497,21 +524,21 @@ A(mission("NS01", "low_tide", "Прилив", "Вода возвращается
 	[act("NS01_fight", "Отбить", "Встретить на мелководье.", [fight("Мелководье", ["M12"], "F_16", "Обитатель уходит на глубину.", "Щупальца тянут вниз.")], [shards(5)], story=False),
 	 act("NS01_climb", "Увести всех наверх", "Бегом на высоту.", [chk("Наверх", {"cunning": 6, "power": 5}, ["climb", "chase"], "Все наверху.", "Кого-то утаскивает.")], [shards(2)], story=False),
 	 retreat("NS01_retreat")], typ="onslaught", enemies=["M12"], field="F_16", known_tags=["Глубинный", "Прилив"], hidden_tags=["Захват"],
-	context=["combat"], expires=60, expire_panic=25,
+	context=["combat"], expires=1, expire_panic=25,
 	on_expire=[shards(-3), {"cmd": "text", "text": "Прилив смыл тайник с припасами. Ночь будет голодной."}], from_event="M12"))
 A(mission("NS02", "hunting_grounds", "Стая Падальщиков", "Падальщики сбились в стаю и идут к расщелине, где вы ночуете.",
 	"Скрежет хитина со всех сторон.", [rum("Их [много]", "Стая"), rum("Панцирь [не пробить в лоб]", "Панцирь")],
 	3, 5, 20, (1, 3),
 	[act("NS02_fight", "Держать проход", "В узости их число не поможет.", [fight("Проход", ["M03", "M03"], "F_01", "Стая отбита.", "Проход прорван.")], [shards(6)], story=False),
 	 act("NS02_lure", "Увести стаю", "Приманкой в сторону.", [chk("Приманка", {"cunning": 7}, ["lure", "chase"], "Стая ушла за приманкой.", "Не поверили.")], [shards(2)], story=False),
-	 retreat("NS02_retreat")], typ="onslaught", enemies=["M03", "M03"], field="F_01", known_tags=["Стая", "Панцирь"], context=["combat", "lure"], expires=60, expire_panic=25,
+	 retreat("NS02_retreat")], typ="onslaught", enemies=["M03", "M03"], field="F_01", known_tags=["Стая", "Панцирь"], context=["combat", "lure"], expires=1, expire_panic=25,
 	on_expire=[shards(-4), {"cmd": "text", "text": "Стая разорила ночёвку."}], from_event="M03"))
 A(mission("NS03", "high_ground", "Шторм с моря", "Внезапный шторм: ветер валит с ног, вода поднимается. Кто не успеет наверх — не успеет вообще.",
 	"Небо чёрное, волны выше кораллов.", [rum("Шторм [приходит без предупреждения]", "Буря")],
 	3, 5, 20, (1, 3),
 	[act("NS03_up", "Наверх", "Все вместе.", [chk("Подъём", {"will": 6, "cunning": 6}, ["climb", "weather"], "Успели.", "Волна накрывает.")], [shards(3)], story=False),
 	 retreat("NS03_retreat")], typ="onslaught", field="F_12", known_tags=["Буря", "Ливень"], context=["weather", "climb"],
-	expires=60, expire_panic=30, on_expire=[shards(-3), {"cmd": "text", "text": "Шторм прошёл по лагерю. Потеряно всё, что лежало внизу."}], from_event="E27"))
+	expires=1, expire_panic=30, on_expire=[shards(-3), {"cmd": "text", "text": "Шторм прошёл по лагерю. Потеряно всё, что лежало внизу."}], from_event="E27"))
 
 # колода событий (docs/16 §11.4, data/deck.json): новые случайные, побочные и две цепочки — tools/shore_deck.py
 import sys
@@ -583,10 +610,15 @@ for m in M:
 
 dump(P("missions", "ch3_shore.json"), M)
 dump(P("regions.json"), upsert(load(P("regions.json")), [REGION]))
-dump(P("locations.json"), upsert(load(P("locations.json")),
+_locs = (
 	[dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": p, "height": h, "text": t}, **({"random": r} if r else {})) for i, n, p, t, r, h in LOC]
 	+ [dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": [0.5, 0.5], "height": h, "text": t,
-		"emerge": True, "random": {"pool": pool}}, **({"raid_only": True} if raid else {})) for i, n, t, h, pool, raid in EMERGE_LOC]))
+		"emerge": True, "random": {"pool": pool}}, **({"raid_only": True} if raid else {})) for i, n, t, h, pool, raid in EMERGE_LOC])
+for _l in _locs:
+	_l["camp"] = CAMP[_l["id"]]
+	if "every" in _l.get("random", {}):   # случайные встречи мест — раз в N дней (было в секундах)
+		_l["random"]["every"] = max(2, round(_l["random"]["every"] / 50))
+dump(P("locations.json"), upsert(load(P("locations.json")), _locs))
 _old = {x["id"]: x for x in load(P("enhancements.json"))}
 for _e in ENH:   # навыки карт (memory) правятся отдельно — сохраняем
 	if "memory" in _old.get(_e["id"], {}):

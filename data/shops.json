@@ -10,7 +10,7 @@
   ],
   "slots": 4,
   "min_characters": 1,
-  "refresh_every": 7,
+  "refresh_every": 3,
   "stock": [
    {
     "card": "P03",
@@ -62,7 +62,7 @@
   ],
   "slots": 3,
   "min_characters": 1,
-  "refresh_every": 7,
+  "refresh_every": 3,
   "stock": [
    {
     "card": "U11",

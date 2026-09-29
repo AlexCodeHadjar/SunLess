@@ -117,7 +117,7 @@ func _refresh() -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	var cur := ShopRules.ensure(c, s, shop_id)
-	var left := ShopRules.missions_to_refresh(c, s, shop_id)
+	var left := ShopRules.days_to_refresh(c, s, shop_id)
 	var shards := int(s.resources.get("shards", 0))
 	_status.text = "У вас ✧ %d %s душ   ·   новый товар через %d %s" % [shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"]), left, ShopIcon._missions_word(left)]
 	for tb: Button in _tabs:

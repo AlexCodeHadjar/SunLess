@@ -34,7 +34,7 @@ def missions(g):
 			[shards(2), temp("power", 1, "Успели до воды")], story=False),
 		 retreat("RS05_retreat")],
 		typ="random", field="F_17", known_tags=["Песок", "Прилив / Отлив"], hidden_tags=["Мёртвое тело"],
-		context=["survival"], expires=100))
+		context=["survival"], expires=2))
 
 	A(mission("RS06", "coral_maze", "Шёпот в коралле",
 		"Из полой коралловой стены слышен шёпот — будто кто-то зовёт по имени. Это шуршат сотни ног: в пустотах гнездятся красные многоножки. А в глубине щели что-то блестит.",
@@ -48,7 +48,7 @@ def missions(g):
 			[shards(2), temp("cunning", 1, "Твёрдая рука")], story=False),
 		 retreat("RS06_retreat")],
 		typ="random", enemies=["M06"], known_tags=["Коралл", "Шум"], hidden_tags=["Засада", "Кислота"],
-		context=["combat", "stealth"], expires=120, from_event="M06"))
+		context=["combat", "stealth"], expires=2, from_event="M06"))
 
 	A(mission("RS07", "hunting_grounds", "Падальщик-одиночка",
 		"Падальщики ходят парами. Этот — один: пара, видно, не вернулась. Он ранен, зол и голоден — и потому неосторожен.",
@@ -62,7 +62,7 @@ def missions(g):
 			[shards(4)], story=False),
 		 retreat("RS07_retreat")],
 		typ="random", enemies=["M03"], known_tags=["Одиночка", "Ранен"], context=["combat", "survival"],
-		expires=110, from_event="M03"))
+		expires=2, from_event="M03"))
 
 	A(mission("RS08", "drowned_hall", "Утопленник Легиона",
 		"На дне затопленного зала лежит легионер в доспехе, покрытом кораллом. Его рука сжата на чём-то, что светится сквозь воду.",
@@ -76,7 +76,7 @@ def missions(g):
 			[codex("legion_drowned", "Утопленник Легиона: он держал строй до конца"), shards(2)], story=False),
 		 retreat("RS08_retreat")],
 		typ="random", field="F_06", known_tags=["Вода", "Мёртвое тело"], hidden_tags=["Переохлаждение"],
-		context=["survival", "knowledge"], expires=130))
+		context=["survival", "knowledge"], expires=2))
 
 	A(mission("RS09", "centurion_gate", "След Центуриона",
 		"У Коралловых врат — глубокие борозды в коралле. Центурион прошёл здесь недавно. Можно узнать его тропы — или встретить его там, где он не ждёт.",
@@ -90,7 +90,7 @@ def missions(g):
 			[shards(6)], story=False),
 		 retreat("RS09_retreat")],
 		typ="random", enemies=["M04"], known_tags=["Элита", "Панцирь"], hidden_tags=["Дальний удар"],
-		context=["combat", "stealth"], expires=120, from_event="M04"))
+		context=["combat", "stealth"], expires=2, from_event="M04"))
 
 	A(mission("RS10", "legion_ruins", "Тайник легионера",
 		"Под упавшей колонной — щель, выложенная камнем, и семь звёзд над ней. Легионеры прятали здесь припасы. Может, что-то осталось.",
@@ -104,7 +104,7 @@ def missions(g):
 			[shards(3)], story=False),
 		 retreat("RS10_retreat")],
 		typ="random", field="F_06", known_tags=["Камень", "Укрытия"], hidden_tags=["Ловушка"],
-		context=["survival"], expires=120))
+		context=["survival"], expires=2))
 
 	# --- побочные ------------------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ def missions(g):
 			[codex("stranger_fire", "Костёр у статуи: на Берегу выживает кто-то ещё"), shards(4)], story=False),
 		 retreat("SS04_retreat")],
 		typ="side", field="F_06", known_tags=["Камень", "Тишина"], context=["social", "survival"],
-		unlock={"after_all": ["SH23"]}, expires=220))
+		unlock={"after_all": ["SH23"]}, expires=4))
 
 	A(mission("SS05", "hunting_grounds", "Охота на охотников",
 		"Пара Падальщиков повадилась караулить Спящих у охотничьих коридоров. Они уже взяли двоих. Пора охотникам самим стать добычей.",
@@ -136,7 +136,7 @@ def missions(g):
 			[shards(5)], story=False),
 		 retreat("SS05_retreat")],
 		typ="side", enemies=["M03", "M03"], field="F_08", known_tags=["Стая", "Панцирь"],
-		context=["combat", "stealth"], unlock={"after_all": ["SH24"]}, expires=220, memory="strong", from_event="M03"))
+		context=["combat", "stealth"], unlock={"after_all": ["SH24"]}, expires=4, memory="strong", from_event="M03"))
 
 	A(mission("SS06", "spire_view", "Взгляд Шпиля",
 		"С Костяного хребта виден Багровый Шпиль. Касси говорит, что тот, кто смотрит на него слишком долго, начинает слышать, как он зовёт. Но оттуда же виден весь Берег — и тропы по нему.",
@@ -151,7 +151,7 @@ def missions(g):
 			[codex("shore_map", "Берег с Костяного хребта: тропы и отмели"), shards(4)], story=False),
 		 retreat("SS06_retreat")],
 		typ="side", field="F_03", known_tags=["Высота", "Кость"], hidden_tags=["Ментальное давление"],
-		context=["ritual", "climb"], unlock={"after_all": ["SH27"]}, expires=220))
+		context=["ritual", "climb"], unlock={"after_all": ["SH27"]}, expires=4))
 
 	# --- цепочка «Песнь глубин» (chain: deep_song) -------------------------------------------------
 
@@ -168,7 +168,7 @@ def missions(g):
 			[shards(2)], story=False),
 		 retreat("SC01_retreat")],
 		typ="side", field="F_17", known_tags=["Вода", "Песок"], hidden_tags=["Очарование"], context=["ritual", "survival"],
-		unlock={"after_all": ["SH22"]}, expires=220, chain="deep_song"))
+		unlock={"after_all": ["SH22"]}, expires=4, chain="deep_song"))
 
 	A(mission("SC02", "drowned_hall", "Затопленный алтарь",
 		"Песня ведёт в Затопленный зал. Под водой — алтарь со светящимися знаками, и знаки пульсируют в такт песне. Алтарь стережёт щупальцевый обитатель.",
@@ -215,7 +215,7 @@ def missions(g):
 			[shards(2)], story=False),
 		 retreat("SC04_retreat")],
 		typ="side", field="F_06", known_tags=["Укрытия", "Камень"], context=["knowledge", "survival"],
-		unlock={"after_all": ["SH23"]}, expires=240, chain="last_legion"))
+		unlock={"after_all": ["SH23"]}, expires=4, chain="last_legion"))
 
 	A(mission("SC05", "centurion_gate", "Путь центуриона",
 		"У Коралловых врат зарубки легионера сменяются следами боя: разрубленный коралл, щербина от меча — и поверх них глубокие борозды когтей Центуриона. Легионер дрался здесь. Один.",
@@ -261,7 +261,7 @@ def missions(g):
 			[shards(5)], story=False),
 		 retreat("RS11_retreat")],
 		typ="random", enemies=["M09"], field="F_17", known_tags=["Кость", "Вода"], hidden_tags=["Захват"],
-		context=["survival", "combat"], expires=100))
+		context=["survival", "combat"], expires=2))
 
 	A(mission("RS12", "sunken_watch", "Затонувший дозор",
 		"Из воды поднялся пенёк сторожевой башни Легиона. Наверху, где сидел дозорный, могло что-то остаться — и оттуда видно полберега.",
@@ -274,7 +274,7 @@ def missions(g):
 			[chk("Завал", {"power": 6}, ["survival"], "За дверью — сундук дозорного.", "Камни сыплются обратно.")],
 			[shards(4), codex("legion_watch", "Затонувший дозор: Легион сторожил Берег с башен")], story=False),
 		 retreat("RS12_retreat")],
-		typ="random", field="F_03", known_tags=["Высота", "Камень"], hidden_tags=["Падение"], context=["climb", "survival"], expires=100))
+		typ="random", field="F_03", known_tags=["Высота", "Камень"], hidden_tags=["Падение"], context=["climb", "survival"], expires=2))
 
 	A(mission("RS13", "current_sink", "Воронка течения",
 		"Отлив оставил круглую чашу, исчерченную спиралью. На дне, у края чёрной дыры, блестит. Из дыры тянет холодом — там кто-то дышит.",
@@ -288,7 +288,7 @@ def missions(g):
 			[shards(5)], story=False),
 		 retreat("RS13_retreat")],
 		typ="random", enemies=["M12"], field="F_17", known_tags=["Глубина", "Вода"], hidden_tags=["Глубинный"],
-		context=["climb", "combat"], expires=90))
+		context=["climb", "combat"], expires=2))
 
 	A(mission("RS14", "carapace_nest", "Гнездовье",
 		"После набега стая вернулась не с пустыми руками: у Охотничьих коридоров вырос холм из панцирей. Там кладка. Если не выжечь — стая будет больше.",
@@ -302,7 +302,7 @@ def missions(g):
 			[shards(3)], story=False),
 		 retreat("RS14_retreat")],
 		typ="random", enemies=["M03", "M03"], field="F_20", known_tags=["Стая", "Логово"], hidden_tags=["Засада"],
-		context=["combat", "stealth"], expires=140))
+		context=["combat", "stealth"], expires=2))
 
 	A(mission("RS15", "sea_stair", "Лестница в море",
 		"Отлив открыл лестницу Легиона, что уходит из ила прямо под воду. На нижних ступенях — дверь, которую море держало закрытой.",
@@ -315,7 +315,7 @@ def missions(g):
 			[chk("Звёзды", {"cunning": 7}, ["knowledge"], "Звёзды складываются в клятву. От неё легче дышать.", "Строки обрываются.")],
 			[shards(2), temp("will", 1, "Клятва Легиона")], story=False),
 		 retreat("RS15_retreat")],
-		typ="random", field="F_16", known_tags=["Вода", "Звёздный свет"], context=["survival", "knowledge"], expires=100))
+		typ="random", field="F_16", known_tags=["Вода", "Звёздный свет"], context=["survival", "knowledge"], expires=2))
 
 	A(mission("RS16", "shell_field", "Поле раковин",
 		"Отлив обнажил поле исполинских витых раковин. В трещинах поблёскивает серебро, а в самых больших раковинах что-то живёт.",
@@ -329,6 +329,6 @@ def missions(g):
 			[shards(6)], story=False),
 		 retreat("RS16_retreat")],
 		typ="random", enemies=["M09"], field="F_17", known_tags=["Серебро", "Песок"], hidden_tags=["Засада"],
-		context=["survival", "combat"], expires=100))
+		context=["survival", "combat"], expires=2))
 
 	return M

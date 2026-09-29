@@ -45,7 +45,9 @@ func _ready() -> void:
 	x.pressed.connect(close)
 	head.add_child(x)
 	body.add_child(head)
-	var intro := UITheme.label("Угли, пара драных плащей и тишина. На койке психика восстанавливается вдвое быстрее, а герой на грани отходит от неё за %d с. Уход на миссию освобождает койку." % int(CampRules.HEAL_EVERY),
+	var cp := DayRules.camp(ContentDB.data, GameState.state)
+	var where := str(ContentDB.data.locations.get(GameState.state.party_at, {}).get("name", "стоянка"))
+	var intro := UITheme.label("Лагерь: %s. Ночью психика +%d; коек: %d — герой на койке сегодня не выходит, а ночью отлёживается и отходит от грани.%s" % [where, int(cp.get("rest", 20)), int(cp.get("beds", 0)), _camp_line(cp)],
 		"serif_italic", 19, Palette.SILVER)
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	intro.custom_minimum_size.x = PANEL.size.x - 56
@@ -105,7 +107,7 @@ func _refresh() -> void:
 	for ch in _bench.get_children():
 		ch.queue_free()
 	var in_beds := CampRules.beds(s)
-	for i in CampRules.BEDS:
+	for i in int(DayRules.camp(c, s).get("beds", 0)):
 		if i < in_beds.size():
 			_beds.add_child(_bed(str(in_beds[i])))
 		else:
@@ -146,7 +148,7 @@ func _bed(cid: String) -> Control:
 	if psy < PsycheRules.MAX:
 		v.add_child(UITheme.label("психика %d — %s" % [psy, PsycheRules.word(psy)], "sans", 16, SquadLifeUI.psyche_color(psy)))
 	var tid := CampRules.next_heal(c, s, cid)
-	var heal := UITheme.label("отойдёт от грани через %d с" % int(ceil(CampRules.heal_left(s, cid))) if tid != "" else "не на грани",
+	var heal := UITheme.label("отойдёт от грани этой ночью" if tid != "" else "не на грани",
 		"sans", 16, Palette.STAT_UP if tid != "" else Palette.TEXT_DIM)
 	heal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	heal.custom_minimum_size.x = 200
@@ -197,3 +199,22 @@ func _board() -> Control:
 	r.add_theme_color_override("default_color", Palette.SILVER)
 	r.text = "\n\n".join(lines)
 	return r
+
+
+## Особенности стоянки одной строкой: службы и ночная опасность.
+static func _camp_line(cp: Dictionary) -> String:
+	var parts: Array = []
+	var names := {"equip": "можно переснарядиться", "repair": "ночью чинят вещи", "view": "с высоты видно соседние места"}
+	for sv: String in cp.get("services", []):
+		if names.has(sv):
+			parts.append(names[sv])
+	var danger := float(cp.get("danger", 0.0))
+	if danger >= 0.25:
+		parts.append("ночью опасно")
+	elif danger > 0.0:
+		parts.append("ночью бывает неспокойно")
+	if parts.is_empty():
+		return ""
+	var t := ", ".join(parts)
+	return " " + t[0].to_upper() + t.substr(1) + "."
+

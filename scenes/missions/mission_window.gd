@@ -298,8 +298,12 @@ func _launch() -> void:
 		return
 	GameState.tutorial("launch")
 	AudioManager.play("shuffle")
-	EventBus.toast.emit("Отряд выступил: %s" % _content().missions[mission_id].get("title", ""))
-	close()
+	# пути нет (docs/16 §12): отряд сразу на месте — окно переходит к выбору действия
+	var tired: Array = Array(GameState.last_launch.get("entries", [])).filter(func(e: Dictionary) -> bool: return str(e.get("text", "")) != "") \
+		.map(func(e: Dictionary) -> String: return str(e["text"]))
+	if not tired.is_empty():
+		EventBus.toast.emit(tired[0])
+	show_arrival(int(GameState.last_launch.get("squad", {}).get("id", -1)))
 
 
 # --- прибытие ---------------------------------------------------------------------------
@@ -776,7 +780,7 @@ func _intel(m: Dictionary) -> Control:
 	var names: Array = []
 	for e: String in enemies:
 		names.append(_content().card_name(e) + (" ×?" if int(enemies[e]) > 1 else ""))
-	for pair: Array in [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))], ["В пути", "~%d с" % int(m.get("duration", 8))],
+	for pair: Array in [["Угроза", _dots(ModifierRules.threat(_content(), GameState.state, str(m.get("id", ""))))], ["Выход", _sortie_text()],
 			["Отряд", _squad_size(m)], ["Противники", ", ".join(names) if not names.is_empty() else "не видно"]]:
 		var v := VBoxContainer.new()
 		v.add_child(UITheme.label(str(pair[0]).to_upper(), "sans_bold", 13, Palette.TEXT_DIM))
@@ -962,3 +966,15 @@ static func _sorted(d: Dictionary) -> Array:
 	var k: Array = d.keys()
 	k.sort()
 	return k
+
+
+## Во что обойдётся выход героям сегодня (усталость, DayRules): «без усталости» или «Санни −6 психики».
+func _sortie_text() -> String:
+	var c := _content()
+	var s := GameState.state
+	var parts: Array = []
+	for cid: String in picked:
+		var loss := DayRules.fatigue_cost(c, s, cid)
+		if loss < 0:
+			parts.append("%s %d" % [c.card_name(cid), loss])
+	return "психика: " + ", ".join(parts) if not parts.is_empty() else "без усталости"

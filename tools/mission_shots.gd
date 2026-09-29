@@ -77,13 +77,13 @@ func _run() -> void:
 	await _wait(1.2)
 	await _shot("m02_map")
 	var game := get_tree().current_scene
-	# небо: ночь → день по часам (перетекание 4 с)
-	GameState.state.clock = Atmosphere.DAY_CYCLE * 0.55
+	# небо: ночь → день — следующая фаза недели (перетекание 4 с)
+	GameState.state.day = 3
 	await _wait(2.0)
 	await _shot("m02c_sky_dawn_fade")
 	await _wait(3.0)
 	await _shot("m02d_sky_day")
-	GameState.state.clock = 0.0
+	GameState.state.day = 1
 	game.call("_open_mission", "MS01")
 	await _wait(0.8)
 	await _shot("m02b_brief_ms01")

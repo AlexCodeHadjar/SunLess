@@ -116,7 +116,7 @@
     "retreat": true
    }
   ],
-  "expires": 90,
+  "expires": 2,
   "unlock": {
    "after_all": [
     "MS02"
@@ -149,7 +149,7 @@
   "exclusive": [
    "SM03"
   ],
-  "expires": 150,
+  "expires": 3,
   "known_tags": [
    "Холод",
    "Снег"
@@ -232,7 +232,7 @@
   "exclusive": [
    "SM02"
   ],
-  "expires": 150,
+  "expires": 3,
   "known_tags": [
    "Снег",
    "Подручные предметы"

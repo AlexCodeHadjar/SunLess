@@ -527,6 +527,12 @@ func ledger(tactic: Dictionary = {}) -> Dictionary:
 	if sky == "blood_moon":
 		E *= 1.0 + Atmosphere.BLOOD_ENEMY
 		es.append({"label": "Кровавая луна", "kind": "field", "pct": Atmosphere.BLOOD_ENEMY, "value": E})
+	elif sky == "night":
+		E *= 1.0 + Atmosphere.NIGHT_ENEMY
+		es.append({"label": "Ночь", "kind": "field", "pct": Atmosphere.NIGHT_ENEMY, "value": E})
+		if ht.has("Тень"):
+			H *= 1.0 + Atmosphere.ECLIPSE_SHADOW
+			hs.append({"label": "Ночь: Тень", "kind": "field", "pct": Atmosphere.ECLIPSE_SHADOW, "value": H})
 	elif sky == "eclipse" and ht.has("Тень"):
 		H *= 1.0 + Atmosphere.ECLIPSE_SHADOW
 		hs.append({"label": "Затмение: Тень", "kind": "field", "pct": Atmosphere.ECLIPSE_SHADOW, "value": H})

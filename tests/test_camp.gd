@@ -13,21 +13,21 @@ func test_beds() -> void:
 	eq(CampRules.put(c, s, "P09"), "", "Шолар на койке:")
 	check(CampRules.put(c, s, "P10").contains("заняты"), "третьему места нет")
 	s.character("P01")["edge"] = true
-	s.character("P01")["panic"] = 40
-	var out := CampRules.tick(c, s, 10.0)
-	check(PsycheRules.value(s, "P01") < 40, "психика восстанавливается")
-	for i in 10:
-		out.append_array(CampRules.tick(c, s, 10.0))
-	check(not EdgeRules.on_edge(s, "P01"), "на койке герой отходит от грани")
-	check(out.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "recover"), "запись об этом")
+	s.character("P01")["panic"] = 60
 	var s2 := RunState.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	check(CampRules.in_bed(s2, "P01"), "лагерь сохраняется")
 	# уход на миссию освобождает койку
 	MissionFlow.open(c, s, "MS02")
-	s.rest_until.clear()
 	var r := MissionFlow.launch(c, s, "MS02", ["P09"])
 	check(bool(r["ok"]), "отряд ушёл: %s" % r.get("error", ""))
 	check(not CampRules.in_bed(s, "P09"), "койка освободилась")
+	s.squads.clear()
+	# ночь: на койке герой отлёживается — отходит от грани и отдыхает лучше
+	var out := DayRules.end_day(c, s)
+	check(not EdgeRules.on_edge(s, "P01"), "на койке герой отходит от грани за ночь")
+	check(out.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "recover"), "запись об этом")
+	check(PsycheRules.value(s, "P01") < 60, "психика восстановилась")
+	check(CampRules.beds(s).is_empty(), "утром койки свободны")
 
 
 func test_rumors() -> void:

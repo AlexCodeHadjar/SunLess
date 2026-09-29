@@ -1,9 +1,9 @@
 class_name OnslaughtRules
 extends RefCounted
-## Натиск Кошмара (docs/16 §9): раз в every[0]–every[1] секунд на карту главы приходит угроза — миссия
+## Натиск Кошмара (docs/16 §9): раз в every[0]–every[1] дней на карту главы приходит угроза — миссия
 ## type "onslaught" из пула (data/onslaught.json). У неё короткий срок (`expires`); не ответили — последствия
 ## (`on_expire` — команды, `expire_panic` — паника всем героям). Отбили — награда миссии и +1 доверия в отряде.
-## Состояние — state.flags["onslaught_at"] (время следующего натиска).
+## Состояние — state.flags["onslaught_day"] (день следующего натиска).
 
 const TRUST_BONUS := 1
 
@@ -30,25 +30,25 @@ static func active(content: Content, state: RunState) -> String:
 	return ""
 
 
-## Когда следующий натиск (0 — ещё не назначен).
-static func next_at(state: RunState) -> float:
-	return float(state.flags.get("onslaught_at", 0.0))
+## День следующего натиска (0 — ещё не назначен).
+static func next_day(state: RunState) -> int:
+	return int(state.flags.get("onslaught_day", 0))
 
 
-## Часы натиска: назначить, прийти. Возвращает записи (тосты).
+## Новый день (DayRules.end_day): назначить натиск, прийти. Возвращает записи.
 static func tick(content: Content, state: RunState) -> Array:
 	var cfg := config(content, state.chapter)
 	if cfg.is_empty() or state.demo_complete or done_in_chapter(content, state) < int(cfg.get("first_after", 0)):
 		return []
-	var every: Array = cfg.get("every", [240, 360])
+	var every: Array = cfg.get("every", [3, 5])
 	var rng := RandomNumberGenerator.new()
-	rng.seed = state.rng_seed + int(state.clock * 10.0)
-	if next_at(state) <= 0.0:
-		state.flags["onslaught_at"] = state.clock + rng.randf_range(float(every[0]), float(every[1]))
+	rng.seed = state.rng_seed + 7907 * state.day
+	if next_day(state) <= 0:
+		state.flags["onslaught_day"] = state.day + rng.randi_range(int(every[0]), int(every[1]))
 		return []
-	if state.clock < next_at(state) or active(content, state) != "":
+	if state.day < next_day(state) or active(content, state) != "":
 		return []
-	state.flags["onslaught_at"] = state.clock + rng.randf_range(float(every[0]), float(every[1]))
+	state.flags["onslaught_day"] = state.day + rng.randi_range(int(every[0]), int(every[1]))
 	var pool: Array = cfg.get("pool", [])
 	if pool.is_empty():
 		return []

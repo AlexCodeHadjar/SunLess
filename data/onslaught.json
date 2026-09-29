@@ -4,8 +4,8 @@
   "chapter": "academy",
   "first_after": 3,
   "every": [
-   100,
-   160
+   3,
+   5
   ],
   "pool": [
    "NA01",
@@ -18,8 +18,8 @@
   "chapter": "shore",
   "first_after": 2,
   "every": [
-   200,
-   320
+   3,
+   5
   ],
   "pool": [
    "NS01",

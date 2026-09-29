@@ -212,8 +212,14 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 				best = other
 		if best != "":
 			paths.append([lid, best])
+	# лагерь-стоянка и соседние места (DayRules): куда можно пойти сегодня
+	var near: Array = []
+	if DayRules.restricted(content, state):
+		for n: String in MapRules.neighbors(content, state, state.party_at):
+			if revealed.has(n) and content.locations.has(n) and not flooded.has(n):
+				near.append(n)
 	_info = {"revealed": revealed, "flooded": flooded, "warn": warn, "feet": feet, "centers": centers,
-		"sizes": sizes, "names": names, "paths": paths}
+		"sizes": sizes, "names": names, "paths": paths, "camp": state.party_at if revealed.has(state.party_at) else "", "near": near}
 	_ink.queue_redraw()
 
 
@@ -348,6 +354,30 @@ func _draw_over() -> void:
 				var ang := TAU * i / 48.0
 				pts.append(c + Vector2(cos(ang) * rr, sin(ang) * rr * 0.62))
 			_over.draw_polyline(pts, Color(0.55, 0.8, 1.0, (0.55 - 0.25 * k) * (0.6 + 0.4 * pulse)), 3.0, true)
+	# соседние места — сюда можно пойти сегодня
+	for lid: String in _info.get("near", []):
+		var nc: Vector2 = centers.get(lid, Vector2.ZERO)
+		var nr := float(sizes.get(lid, 100.0)) * 0.46
+		for i in 24:
+			if i % 2 == 1:
+				continue
+			var a0 := TAU * i / 24.0
+			var a1 := TAU * (i + 1) / 24.0
+			_over.draw_line(nc + Vector2(cos(a0) * nr, sin(a0) * nr * 0.6), nc + Vector2(cos(a1) * nr, sin(a1) * nr * 0.6),
+				Color(0.89, 0.79, 0.56, 0.35), 2.0, true)
+	# лагерь: костёр у места стоянки
+	var camp := str(_info.get("camp", ""))
+	if camp != "" and centers.has(camp):
+		var cc: Vector2 = centers[camp] + Vector2(-float(sizes[camp]) * 0.3, float(sizes[camp]) * 0.18)
+		var fl := 0.8 + 0.2 * sin(_t * 9.0) * sin(_t * 5.3)
+		_over.draw_circle(cc, 26.0 * fl, Color(1.0, 0.55, 0.2, 0.16))
+		_over.draw_circle(cc, 14.0 * fl, Color(1.0, 0.62, 0.25, 0.35))
+		_over.draw_circle(cc, 6.0, Color(1.0, 0.85, 0.5, 0.95))
+		var cf := UITheme.font("sans_bold")
+		var ct := "лагерь"
+		var cw := cf.get_string_size(ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		_over.draw_string_outline(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
+		_over.draw_string(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.8, 0.5))
 	# подписи открытых мест
 	var f := UITheme.font("title")
 	var feet: Dictionary = _info.get("feet", {})

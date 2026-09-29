@@ -1,5 +1,6 @@
 extends TestCase
-## Прилив Забытого Берега (TideRules, docs/16 §10.1): по сюжету — предупреждение, вода, отлив.
+## Прилив Забытого Берега (TideRules, docs/16 §11.1, §12): вода по неделе (Прилив и шторм), по сюжету —
+## своим счётом дней; лагерь в затопленном месте бежит; ночь у логова опаснее.
 
 
 func _shore() -> RunState:
@@ -10,7 +11,7 @@ func _low_high(c: Content) -> Array:
 	var low := ""
 	var high := ""
 	for lid: String in c.locations:
-		if str(c.locations[lid].get("chapter", "")) != "shore":
+		if str(c.locations[lid].get("chapter", "")) != "shore" or bool(c.locations[lid].get("emerge", false)):
 			continue
 		if TideRules.height(c, lid) == "low" and low == "":
 			low = lid
@@ -46,11 +47,11 @@ func test_schedule_picks_low_never_high() -> void:
 				check(not TideRules.places(s).has(lid), "высота %s не тонет" % lid)
 
 
-func test_flood_washes_side_blocks_story_and_ebb_reshapes() -> void:
+func test_story_flood_by_days() -> void:
+	# сюжетная вода (команда tide) идёт своим счётом дней; Рассвет её не снимает
 	var c := content()
 	var s := _shore()
 	var low: String = _low_high(c)[0]
-	# побочная и сюжетная миссии в низине
 	var side := ""
 	var story := ""
 	for mid: String in c.missions:
@@ -64,75 +65,90 @@ func test_flood_washes_side_blocks_story_and_ebb_reshapes() -> void:
 	check(side != "" and story != "", "в низине %s есть случайная и сюжетная миссии" % low)
 	MissionFlow.open(c, s, side, true)
 	MissionFlow.open(c, s, story)
+	s.party_at = _low_high(c)[1]
 	TideRules.schedule(c, s, 2, 2)
 	check(TideRules.threatened(s, low), "низина под угрозой")
-	check(not TideRules.risky(c, s, story), "до воды две миссии — ещё можно")
-	MissionFlow.tick(c, s, 500.0)
-	eq(TideRules.phase(s), "warn", "время само по себе воду не приводит:")
 	MissionFlow.after_completion(c, s)
-	check(not TideRules.risky(c, s, story), "одна миссия до воды, других отрядов нет — успеет")
-	# другой отряд в деле может закончить раньше и привести воду
-	s.squads.append({"id": 99, "mission": side, "heroes": [], "phase": "travel", "launched_at": 0.0, "arrive_at": 99.0})
-	check(TideRules.risky(c, s, story), "другой отряд в деле — отмечено")
-	s.squads.clear()
-	MissionFlow.after_completion(c, s)
-	MissionFlow.tick(c, s, 0.1)
-	eq(TideRules.phase(s), "flood", "две миссии — вода пришла:")
+	eq(TideRules.phase(s), "warn", "выполненная миссия воду не приводит — только ночь:")
+	DayRules.end_day(c, s)
+	eq(TideRules.phase(s), "warn", "одна ночь — вода ещё не пришла:")
+	DayRules.end_day(c, s)
+	eq(TideRules.phase(s), "flood", "две ночи — вода пришла:")
+	eq(str(DayRules.phase(c, s)["id"]), "dawn", "это Рассвет — но сюжетная вода стоит:")
 	eq(str(s.missions[side]["status"]), "expired", "побочную смыло:")
 	eq(str(s.missions[story]["status"]), "open", "сюжетная ждёт:")
+	s.party_at = low
 	eq(MissionFlow.can_launch(c, s, story, ["P01"]), "Под водой — ждите отлива", "под воду не отправить:")
-	var before := TideRules.pos(c, s, low)
-	# на высоте есть чем заняться — вода стоит, пока не выполнены две миссии
-	var high: String = _low_high(c)[1]
-	for m3: String in c.missions:
-		if str(c.missions[m3].get("location", "")) == high and str(c.missions[m3].get("type", "")) == "story" and not s.missions.has(m3):
-			MissionFlow.open(c, s, m3)
-			break
-	MissionFlow.tick(c, s, 500.0)
-	eq(TideRules.phase(s), "flood", "время воду не уводит:")
-	MissionFlow.after_completion(c, s)
-	MissionFlow.after_completion(c, s)
-	var ev := MissionFlow.tick(c, s, 0.1)
-	eq(TideRules.phase(s), "", "отлив после двух миссий:")
-	check(ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_ebb"), "событие отлива")
-	check(MissionFlow.can_launch(c, s, story, ["P01"]) != "Под водой — ждите отлива", "после отлива — снова можно")
-	check(before.size() == 2, "у места есть точка")
-	# ячейки только переставляются: два места никогда не встают в одну точку
-	var seen := {}
-	for lid: String in c.locations:
-		if str(c.locations[lid].get("chapter", "")) == "shore":
-			var cell := TideRules.slot(s, lid)
-			check(not seen.has(cell), "ячейка %s занята одним местом" % cell)
-			seen[cell] = true
+	s.party_at = _low_high(c)[1]
+	DayRules.end_day(c, s)
+	var ev := DayRules.end_day(c, s)
+	check(ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_ebb"), "через два дня вода сошла")
 
 
-func test_caught_squad_flees() -> void:
+func test_week_cycle() -> void:
+	# неделя Берега: ночь 2 · рассвет 2 · прилив и шторм 2 · кровавая луна 2
 	var c := content()
-	var fails := 0
-	for sd in 40:
+	var s := _shore()
+	s.party_at = _low_high(c)[1]
+	eq(DayRules.week_len(c, "shore"), 8, "неделя — 8 дней:")
+	eq(str(DayRules.phase(c, s)["id"]), "night", "день 1 — ночь:")
+	s.day = 3
+	eq(str(DayRules.phase(c, s)["id"]), "dawn", "день 3 — рассвет:")
+	eq(TideRules.phase(s), "", "воды нет:")
+	var ev := DayRules.end_day(c, s)
+	eq(s.day, 4, "ночь прошла:")
+	eq(TideRules.phase(s), "warn", "накануне шторма — предупреждение:")
+	DayRules.end_day(c, s)
+	eq(str(DayRules.phase(c, s)["id"]), "storm", "день 5 — прилив и шторм:")
+	eq(TideRules.phase(s), "flood", "вода пришла сама:")
+	eq(Atmosphere.sky(c, s), "storm", "небо штормовое:")
+	DayRules.end_day(c, s)
+	eq(TideRules.phase(s), "flood", "стоит весь шторм:")
+	ev = DayRules.end_day(c, s)
+	eq(str(DayRules.phase(c, s)["id"]), "blood_moon", "день 7 — кровавая луна:")
+	eq(TideRules.phase(s), "", "после шторма вода сходит:")
+	check(ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_ebb"), "событие схода воды")
+	for i in 4:
+		ev = DayRules.end_day(c, s)
+	eq(str(DayRules.phase(c, s)["id"]), "dawn", "день 11 — снова рассвет:")
+	check(not MapRules.emerged(s).is_empty(), "большой отлив поднял новые места")
+
+
+func test_flooded_camp_flees() -> void:
+	var c := content()
+	var fled := 0
+	for sd in 30:
 		var s := _shore()
 		s.rng_seed = 900 + sd
 		var low: String = _low_high(c)[0]
-		var mid := ""
-		for m2: String in c.missions:
-			if str(c.missions[m2].get("location", "")) == low and str(c.missions[m2].get("type", "")) == "story":
-				mid = m2
-				break
-		MissionFlow.open(c, s, mid)
-		var r := MissionFlow.launch(c, s, mid, ["P01"])
-		check(bool(r["ok"]), "отряд ушёл: %s" % r.get("error", ""))
-		TideRules.schedule(c, s, 1, 2)
-		MissionFlow.after_completion(c, s)   # другой отряд закончил своё — вода пришла
-		var ev := MissionFlow.tick(c, s, 0.1)
-		var caught: Array = ev.filter(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "tide_caught")
-		eq(caught.size(), 1, "вода застала отряд:")
-		check(s.squads.is_empty(), "отряд вернулся")
-		eq(str(s.missions[mid]["status"]), "open", "сюжетная миссия осталась:")
-		check(PsycheRules.psyche(s, "P01") < 100, "психика задета")
-		if not bool(caught[0]["ok"]):
-			fails += 1
-			check(EdgeRules.on_edge(s, "P01") or not s.is_alive("P01"), "провал бегства — поражение")
-	check(fails > 0 and fails < 40, "бегство иногда проваливается: %d из 40" % fails)
+		s.party_at = low
+		s.day = 4                    # завтра шторм — вода придёт ночью, а отряд остался в низине
+		var ev := DayRules.end_day(c, s)
+		if TideRules.flooded(s, low):
+			fled += 1
+			check(s.party_at != low and not TideRules.flooded(s, s.party_at), "отряд бежал на сухое: %s" % s.party_at)
+			check(ev.any(func(e: Dictionary) -> bool: return str(e.get("text", "")).begins_with("Вода пришла в лагерь")), "испытание бегством")
+	eq(fled, 30, "низину заливает каждый раз:")
+
+
+func test_night_attack_by_camp() -> void:
+	# у логова в кровавую луну нападают часто, в укрытии — почти никогда
+	var c := content()
+	var near_lair := 0
+	var shelter := 0
+	for sd in 40:
+		for place: String in ["hunting_grounds", "shelter"]:
+			var s := _shore()
+			s.rng_seed = 300 + sd
+			s.day = 7
+			s.party_at = place
+			var ev := DayRules.end_day(c, s)
+			if ev.any(func(e: Dictionary) -> bool: return str(e.get("text", "")).begins_with("На лагерь напали")):
+				if place == "shelter":
+					shelter += 1
+				else:
+					near_lair += 1
+	check(near_lair > shelter + 10, "у логова нападают чаще: %d против %d" % [near_lair, shelter])
 
 
 func test_tide_command_and_save() -> void:
@@ -153,22 +169,10 @@ func test_tide_command_and_save() -> void:
 	check(n >= 4, "приливов по сюжету: %d" % n)
 
 
-func test_stuck_flood_ebbs() -> void:
-	var c := content()
-	var s := _shore()
-	for mid: String in s.missions.keys():
-		s.missions.erase(mid)
-	TideRules.schedule(c, s, 1, 5)
-	MissionFlow.after_completion(c, s)
-	MissionFlow.tick(c, s, 0.1)
-	# открытых миссий нет, отрядов нет — ждать нечем: вода уходит сама
-	MissionFlow.tick(c, s, 0.1)
-	eq(TideRules.phase(s), "", "глава не встаёт — вода ушла:")
-
-
 func test_new_chapter_clears_tide() -> void:
 	var c := content()
 	var s := _shore()
 	TideRules.schedule(c, s, 2, 2)
 	MissionFlow.start_chapter(c, s, "shore")
 	eq(TideRules.phase(s), "", "новая глава — без прилива:")
+	eq(s.day, 1, "неделя новой главы — с первого дня:")

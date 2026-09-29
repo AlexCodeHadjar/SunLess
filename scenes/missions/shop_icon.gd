@@ -79,4 +79,4 @@ func _caption(text: String, y: float, kind: String, fs: int, col: Color) -> void
 
 
 static func _missions_word(n: int) -> String:
-	return UITheme.plural(n, ["миссию", "миссии", "миссий"])
+	return UITheme.plural(n, ["день", "дня", "дней"])   # лавка обновляется по дням (DayRules)

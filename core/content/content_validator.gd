@@ -354,8 +354,8 @@ static func _validate_mission(c: Content, mid: String, errors: Array[String]) ->
 			errors.append("%s: exclusive → нет миссии %s" % [w, other])
 		elif not Array(c.missions[other].get("exclusive", [])).has(mid):
 			errors.append("%s: миссия-выбор с %s должна быть взаимной" % [w, other])
-	if m.has("expires") and (float(m["expires"]) < 20.0 or str(m.get("type", "")) == "story"):
-		errors.append("%s: expires — только у побочных и случайных, не меньше 20 с" % w)
+	if m.has("expires") and (float(m["expires"]) < 1.0 or float(m["expires"]) > 10.0 or str(m.get("type", "")) == "story"):
+		errors.append("%s: expires — только у побочных и случайных, 1–10 дней" % w)
 	for ph: Dictionary in m.get("boss", {}).get("phases", []):
 		if ph.has("field") and not c.fields.has(str(ph["field"])):
 			errors.append("%s: у захода босса нет поля %s" % [w, ph["field"]])
