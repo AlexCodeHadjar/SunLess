@@ -37,7 +37,7 @@ func test_schedule_picks_low_never_high() -> void:
 		var ev := TideRules.schedule(c, s, 2, 2)
 		check(not ev.is_empty() and TideRules.phase(s) == "warn", "прилив объявлен")
 		for lid: String in c.locations:
-			if str(c.locations[lid].get("chapter", "")) != "shore":
+			if str(c.locations[lid].get("chapter", "")) != "shore" or not MapRules.present(c, s, lid):
 				continue
 			var h := TideRules.height(c, lid)
 			if h == "low":

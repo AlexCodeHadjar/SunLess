@@ -976,6 +976,14 @@
    "SH25"
   ],
   "from_event": "E24",
+  "on_complete": [
+   {
+    "cmd": "map_mark",
+    "place": "hunting_grounds",
+    "state": "ravaged",
+    "missions": 2
+   }
+  ],
   "memory": "strong"
  },
  {
@@ -1304,6 +1312,14 @@
    "SH27"
   ],
   "from_event": "E26",
+  "on_complete": [
+   {
+    "cmd": "map_mark",
+    "place": "coral_maze",
+    "state": "ravaged",
+    "missions": 2
+   }
+  ],
   "memory": "strong"
  },
  {
@@ -1467,6 +1483,42 @@
     "warn": 1,
     "flood": 3,
     "text": "Шторм гонит воду в лабиринт."
+   },
+   {
+    "cmd": "map_mark",
+    "place": "coral_maze",
+    "state": "storm",
+    "missions": 2
+   },
+   {
+    "cmd": "map_mark",
+    "place": "high_ground",
+    "state": "storm",
+    "missions": 2
+   },
+   {
+    "cmd": "map_mark",
+    "place": "legion_ruins",
+    "state": "storm",
+    "missions": 2
+   },
+   {
+    "cmd": "map_mark",
+    "place": "spire_view",
+    "state": "storm",
+    "missions": 2
+   },
+   {
+    "cmd": "map_mark",
+    "place": "stone_isle",
+    "state": "storm",
+    "missions": 2
+   },
+   {
+    "cmd": "map_mark",
+    "place": "low_tide",
+    "state": "storm",
+    "missions": 2
    }
   ]
  },
@@ -1660,6 +1712,14 @@
    "SH29"
   ],
   "from_event": "E28",
+  "on_complete": [
+   {
+    "cmd": "map_mark",
+    "place": "centurion_gate",
+    "state": "ravaged",
+    "missions": 3
+   }
+  ],
   "memory": "boss"
  },
  {
@@ -3090,9 +3150,39 @@
    {
     "cmd": "text",
     "text": "Стая разорила ночёвку."
+   },
+   {
+    "cmd": "map_mark",
+    "place": "shelter",
+    "state": "ravaged",
+    "missions": 4
+   },
+   {
+    "cmd": "map_mark",
+    "place": "statue_hill",
+    "state": "ravaged",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "hunting_grounds",
+    "state": "ravaged",
+    "missions": 3
+   },
+   {
+    "cmd": "emerge",
+    "place": "carapace_nest",
+    "near": "hunting_grounds"
    }
   ],
-  "from_event": "M03"
+  "from_event": "M03",
+  "on_complete": [
+   {
+    "cmd": "emerge",
+    "place": "carapace_nest",
+    "near": "hunting_grounds"
+   }
+  ]
  },
  {
   "id": "NS03",
@@ -3171,6 +3261,42 @@
    {
     "cmd": "text",
     "text": "Шторм прошёл по лагерю. Потеряно всё, что лежало внизу."
+   },
+   {
+    "cmd": "map_mark",
+    "place": "stone_isle",
+    "state": "storm",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "high_ground",
+    "state": "storm",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "spire_view",
+    "state": "storm",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "legion_ruins",
+    "state": "storm",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "low_tide",
+    "state": "storm",
+    "missions": 3
+   },
+   {
+    "cmd": "map_mark",
+    "place": "coral_maze",
+    "state": "storm",
+    "missions": 3
    }
   ],
   "from_event": "E27"
@@ -4893,5 +5019,634 @@
   "memory": "boss",
   "chain": "last_legion",
   "from_event": "M04"
+ },
+ {
+  "id": "RS11",
+  "location": "leviathan_ribs",
+  "type": "random",
+  "title": "Рёбра Левиафана",
+  "briefing": "Отлив поднял из ила рёбра исполинской твари. Между костями — лужи, а в лужах то, что море копило веками. И то, что там живёт.",
+  "arrival": "Рёбра выгибаются над головой, как своды собора. В лужах что-то шевелится.",
+  "rumors": [
+   {
+    "text": "Кости [держат добычу]",
+    "tag": "Кость"
+   },
+   {
+    "text": "В лужах [кто-то есть]",
+    "tag": "Щупальца"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M09"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Кость",
+   "Вода"
+  ],
+  "hidden_tags": [
+   "Захват"
+  ],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "RS11_search",
+    "label": "Обыскать рёбра",
+    "text": "Пока вода далеко.",
+    "stages": [
+     {
+      "name": "Между костей",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "В расщелине кости — горсть осколков.",
+      "fail": "Кость трещит под ногой."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "RS11_pools",
+    "label": "Вычистить лужи",
+    "text": "Сначала те, кто в них прячется.",
+    "stages": [
+     {
+      "name": "Лужи",
+      "combat": {
+       "enemies": [
+        "M09"
+       ],
+       "field": "F_17"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Лужи чисты — и на дне блестит.",
+      "fail": "Щупальца утаскивают добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "RS11_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 100,
+  "from_event": "M09"
+ },
+ {
+  "id": "RS12",
+  "location": "sunken_watch",
+  "type": "random",
+  "title": "Затонувший дозор",
+  "briefing": "Из воды поднялся пенёк сторожевой башни Легиона. Наверху, где сидел дозорный, могло что-то остаться — и оттуда видно полберега.",
+  "arrival": "Ступени скользкие от водорослей. Ветер свистит в бойницах.",
+  "rumors": [
+   {
+    "text": "Дозор [видит далеко]",
+    "tag": "Высота"
+   },
+   {
+    "text": "Ступени [ненадёжны]",
+    "tag": "Падение"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Высота",
+   "Камень"
+  ],
+  "hidden_tags": [
+   "Падение"
+  ],
+  "context": [
+   "climb",
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "RS12_climb",
+    "label": "Подняться наверх",
+    "text": "По винтовой лестнице.",
+    "stages": [
+     {
+      "name": "Подъём",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "Сверху видно, где вода уйдёт в следующий раз.",
+      "fail": "Ступень обваливается."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     },
+     {
+      "cmd": "add_temp",
+      "stat": "cunning",
+      "value": 1,
+      "label": "Обзор с дозора"
+     }
+    ]
+   },
+   {
+    "id": "RS12_dig",
+    "label": "Разобрать завал внизу",
+    "text": "Дверь под лестницей завалена камнями.",
+    "stages": [
+     {
+      "name": "Завал",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "За дверью — сундук дозорного.",
+      "fail": "Камни сыплются обратно."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     },
+     {
+      "cmd": "add_codex",
+      "entry": "legion_watch",
+      "text": "Затонувший дозор: Легион сторожил Берег с башен"
+     }
+    ]
+   },
+   {
+    "id": "RS12_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 100
+ },
+ {
+  "id": "RS13",
+  "location": "current_sink",
+  "type": "random",
+  "title": "Воронка течения",
+  "briefing": "Отлив оставил круглую чашу, исчерченную спиралью. На дне, у края чёрной дыры, блестит. Из дыры тянет холодом — там кто-то дышит.",
+  "arrival": "Спираль в иле ведёт вниз. Каждый шаг — ближе к дыре.",
+  "rumors": [
+   {
+    "text": "Воронка [тянет вниз]",
+    "tag": "Глубина"
+   },
+   {
+    "text": "Из дыры [дышат]",
+    "tag": "Глубинный"
+   }
+  ],
+  "threat": 3,
+  "duration": 7,
+  "rest": 20,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M12"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Глубина",
+   "Вода"
+  ],
+  "hidden_tags": [
+   "Глубинный"
+  ],
+  "context": [
+   "climb",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "RS13_rope",
+    "label": "Спуститься на верёвке",
+    "text": "Быстро — туда и обратно.",
+    "stages": [
+     {
+      "name": "Спуск",
+      "req": {
+       "cunning": 6,
+       "will": 6
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "Рука сжимает находку. Верёвка держит.",
+      "fail": "Верёвка скользит."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "RS13_lure",
+    "label": "Выманить обитателя",
+    "text": "Пусть выйдет на ил, где он медленнее.",
+    "stages": [
+     {
+      "name": "Край воронки",
+      "combat": {
+       "enemies": [
+        "M12"
+       ],
+       "field": "F_17"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Обитатель лежит на иле. Дыра молчит.",
+      "fail": "Он утягивает кого-то к краю."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "RS13_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 90,
+  "from_event": "M12"
+ },
+ {
+  "id": "RS14",
+  "location": "carapace_nest",
+  "type": "random",
+  "title": "Гнездовье",
+  "briefing": "После набега стая вернулась не с пустыми руками: у Охотничьих коридоров вырос холм из панцирей. Там кладка. Если не выжечь — стая будет больше.",
+  "arrival": "Холм из панцирей гудит. Внутри что-то скребётся.",
+  "rumors": [
+   {
+    "text": "Гнездо [охраняют]",
+    "tag": "Стая"
+   },
+   {
+    "text": "Кладка [растёт]",
+    "tag": "Яйцо"
+   }
+  ],
+  "threat": 3,
+  "duration": 7,
+  "rest": 20,
+  "squad": {
+   "min": 2,
+   "max": 3
+  },
+  "enemies": [
+   "M03",
+   "M03"
+  ],
+  "field": "F_20",
+  "known_tags": [
+   "Стая",
+   "Логово"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "combat",
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "RS14_burn",
+    "label": "Выжечь гнездо",
+    "text": "Все вместе, пока стражи у входа.",
+    "stages": [
+     {
+      "name": "Гнездовье",
+      "combat": {
+       "enemies": [
+        "M03",
+        "M03"
+       ],
+       "field": "F_20"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Кладка раздавлена, стражи мертвы.",
+      "fail": "Стража отбрасывает отряд."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "RS14_crush",
+    "label": "Разбить кладку тихо",
+    "text": "Проползти внутрь и вернуться.",
+    "stages": [
+     {
+      "name": "Тихо",
+      "req": {
+       "cunning": 7
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Скорлупы треснули одна за другой. Никто не проснулся.",
+      "fail": "Стража услышала."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "RS14_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 140,
+  "from_event": "M03"
+ },
+ {
+  "id": "RS15",
+  "location": "sea_stair",
+  "type": "random",
+  "title": "Лестница в море",
+  "briefing": "Отлив открыл лестницу Легиона, что уходит из ила прямо под воду. На нижних ступенях — дверь, которую море держало закрытой.",
+  "arrival": "Ступени мокрые, на каждой — семь звёзд. Внизу плещет чёрная вода.",
+  "rumors": [
+   {
+    "text": "Лестница [ведёт вниз]",
+    "tag": "Глубина"
+   },
+   {
+    "text": "Звёзды [Легиона]",
+    "tag": "Звёздный свет"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_16",
+  "known_tags": [
+   "Вода",
+   "Звёздный свет"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "knowledge"
+  ],
+  "actions": [
+   {
+    "id": "RS15_down",
+    "label": "Спуститься к двери",
+    "text": "Пока вода не вернулась.",
+    "stages": [
+     {
+      "name": "Вниз",
+      "req": {
+       "will": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Дверь поддалась. За ней — сухая ниша и осколки.",
+      "fail": "Холод выбивает дыхание."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     },
+     {
+      "cmd": "add_codex",
+      "entry": "legion_stair",
+      "text": "Лестница в море: Легион спускался под воду"
+     }
+    ]
+   },
+   {
+    "id": "RS15_read",
+    "label": "Прочесть звёзды на ступенях",
+    "text": "Каждая ступень — строка.",
+    "stages": [
+     {
+      "name": "Звёзды",
+      "req": {
+       "cunning": 7
+      },
+      "tags": [
+       "knowledge"
+      ],
+      "ok": "Звёзды складываются в клятву. От неё легче дышать.",
+      "fail": "Строки обрываются."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 2
+     },
+     {
+      "cmd": "add_temp",
+      "stat": "will",
+      "value": 1,
+      "label": "Клятва Легиона"
+     }
+    ]
+   },
+   {
+    "id": "RS15_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 100
+ },
+ {
+  "id": "RS16",
+  "location": "shell_field",
+  "type": "random",
+  "title": "Поле раковин",
+  "briefing": "Отлив обнажил поле исполинских витых раковин. В трещинах поблёскивает серебро, а в самых больших раковинах что-то живёт.",
+  "arrival": "Раковины выше человека. В одной из них — тихий плеск.",
+  "rumors": [
+   {
+    "text": "Серебро [в трещинах]",
+    "tag": "Серебро"
+   },
+   {
+    "text": "Раковины [не пустые]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 6,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M09"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Серебро",
+   "Песок"
+  ],
+  "hidden_tags": [
+   "Засада"
+  ],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "RS16_gather",
+    "label": "Собрать серебро",
+    "text": "С краю, не трогая больших.",
+    "stages": [
+     {
+      "name": "Сбор",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Горсть осколков и серебряная пыль.",
+      "fail": "Раковина захлопывается на руке."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "RS16_open",
+    "label": "Вскрыть большую раковину",
+    "text": "Там самое ценное — и самое опасное.",
+    "stages": [
+     {
+      "name": "Раковина",
+      "combat": {
+       "enemies": [
+        "M09"
+       ],
+       "field": "F_17"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Внутри — перламутр и осколки.",
+      "fail": "Щупальца из раковины хватают первого."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "RS16_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 100,
+  "from_event": "M09"
  }
 ]

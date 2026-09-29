@@ -7,8 +7,9 @@ const MAP_TOP := 72.0
 const MAP_BOTTOM := 780.0
 const LEFT_W := 250.0
 
-var _backdrop: MapBackdrop
+var _backdrop: MapBackdrop      # старый фон главы (панорама); у глав с картой-планом — null
 var _life: MapLife
+var _sleeper: SleeperMap        # «Карта Спящего» (docs/16 §11.6): план сверху, если у региона есть data/maps
 var _fog: CPUParticles2D
 var _embers: CPUParticles2D
 var _sky := ""                # небо над картой (Atmosphere): night | day | eclipse | blood_moon
@@ -100,13 +101,18 @@ func _process(delta: float) -> void:
 # --- построение ---------------------------------------------------------------
 
 func _build_map() -> void:
-	_backdrop = MapBackdrop.new()
-	_backdrop.region = _region()
-	_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(_backdrop)
-	_life = MapLife.new()
-	_life.size = Vector2(1920, MAP_BOTTOM)
-	add_child(_life)
+	var cfg := MapRules.config(ContentDB.data, GameState.state.chapter)
+	if not cfg.is_empty():
+		_sleeper = SleeperMap.make(cfg, Rect2(0, MAP_TOP, 1920, MAP_BOTTOM - MAP_TOP))
+		add_child(_sleeper)
+	else:
+		_backdrop = MapBackdrop.new()
+		_backdrop.region = _region()
+		_backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_backdrop)
+		_life = MapLife.new()
+		_life.size = Vector2(1920, MAP_BOTTOM)
+		add_child(_life)
 	var area := Rect2(Vector2(LEFT_W - 200, MAP_TOP + 120), Vector2(1920 - LEFT_W + 400, MAP_BOTTOM - MAP_TOP - 120))
 	_fog = Vfx.fog(area, 0.07)
 	add_child(_fog)
@@ -126,7 +132,7 @@ func _build_map() -> void:
 		icon.title = str(c.shops[sid].get("name", sid))
 		icon.pressed.connect(_open_shop)
 		add_child(icon)
-		icon.position = _map_point(c.shops[sid].get("pos", [0.5, 0.5])) - Vector2(110, 42)
+		icon.position = _shop_point(sid) - Vector2(110, 42)
 		_shops[sid] = icon
 
 
@@ -136,6 +142,20 @@ func _region() -> String:
 		if str(c.locations[lid].get("chapter", "")) == GameState.state.chapter:
 			return str(c.locations[lid].get("region", "mountain_pass"))
 	return "mountain_pass"
+
+
+## Где на экране стоит место: на карте-плане — его посадочное пятно, на панораме — точка из locations.
+func _place_point(lid: String) -> Vector2:
+	if _sleeper != null:
+		return _sleeper.foot(ContentDB.data, GameState.state, lid)
+	return _map_point(TideRules.pos(ContentDB.data, GameState.state, lid))
+
+
+func _shop_point(sid: String) -> Vector2:
+	if _sleeper != null and _sleeper.cfg.get("places", {}).has(sid):
+		# над плитой алтаря, чтобы не спорить с метками соседних площадок
+		return _sleeper.center(ContentDB.data, GameState.state, sid) - Vector2(0, MapRules.size_of(ContentDB.data, GameState.state, sid) * _sleeper.rect.size.x * 0.22)
+	return _map_point(ContentDB.data.shops[sid].get("pos", [0.5, 0.5]))
 
 
 func _map_point(p: Array) -> Vector2:
@@ -289,6 +309,8 @@ func _hint_target(name: String) -> Rect2:
 	if name == "tide_banner":
 		return _tide_banner.get_global_rect() if _tide_banner.visible else Rect2()
 	if name == "sky_moon":
+		if _backdrop == null:
+			return Rect2()
 		var br := _backdrop.get_global_rect()
 		return Rect2(br.position + br.size * MapBackdrop.MOON_AT - Vector2(46, 46), Vector2(92, 92))
 	if name.begins_with("marker_"):
@@ -366,7 +388,9 @@ func _update_tide() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
 	var ph := TideRules.phase(s)
-	var spots: Array = TideRules.places(s).map(func(l: String) -> Vector2: return _map_point(TideRules.pos(c, s, l)))
+	if _sleeper != null:
+		_sleeper.sync(c, s, Atmosphere.sky(c, s))
+	var spots: Array = TideRules.places(s).map(func(l: String) -> Vector2: return _place_point(l))
 	var left := TideRules.left(s)
 	var urgency := 0.0
 	if ph == "warn":
@@ -379,6 +403,8 @@ func _update_tide() -> void:
 	var captions: Array = []
 	for i in titles.size():
 		captions.append("" if shown.has(TideRules.places(s)[i]) else titles[i])
+	# на карте-плане вода и кольца рисуются самой картой
+	_tide.visible = _sleeper == null
 	_tide.show_tide(ph, spots, urgency, captions)
 	var names := ", ".join(titles)
 	match ph:
@@ -393,7 +419,7 @@ func _update_tide() -> void:
 
 func _tide_key() -> String:
 	var t: Dictionary = GameState.state.tide
-	return "%s|%s|%s" % [TideRules.phase(GameState.state), str(t.get("slot", {})), str(t.get("shift", {}))]
+	return "%s|%s|%s|%s" % [TideRules.phase(GameState.state), str(t.get("slot", {})), str(t.get("shift", {})), str(t.get("emerged", {}))]
 
 
 ## Небо над картой: день и ночь по часам, кровавая луна и затмение — по сюжету (Atmosphere).
@@ -404,13 +430,16 @@ func _update_sky() -> void:
 		return
 	var first := _sky == ""
 	_sky = next
-	if not _backdrop.has_sky_art():
+	if _sleeper != null:
+		_sleeper.sync(ContentDB.data, GameState.state, next)
+	elif not _backdrop.has_sky_art():
 		# нарисованный фон (Академия): день и ночь — временем суток
 		_backdrop.set_tod(float(Atmosphere.TOD[next]), not first)
 		_life.set_tod(float(Atmosphere.TOD[next]), not first)
 		return
-	_backdrop.set_sky(next, not first)
-	_life.set_tod(float(Atmosphere.TOD[next]), not first)
+	if _backdrop != null:
+		_backdrop.set_sky(next, not first)
+		_life.set_tod(float(Atmosphere.TOD[next]), not first)
 	var tint := {"night": Color(1, 1, 1), "day": Color(1.1, 1.1, 1.15), "eclipse": Color(0.55, 0.58, 0.7),
 		"blood_moon": Color(1.25, 0.45, 0.4), "storm": Color(0.6, 0.65, 0.8)}
 	var fog_tint := {"night": Color(1, 1, 1), "day": Color(1.2, 1.2, 1.25), "eclipse": Color(0.5, 0.52, 0.6),
@@ -525,7 +554,7 @@ func _rebuild_markers() -> void:
 		by_loc[lid].append(mid)
 	for lid: String in by_loc:
 		var loc: Dictionary = c.locations.get(lid, {})
-		var foot := _map_point(TideRules.pos(c, GameState.state, lid))
+		var foot := _place_point(lid)
 		var here: Array = by_loc[lid]
 		# сюжетные — крупнее и первыми; несколько миссий одной локации лежат веером
 		here.sort_custom(func(a: String, b: String) -> bool:
@@ -536,6 +565,8 @@ func _rebuild_markers() -> void:
 		var total_w := 0.0
 		for mid: String in here:
 			var sz := CardView.SIZE_PANEL * (1.1 if str(c.missions[mid].get("type", "")) == "story" else 0.95)
+			if _sleeper != null:
+				sz *= 0.6   # на карте-плане метки мельче, чтобы не закрывать места; при наведении карта растёт
 			sizes.append(sz)
 			total_w += sz.x + 14.0
 		var x := foot.x - (total_w - 14.0) / 2.0
@@ -543,12 +574,15 @@ func _rebuild_markers() -> void:
 			var mid: String = here[i]
 			var sz: Vector2 = sizes[i]
 			var mk := MissionMarker.make(mid, sz)
+			mk.zoom_on_hover = _sleeper != null
 			mk.position = Vector2(x, foot.y - sz.y)
 			mk.pressed.connect(_open_mission)
 			mk.hero_dropped.connect(_on_hero_dropped)
 			_pins_layer.add_child(mk)
 			_markers[mid] = mk
 			x += sz.x + 14.0
+		if _sleeper != null:
+			continue   # подписи мест рисует сама карта
 		var name := UITheme.label(str(loc.get("name", lid)), "title", 20, Palette.SILVER)
 		name.add_theme_constant_override("outline_size", 6)
 		name.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))

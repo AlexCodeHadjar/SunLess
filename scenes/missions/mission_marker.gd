@@ -16,6 +16,7 @@ var remaining := 0.0      # секунд до прибытия
 var arrived := false
 var fork_wait := false    # отряд стоит на развилке и ждёт решения игрока
 var card: CardView
+var zoom_on_hover := false  # на карте-плане метка мелкая: при наведении растёт, чтобы прочесть
 var _ring: Control
 var _t := 0.0
 
@@ -40,6 +41,9 @@ func _ready() -> void:
 	card.inspect_requested.connect(func(_id: String) -> void: pressed.emit(mission_id))
 	card.set_drag_forwarding(Callable(), _can_drop, _drop)
 	add_child(card)
+	if zoom_on_hover:
+		card.mouse_entered.connect(func() -> void: _zoom(true))
+		card.mouse_exited.connect(func() -> void: _zoom(false))
 	_add_mods()
 	_ring = Control.new()
 	_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -116,6 +120,16 @@ func _flash() -> void:
 	Vfx.autofree(fx)
 	_ring.scale = Vector2(1.35, 1.35)
 	create_tween().tween_property(_ring, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+
+
+func _zoom(on: bool) -> void:
+	pivot_offset = Vector2(size.x / 2.0, size.y)
+	z_index = 20 if on else 0
+	var k := 1.6 if on else 1.0
+	if Vfx.reduced():
+		scale = Vector2(k, k)
+		return
+	create_tween().tween_property(self, "scale", Vector2(k, k), 0.16).set_trans(Tween.TRANS_SINE)
 
 
 func busy() -> bool:

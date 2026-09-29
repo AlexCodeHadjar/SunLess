@@ -114,6 +114,17 @@ LOC = [
 		{"pool": ["RS10"], "every": 130}, "mid"),
 ]
 
+# появляющиеся места «Карты Спящего» (docs/16 §11.6, MapRules): встают на площадки ила при отливе и уходят
+# со следующим приливом; Гнездовье поднимает набег стаи. (id, имя, текст, высота, пул встреч, только набег)
+EMERGE_LOC = [
+	("leviathan_ribs", "Рёбра Левиафана", "Рёбра исполинской твари выгибаются из ила. Между ними — лужи и то, что застряло за века.", "low", ["RS11"], False),
+	("sunken_watch", "Затонувший дозор", "Пенёк сторожевой башни Легиона, обросший ракушками. Винтовая лестница торчит из воды.", "mid", ["RS12"], False),
+	("current_sink", "Воронка течения", "Круглая чаша в иле, исчерченная спиралью. В центре — чёрная дыра без дна.", "low", ["RS13"], False),
+	("carapace_nest", "Гнездовье", "Холм из сросшихся пустых панцирей. Внутри — бледные скорлупы и обглоданные кости.", "mid", ["RS14"], True),
+	("sea_stair", "Лестница в море", "Широкая лестница Легиона уходит из ила под воду. На ступенях — семь звёзд.", "low", ["RS15"], False),
+	("shell_field", "Поле раковин", "Поле исполинских витых раковин и луж. В трещинах поблёскивает серебро.", "low", ["RS16"], False),
+]
+
 # --- предметы ---------------------------------------------------------------------------------
 
 ENH = [
@@ -524,6 +535,29 @@ for m in M:
 	if m["id"] == "NS01":
 		m["on_expire"] = m.get("on_expire", []) + [{"cmd": "tide", "warn": 1, "flood": 2, "text": "Прилив пришёл раньше срока."}]
 
+# следы на карте-плане (MapRules): набег и шторм оставляют место разорённым / после шторма на N миссий;
+# набег стаи поднимает Гнездовье у Охотничьих коридоров
+def mark(place, st, n):
+	return {"cmd": "map_mark", "place": place, "state": st, "missions": n}
+
+
+MARKS = {
+	"SH24": ("on_complete", [mark("hunting_grounds", "ravaged", 2)]),
+	"SH26": ("on_complete", [mark("coral_maze", "ravaged", 2)]),
+	"SH27": ("on_complete", [mark(p, "storm", 2) for p in ("coral_maze", "high_ground", "legion_ruins", "spire_view", "stone_isle", "low_tide")]),
+	"SH28": ("on_complete", [mark("centurion_gate", "ravaged", 3)]),
+	"NS02": ("on_expire", [mark("shelter", "ravaged", 4), mark("statue_hill", "ravaged", 3), mark("hunting_grounds", "ravaged", 3)]),
+	"NS03": ("on_expire", [mark(p, "storm", 3) for p in ("stone_isle", "high_ground", "spire_view", "legion_ruins", "low_tide", "coral_maze")]),
+}
+NEST = {"cmd": "emerge", "place": "carapace_nest", "near": "hunting_grounds"}
+for m in M:
+	if m["id"] in MARKS:
+		key, cmds = MARKS[m["id"]]
+		m[key] = m.get(key, []) + cmds
+	if m["id"] == "NS02":
+		m["on_complete"] = m.get("on_complete", []) + [NEST]
+		m["on_expire"] = m.get("on_expire", []) + [NEST]
+
 # Воспоминание-добыча (LootRules, docs/16 §11.3): ключевые сюжетные бои — выбор 1 из 3 всегда
 MEMORY = {"SH24": "strong", "SH26": "strong", "SH28": "boss", "SH32": "boss"}
 for m in M:
@@ -532,7 +566,7 @@ for m in M:
 
 # рисунки: случайные миссии — карта своей твари
 for m in M:
-	if m["id"] in ("RS01", "RS02", "RS03", "RS04") and m.get("enemies"):
+	if m["id"] in ("RS01", "RS02", "RS03", "RS04", "RS11", "RS13", "RS14", "RS16") and m.get("enemies"):
 		m["from_event"] = m["enemies"][0]
 
 # чистка: пустые поля
@@ -550,7 +584,9 @@ for m in M:
 dump(P("missions", "ch3_shore.json"), M)
 dump(P("regions.json"), upsert(load(P("regions.json")), [REGION]))
 dump(P("locations.json"), upsert(load(P("locations.json")),
-	[dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": p, "height": h, "text": t}, **({"random": r} if r else {})) for i, n, p, t, r, h in LOC]))
+	[dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": p, "height": h, "text": t}, **({"random": r} if r else {})) for i, n, p, t, r, h in LOC]
+	+ [dict({"id": i, "name": n, "chapter": "shore", "region": "forgotten_shore", "pos": [0.5, 0.5], "height": h, "text": t,
+		"emerge": True, "random": {"pool": pool}}, **({"raid_only": True} if raid else {})) for i, n, t, h, pool, raid in EMERGE_LOC]))
 _old = {x["id"]: x for x in load(P("enhancements.json"))}
 for _e in ENH:   # навыки карт (memory) правятся отдельно — сохраняем
 	if "memory" in _old.get(_e["id"], {}):

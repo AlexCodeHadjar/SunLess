@@ -1,0 +1,314 @@
+{
+ "_doc": "Карта Спящего (docs/16 §11.6, core/rules/map_rules.gd, scenes/map/sleeper_map.gd). Основа — план сверху; at — центр виньетки места в долях основы, size — ширина виньетки в долях ширины основы; states — нарисованные облики (<место>_<облик>.webp). sockets — пустые площадки ила для появляющихся мест. levels — уровни воды по карте высот (0–255): normal — обычная кромка, warn — вода подступает, flood — прилив, storm — штормовой прилив. view_top — какая доля основы уходит под верхнюю кромку окна карты. foot — где встаёт метка миссии: доля размера виньетки вниз от центра.",
+ "region": "forgotten_shore",
+ "art": "res://art/map/forgotten_shore/",
+ "base": "base.webp",
+ "height": "height.png",
+ "water": "water_tile.webp",
+ "fog": "fog_tile.webp",
+ "view_top": 0.08,
+ "foot": 0.28,
+ "levels": {
+  "normal": 55,
+  "warn": 68,
+  "flood": 115,
+  "storm": 140
+ },
+ "places": {
+  "stone_isle": {
+   "at": [
+    0.69,
+    0.712
+   ],
+   "size": 0.1,
+   "states": [
+    "dry",
+    "storm"
+   ]
+  },
+  "low_tide": {
+   "at": [
+    0.34,
+    0.7
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "flooded",
+    "silt",
+    "storm"
+   ]
+  },
+  "coral_maze": {
+   "at": [
+    0.428,
+    0.54
+   ],
+   "size": 0.16,
+   "states": [
+    "dry",
+    "dry_b",
+    "dry_c",
+    "flooded",
+    "silt",
+    "ravaged",
+    "storm"
+   ]
+  },
+  "shelter": {
+   "at": [
+    0.606,
+    0.53
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "ravaged"
+   ]
+  },
+  "centurion_gate": {
+   "at": [
+    0.33,
+    0.37
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "flooded",
+    "ravaged"
+   ]
+  },
+  "high_ground": {
+   "at": [
+    0.492,
+    0.35
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "storm"
+   ]
+  },
+  "hunting_grounds": {
+   "at": [
+    0.636,
+    0.375
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "dry_b",
+    "dry_c",
+    "flooded",
+    "silt",
+    "ravaged"
+   ]
+  },
+  "drowned_hall": {
+   "at": [
+    0.762,
+    0.255
+   ],
+   "size": 0.14,
+   "states": [
+    "dry",
+    "flooded",
+    "silt"
+   ]
+  },
+  "statue_hill": {
+   "at": [
+    0.396,
+    0.225
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "ravaged"
+   ]
+  },
+  "legion_ruins": {
+   "at": [
+    0.555,
+    0.205
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "flooded",
+    "storm"
+   ]
+  },
+  "spire_view": {
+   "at": [
+    0.245,
+    0.255
+   ],
+   "size": 0.2,
+   "states": [
+    "dry",
+    "storm"
+   ]
+  },
+  "shore_altar": {
+   "at": [
+    0.795,
+    0.46
+   ],
+   "size": 0.1,
+   "states": [
+    "dry"
+   ]
+  },
+  "leviathan_ribs": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "sea_stair": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "shell_field": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "sunken_watch": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "current_sink": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "carapace_nest": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  }
+ },
+ "variants": {
+  "coral_maze": [
+   "dry",
+   "dry_b",
+   "dry_c"
+  ],
+  "hunting_grounds": [
+   "dry",
+   "dry_b",
+   "dry_c"
+  ]
+ },
+ "sockets": [
+  [
+   0.65,
+   0.275
+  ],
+  [
+   0.583,
+   0.32
+  ],
+  [
+   0.3,
+   0.508
+  ],
+  [
+   0.708,
+   0.475
+  ],
+  [
+   0.783,
+   0.583
+  ],
+  [
+   0.53,
+   0.7
+  ]
+ ],
+ "paths": [
+  [
+   "stone_isle",
+   "low_tide"
+  ],
+  [
+   "stone_isle",
+   "shelter"
+  ],
+  [
+   "low_tide",
+   "coral_maze"
+  ],
+  [
+   "coral_maze",
+   "shelter"
+  ],
+  [
+   "coral_maze",
+   "centurion_gate"
+  ],
+  [
+   "coral_maze",
+   "high_ground"
+  ],
+  [
+   "high_ground",
+   "statue_hill"
+  ],
+  [
+   "high_ground",
+   "hunting_grounds"
+  ],
+  [
+   "hunting_grounds",
+   "legion_ruins"
+  ],
+  [
+   "hunting_grounds",
+   "drowned_hall"
+  ],
+  [
+   "legion_ruins",
+   "statue_hill"
+  ],
+  [
+   "legion_ruins",
+   "drowned_hall"
+  ],
+  [
+   "statue_hill",
+   "spire_view"
+  ],
+  [
+   "centurion_gate",
+   "spire_view"
+  ],
+  [
+   "shelter",
+   "hunting_grounds"
+  ],
+  [
+   "shelter",
+   "shore_altar"
+  ],
+  [
+   "drowned_hall",
+   "shore_altar"
+  ]
+ ]
+}

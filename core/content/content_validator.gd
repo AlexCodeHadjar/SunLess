@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "edge", "recover", "psyche",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
-	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide"]
+	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide", "map_mark", "emerge"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_on_edge"]
 const STATS := ["power", "will", "cunning"]
@@ -18,6 +18,7 @@ static func validate(c: Content) -> Array[String]:
 	_validate_modifiers(c, errors)
 	_validate_loot(c, errors)
 	_validate_deck(c, errors)
+	_validate_maps(c, errors)
 	return errors
 
 
@@ -56,6 +57,36 @@ static func _validate_loot(c: Content, errors: Array[String]) -> void:
 		var e: Dictionary = c.enhancements[id]
 		if bool(e.get("loot", false)) and not LootRules.RARITY_ORDER.has(str(e.get("rarity", ""))):
 			errors.append("%s: у добычи неизвестная редкость «%s»" % [id, e.get("rarity", "")])
+
+
+## Карты-планы (docs/16 §11.6): места есть в locations, рисунки лежат на месте, площадки и проходы в порядке.
+static func _validate_maps(c: Content, errors: Array[String]) -> void:
+	for region: String in c.maps:
+		var m: Dictionary = c.maps[region]
+		var art := str(m.get("art", ""))
+		for key: String in ["base", "height", "water", "fog"]:
+			if not ResourceLoader.exists(art + str(m.get(key, ""))):
+				errors.append("maps/%s: нет файла %s" % [region, m.get(key, "")])
+		var places: Dictionary = m.get("places", {})
+		for lid: String in places:
+			if not c.locations.has(lid) and not c.shops.has(lid):
+				errors.append("maps/%s: место %s не описано в locations.json или shops.json" % [region, lid])
+			for st: String in places[lid].get("states", ["dry"]):
+				if not ResourceLoader.exists("%s%s_%s.webp" % [art, lid, st]):
+					errors.append("maps/%s: нет виньетки %s_%s" % [region, lid, st])
+		for lid: String in m.get("variants", {}):
+			for v: String in m["variants"][lid]:
+				if not Array(places.get(lid, {}).get("states", [])).has(v):
+					errors.append("maps/%s: вариант %s у %s не в списке состояний" % [region, v, lid])
+		for lid: String in c.locations:
+			if str(c.locations[lid].get("region", "")) == region and not places.has(lid):
+				errors.append("maps/%s: у места %s нет точки на карте" % [region, lid])
+			if bool(c.locations[lid].get("emerge", false)) and m.get("sockets", []).is_empty():
+				errors.append("maps/%s: появляющемуся месту %s негде встать — нет площадок" % [region, lid])
+		for pair: Array in m.get("paths", []):
+			for lid: String in pair:
+				if not places.has(lid):
+					errors.append("maps/%s: тропа ведёт в неизвестное место %s" % [region, lid])
 
 
 ## Колода событий (docs/16 §11.4): миссии существуют, из своей главы, не повторяются; pick не больше единиц.

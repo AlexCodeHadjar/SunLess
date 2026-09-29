@@ -378,5 +378,114 @@
    ],
    "every": 130
   }
+ },
+ {
+  "id": "leviathan_ribs",
+  "name": "Рёбра Левиафана",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Рёбра исполинской твари выгибаются из ила. Между ними — лужи и то, что застряло за века.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS11"
+   ]
+  }
+ },
+ {
+  "id": "sunken_watch",
+  "name": "Затонувший дозор",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Пенёк сторожевой башни Легиона, обросший ракушками. Винтовая лестница торчит из воды.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS12"
+   ]
+  }
+ },
+ {
+  "id": "current_sink",
+  "name": "Воронка течения",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Круглая чаша в иле, исчерченная спиралью. В центре — чёрная дыра без дна.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS13"
+   ]
+  }
+ },
+ {
+  "id": "carapace_nest",
+  "name": "Гнездовье",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Холм из сросшихся пустых панцирей. Внутри — бледные скорлупы и обглоданные кости.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS14"
+   ]
+  },
+  "raid_only": true
+ },
+ {
+  "id": "sea_stair",
+  "name": "Лестница в море",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Широкая лестница Легиона уходит из ила под воду. На ступенях — семь звёзд.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS15"
+   ]
+  }
+ },
+ {
+  "id": "shell_field",
+  "name": "Поле раковин",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Поле исполинских витых раковин и луж. В трещинах поблёскивает серебро.",
+  "emerge": true,
+  "random": {
+   "pool": [
+    "RS16"
+   ]
+  }
  }
 ]

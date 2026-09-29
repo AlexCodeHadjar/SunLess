@@ -8,6 +8,7 @@ extends RefCounted
 ##     удача: только психика, провал: один герой — поражение (грань смерти, на грани — бросок смерти);
 ##   · открытые побочные и случайные миссии там смыты; сюжетные ждут отлива (отправить нельзя).
 ## Отлив: лабиринт перестроен — затопленные места меняются местами на карте (новые проходы), в них — новые встречи.
+## На карте-плане (MapRules, docs/16 §11.6) места не двигаются: меняются коридоры, остаётся ил, поднимаются новые места.
 ## Если делать больше нечего (всё открытое под водой, отрядов нет) — вода уходит сама, глава не встаёт.
 ## Натиск не тонет: угроза приходит сама.
 
@@ -59,6 +60,7 @@ static func left_text(state: RunState) -> String:
 
 ## Выполнена миссия (MissionFlow.after_completion): счётчик прилива идёт вперёд. Смена фазы — в tick.
 static func count(state: RunState) -> void:
+	MapRules.count(state)
 	if phase(state) != "":
 		state.tide["left"] = maxi(0, int(state.tide.get("left", 0)) - 1)
 
@@ -118,7 +120,7 @@ static func schedule(content: Content, state: RunState, warn: int, flood: int, t
 	var lids: Array = content.locations.keys()
 	lids.sort()
 	for lid: String in lids:
-		if str(content.locations[lid].get("chapter", "")) != state.chapter:
+		if str(content.locations[lid].get("chapter", "")) != state.chapter or not MapRules.present(content, state, lid):
 			continue
 		var h := height(content, lid)
 		if h == "low" or (h == "mid" and rng.randf() < MID_CHANCE):
@@ -215,6 +217,8 @@ static func _caught(content: Content, state: RunState, sq: Dictionary, rng: Rand
 static func _ebb(content: Content, state: RunState) -> Array:
 	var old := places(state)
 	var rng := _rng(state, 3)
+	if MapRules.has_map(content, state.chapter):
+		return _ebb_on_map(content, state, old, rng)
 	var cells: Array = old.map(func(l: String) -> String: return slot(state, l))
 	for i in range(cells.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
@@ -230,4 +234,21 @@ static func _ebb(content: Content, state: RunState) -> Array:
 	var out: Array = [{"kind": "tide_ebb", "text": "Вода ушла. Лабиринт уже не тот: новые проходы, новые встречи"}]
 	for lid: String in old:
 		out.append_array(MissionFlow.spawn_random(content, state, lid))
+	return out
+
+
+## Отлив на карте-плане (MapRules): места стоят на своих точках — меняются проходы, остаётся ил,
+## поднимаются новые места со своими встречами.
+static func _ebb_on_map(content: Content, state: RunState, old: Array, rng: RandomNumberGenerator) -> Array:
+	var keep := {}
+	for key: String in ["emerged", "variant", "silt", "marks"]:
+		if state.tide.has(key):
+			keep[key] = state.tide[key]
+	state.tide = {"phase": "", "places": [], "count": int(state.tide.get("count", 0)) + 1}
+	state.tide.merge(keep)
+	var out: Array = [{"kind": "tide_ebb", "text": "Вода ушла. Лабиринт уже не тот: новые проходы, новые места"}]
+	out.append_array(MapRules.on_ebb(content, state, old, rng))
+	for lid: String in old:
+		if MapRules.present(content, state, lid):
+			out.append_array(MissionFlow.spawn_random(content, state, lid))
 	return out

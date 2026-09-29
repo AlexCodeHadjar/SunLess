@@ -82,6 +82,12 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			if not ch5.is_empty():
 				ch5["stage"] = str(e["stage"])
 				return [{"kind": "stage", "text": "%s — новая стадия: %s" % [content.card_name(cid2), content.stage_name(cid2, str(e["stage"]))], "card": cid2}]
+		"map_mark":
+			# след на карте-плане (MapRules): разорено / после шторма — на N выполненных миссий
+			return MapRules.mark(content, state, str(e["place"]), str(e.get("state", "ravaged")), int(e.get("missions", 3)))
+		"emerge":
+			# на свободной площадке поднимается место со своей встречей (Гнездовье после набега)
+			return MapRules.emerge(content, state, str(e["place"]), rng, str(e.get("near", "")))
 		"add_codex":
 			var entry: String = e["entry"]
 			if not state.codex.has(entry):
