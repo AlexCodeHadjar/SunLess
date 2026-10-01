@@ -124,8 +124,14 @@ static func _resolve(c: Content, s: RunState, on_report: Callable) -> Dictionary
 				if v > best_v:
 					best_v = v
 					best = str(a["id"])
-		var need := 20 if str(c.missions[sq["mission"]]["type"]) == "story" else 50
+		var story_m := str(c.missions[sq["mission"]]["type"]) == "story"
+		var need := 20 if story_m else 50
+		# сюжет не ждёт вечно: после двух отступлений идут на лучшее, что есть (иначе глава встала бы без спутников)
+		if story_m and int(s.missions.get(sq["mission"], {}).get("retreats", 0)) >= 2:
+			need = 0
 		var pick := best if best_v >= need or retreat == "" else retreat
+		if pick == retreat and story_m:
+			s.missions[sq["mission"]]["retreats"] = int(s.missions[sq["mission"]].get("retreats", 0)) + 1
 		var r := MissionResolver.resolve(c, s, int(sq["id"]), pick)
 		if not r["ok"]:
 			return {"state": s, "error": str(r["error"]), "chapter_started": started}

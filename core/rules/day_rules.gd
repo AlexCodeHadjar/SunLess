@@ -74,7 +74,7 @@ static func camp_at(content: Content, lid: String) -> Dictionary:
 
 
 static func camp(content: Content, state: RunState) -> Dictionary:
-	return camp_at(content, state.party_at)
+	return GateRules.camp_mod(content, state, state.party_at, camp_at(content, state.party_at))
 
 
 static func has_service(content: Content, state: RunState, service: String) -> bool:
@@ -90,7 +90,8 @@ static func can_equip(content: Content, state: RunState) -> String:
 
 ## Движение по тропам ограничено только на карте-плане.
 static func restricted(content: Content, state: RunState) -> bool:
-	return MapRules.has_map(content, state.chapter) and state.party_at != ""
+	# лагерь должен стоять на карте этой главы (иначе — глава без карты-плана или отряд ещё не пришёл)
+	return state.party_at != "" and MapRules.config(content, state.chapter).get("places", {}).has(state.party_at)
 
 
 static func reachable(content: Content, state: RunState, lid: String) -> bool:
@@ -229,6 +230,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 	if TideRules.flooded(state, state.party_at):
 		out.append_array(_flee(content, state, rng))
 	out.append_array(MissionFlow.expire_day(content, state))
+	out.append_array(GateRules.night(content, state, rng))   # прорывы и рой (Академия), Врата (Город)
 	out.append_array(MissionFlow.spawn_day(content, state))
 	out.append_array(OnslaughtRules.tick(content, state))
 	# 4. утро: планировщик проверяет, что сегодня есть чем заняться (docs/17 §4)

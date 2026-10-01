@@ -257,6 +257,25 @@ func _run() -> void:
 	get_tree().current_scene.call("_open_mission", "MA16")
 	await _wait(0.8)
 	await _shot("m18_brief_ma16")
+	# прорывы Академии (GateRules): сигнал, пролом, рой в корпусе, повреждения и баррикада
+	var ga := GameState.state
+	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
+	GateRules.raise_signal(ContentDB.data, ga, "B4")
+	ga.flags["gates"]["B1"] = {"stage": "open", "open_day": ga.day}
+	GateRules.set_site(ga, "dorm", "alarm")
+	GateRules.set_site(ga, "yard", "alarm")
+	ga.flags["swarms"] = [{"at": "canteen", "from": "dorm", "point": "B1"}]
+	GateRules.set_site(ga, "canteen", "alarm")
+	GateRules.set_site(ga, "medbay", "burning")
+	GateRules.set_site(ga, "arena", "barricaded")
+	GateRules.set_site(ga, "lab", "leak")
+	MissionFlow.open(ContentDB.data, ga, "BA15", true)
+	GameState.missions_changed.emit()
+	await _wait(1.5)
+	await _shot("m18b_academy_breach")
+	GameState.state.flags.erase("swarms")
+	GateRules.reset(GameState.state)
+	GameState.missions_changed.emit()
 	get_tree().current_scene.get_children().filter(func(n: Node) -> bool: return n is MissionWindow).map(func(n: Node) -> void: n.close())
 	# Забытый Берег (Ф13): после Зимнего солнцестояния — Санни один, ночь, потом шторм и день
 	var sa := GameState.state

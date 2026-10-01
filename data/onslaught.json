@@ -1,19 +1,5 @@
 [
  {
-  "id": "academy",
-  "chapter": "academy",
-  "first_after": 3,
-  "every": [
-   3,
-   5
-  ],
-  "pool": [
-   "NA01",
-   "NA02"
-  ],
-  "text": "Врата Кошмара открываются и в мире бодрствования. Академия учит: на прорыв отвечают сразу."
- },
- {
   "id": "shore",
   "chapter": "shore",
   "first_after": 2,

@@ -65,6 +65,19 @@ static func state_events(content: Content, state: RunState) -> Array:
 			out.append("boss")
 		if str(m.get("type", "")) == "onslaught":
 			out.append("onslaught")
+	# прорывы Академии / Врата (GateRules)
+	if GateRules.active(content, state):
+		for pid: String in GateRules.points(state):
+			match GateRules.stage(state, pid):
+				"signal":
+					out.append("breach_signal")
+				"open":
+					out.append("breach")
+		if not GateRules.swarms(state).is_empty():
+			out.append("swarm")
+		for lid: String in GateRules.sites(state):
+			if GateRules.site_state(state, lid) == "repair":
+				out.append("repair")
 	# дни, переходы, лагерь-стоянка (docs/16 §12, docs/17)
 	out.append("day")
 	if DayRules.restricted(content, state):

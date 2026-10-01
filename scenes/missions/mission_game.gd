@@ -660,6 +660,10 @@ func _show_night(ev: Array) -> void:
 				col = Palette.SILVER
 			"planner", "mission":
 				col = Palette.GOLD
+			"breach", "breach_signal", "swarm", "damage":
+				col = Color(1.0, 0.45, 0.35)
+			"repair":
+				col = Palette.STAT_UP
 		var l := UITheme.label("• " + t, "sans", 18, col)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 740
@@ -751,6 +755,8 @@ func _hint_target(name: String) -> Rect2:
 					ok = str(m.get("type", "")) == "onslaught"
 				"marker_far":
 					ok = TravelRules.distance(c, s, str(m.get("location", ""))) > 0 and str(m.get("type", "")) != "onslaught"
+				"marker_breach":
+					ok = GateRules.mission_ids(c, s).has(mid)
 			var mk: Control = _markers[mid]
 			if ok and is_instance_valid(mk) and mk.is_visible_in_tree():
 				return mk.get_global_rect()
@@ -835,7 +841,13 @@ func _update_tide() -> void:
 			_tide_banner.text = "≈ Под водой: %s · отлив через %s" % [names, TideRules.left_text(s)]
 		_:
 			_tide_banner.text = ""
-	_tide_banner.visible = ph != ""
+	_tide_banner.add_theme_color_override("font_color", Color(0.72, 0.88, 1.0))
+	# прорывы и Врата (GateRules): сигнал, прорыв, рой — той же строкой, красным
+	if ph == "" and GateRules.active(c, s):
+		_tide_banner.text = GateRules.banner(c, s)
+		_tide_banner.add_theme_color_override("font_color", Color(1.0, 0.55, 0.45))
+	_tide_banner.tooltip_text = "" if ph == "" else _tide_banner.tooltip_text
+	_tide_banner.visible = _tide_banner.text != ""
 
 
 func _tide_key() -> String:
@@ -1064,7 +1076,7 @@ func _update_pins() -> void:
 		if under:
 			badge = "ПОД ВОДОЙ"
 		elif far:
-			badge = "ЗА ВОДОЙ"
+			badge = "ЗА ВОДОЙ" if TideRules.phase(s) == "flood" else "НЕТ ПРОХОДА"
 		elif steps > 0 and not arrived and badge == "":
 			badge = "%d %s%s" % [steps, UITheme.plural(steps, ["ПЕРЕХОД", "ПЕРЕХОДА", "ПЕРЕХОДОВ"]),
 				" · МАРШ" if TravelRules.march_steps(ContentDB.data, s, steps) > 0 else ""]
@@ -1087,7 +1099,10 @@ func _on_events(events: Array) -> void:
 			"arrived":
 				AudioManager.play("bell", -6.0, 1.2)
 				_show_toast("%s — щёлкните по карте миссии" % e["text"])
-			"rested", "expired", "move", "task", "planner":
+			"rested", "expired", "move", "task", "planner", "repair":
+				_show_toast(str(e["text"]))
+			"breach", "breach_signal", "swarm", "damage":
+				AudioManager.play("bell", -3.0, 0.6)
 				_show_toast(str(e["text"]))
 			"onslaught":
 				AudioManager.play("bell", -2.0, 0.7)

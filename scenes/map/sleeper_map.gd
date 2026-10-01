@@ -6,6 +6,8 @@ extends Control
 ##   (облик — MapRules.place_state, смена — наплывом) → тени облаков → туман неизвестного (шейдер)
 ##   → кольца «вода идёт», подписи мест, дождь и молнии.
 ## Небо не рисуется: день, ночь, кровавая луна, шторм и затмение — цветом всей карты и эффектами.
+## Угрозы-точки (GateRules): проломы на стене по стадии, рой — полоса следа и тёмное пятно, метки мест по облику
+## (сирены, баррикады, копоть, слизь), Тревога — красные отблески. Карта без поля height — без воды.
 ## Основа покрывает всё окно с запасом (`zoom`), карту можно чуть сдвинуть мышью (`pan`, сигнал `panned`).
 
 const WATER_SHADER := preload("res://scenes/map/sleeper_water.gdshader")
@@ -36,6 +38,7 @@ var _sprites_layer: Control
 var _shade: Control
 var _fog: ColorRect
 var _over: Control
+var _threat: Control
 var _weather: Control
 var _sprites := {}        # место -> TextureRect
 var _shown := {}          # место -> облик на экране ("" — место скрыто)
@@ -79,20 +82,16 @@ func _ready() -> void:
 	_world.add_child(bg)
 	_water = ColorRect.new()
 	_water.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var wm := ShaderMaterial.new()
-	wm.shader = WATER_SHADER
-	wm.set_shader_parameter("height_tex", _load(str(cfg.get("height", "height.png")).get_basename(), str(cfg.get("height", "height.png")).get_extension()))
-	wm.set_shader_parameter("water_tex", _load(str(cfg.get("water", "water_tile.webp")).get_basename()))
-	wm.set_shader_parameter("aspect", aspect)
-	_level = _levels("normal")
-	_level_to = _level
-	wm.set_shader_parameter("normal_level", _level)
-	wm.set_shader_parameter("level", _level)
-	_water.material = wm
 	_world.add_child(_water)
+	if cfg.has("height"):
+		_build_water(aspect)
+	else:
+		_water.visible = false   # карта без воды (Академия)
 	_ink = _layer(_world)
 	_ink.draw.connect(_draw_paths)
 	_sprites_layer = _layer(_world)
+	_threat = _layer(_world)
+	_threat.draw.connect(_draw_threat)
 	_shade = _layer(_world)
 	_shade.draw.connect(_draw_shade)
 	_fog = ColorRect.new()
@@ -113,6 +112,20 @@ func _ready() -> void:
 	for i in 5:
 		_clouds.append({"tex": Vfx.tex(names[i % names.size()]), "pos": Vector2(_rng.randf() * rect.size.x, _rng.randf() * rect.size.y),
 			"scale": _rng.randf_range(1.4, 2.4), "speed": _rng.randf_range(5.0, 11.0)})
+
+
+## Вода прилива: шейдер по карте высот.
+func _build_water(aspect: float) -> void:
+	var wm := ShaderMaterial.new()
+	wm.shader = WATER_SHADER
+	wm.set_shader_parameter("height_tex", _load(str(cfg.get("height", "height.png")).get_basename(), str(cfg.get("height", "height.png")).get_extension()))
+	wm.set_shader_parameter("water_tex", _load(str(cfg.get("water", "water_tile.webp")).get_basename()))
+	wm.set_shader_parameter("aspect", aspect)
+	_level = _levels("normal")
+	_level_to = _level
+	wm.set_shader_parameter("normal_level", _level)
+	wm.set_shader_parameter("level", _level)
+	_water.material = wm
 
 
 ## Основа покрывает окно целиком и чуть больше — запас для сдвига мышью.
@@ -220,7 +233,7 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 	var kn := MapRules.known(content, state)
 	for lid: String in cfg.get("places", {}):
 		var here := MapRules.present(content, state, lid)
-		var st := MapRules.place_state(content, state, lid, sky_now) if here else ""
+		var st := MapRules.place_state(content, state, lid, sky_now) if here and not MapRules.states(content, state, lid).is_empty() else ""
 		if str(_shown.get(lid, "-")) != st:
 			_show_place(content, state, lid, st)
 		if not here:
@@ -278,8 +291,43 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 			if revealed.has(n) and content.locations.has(n) and not flooded.has(n):
 				near.append(n)
 	_info = {"revealed": revealed, "flooded": flooded, "warn": warn, "feet": feet, "centers": centers,
-		"sizes": sizes, "names": names, "paths": paths, "camp": state.party_at if revealed.has(state.party_at) else "", "near": near}
+		"sizes": sizes, "names": names, "paths": paths, "camp": state.party_at if revealed.has(state.party_at) else "", "near": near,
+		"threat": _threat_info(content, state, revealed), "alarm": GateRules.alarm(state)}
 	_ink.queue_redraw()
+
+
+## Что рисовать от угроз: проломы по стадии, метки мест по облику, рой (откуда → где).
+func _threat_info(content: Content, state: RunState, revealed: Array) -> Dictionary:
+	if not GateRules.active(content, state):
+		return {}
+	var dec: Dictionary = cfg.get("decals", {})
+	var pts: Array = []
+	for pid: String in GateRules.points(state):
+		var d := GateRules.point_def(content, state, pid)
+		if not bool(d.get("sprite", true)):
+			continue
+		var at: Array = d.get("at", [0.5, 0.5])
+		pts.append({"at": to_screen(Vector2(float(at[0]), float(at[1]))) - view.position, "size": float(d.get("size", 0.11)) * rect.size.x,
+			"tex": "%s_%s" % [str(dec.get("point", "breach")), GateRules.stage(state, pid)], "stage": GateRules.stage(state, pid)})
+	var marks: Array = []
+	for lid: String in GateRules.sites(state):
+		if not revealed.has(lid):
+			continue
+		var st := GateRules.site_state(state, lid)
+		marks.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid), "state": st,
+			"decals": Array(dec.get(st, []))})
+	var sw: Array = []
+	for e: Dictionary in GateRules.swarms(state):
+		var to := center(content, state, str(e.get("at", ""))) - view.position
+		var from := to
+		if str(e.get("from", "")) != "":
+			from = center(content, state, str(e["from"])) - view.position
+		else:
+			var at2: Array = GateRules.point_def(content, state, str(e.get("point", ""))).get("at", [])
+			if at2.size() == 2:
+				from = to_screen(Vector2(float(at2[0]), float(at2[1]))) - view.position
+		sw.append({"from": from, "to": to, "size": _sprite_size(content, state, str(e.get("at", "")))})
+	return {"points": pts, "marks": marks, "swarms": sw, "strip": str(dec.get("swarm", ""))}
 
 
 ## Сменить облик места наплывом ("" — место уходит с карты).
@@ -335,7 +383,7 @@ func _set_sky(next: String, animate: bool) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if not is_equal_approx(_level, _level_to):
+	if not is_equal_approx(_level, _level_to) and _water.material != null:
 		_level = move_toward(_level, _level_to, LEVEL_SPEED * delta)
 		(_water.material as ShaderMaterial).set_shader_parameter("level", _level)
 	var holes := PackedVector4Array()
@@ -363,6 +411,61 @@ func _process(delta: float) -> void:
 	_shade.queue_redraw()
 	_over.queue_redraw()
 	_weather.queue_redraw()
+	if not Dictionary(_info.get("threat", {})).is_empty():
+		_threat.queue_redraw()
+
+
+## Угрозы: пролом на стене, метки мест, рой и его след.
+func _draw_threat() -> void:
+	var th: Dictionary = _info.get("threat", {})
+	if th.is_empty():
+		return
+	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+	for p: Dictionary in th.get("points", []):
+		var tex := _load(str(p["tex"]))
+		var sz := float(p["size"])
+		var r := Rect2(Vector2(p["at"]) - Vector2(sz, sz) / 2.0, Vector2(sz, sz))
+		if tex != null:
+			_threat.draw_texture_rect(tex, r, false, Color(1, 1, 1, 0.75 + 0.25 * pulse) if str(p["stage"]) == "signal" else Color.WHITE)
+		if str(p["stage"]) in ["signal", "open"]:
+			var c := Vector2(p["at"])
+			for k in 2:
+				_threat.draw_arc(c, sz * (0.3 + 0.06 * k + 0.04 * pulse), 0.0, TAU, 40, Color(1.0, 0.2, 0.15, (0.5 - 0.2 * k) * (0.5 + 0.5 * pulse)), 3.0, true)
+	for m: Dictionary in th.get("marks", []):
+		var c2 := Vector2(m["at"])
+		var s2 := float(m["size"])
+		var offs := [Vector2(0.24, -0.2), Vector2(-0.3, 0.22), Vector2(0.18, 0.26)]
+		var i := 0
+		for dn: String in m.get("decals", []):
+			var t2 := _load(dn)
+			if t2 == null:
+				continue
+			var ds := s2 * 0.3
+			_threat.draw_texture_rect(t2, Rect2(c2 + offs[i % offs.size()] * s2 - Vector2(ds, ds) / 2.0, Vector2(ds, ds)), false)
+			i += 1
+		if str(m["state"]) in ["alarm", "fight", "lockdown", "leak", "breached"]:
+			_threat.draw_arc(c2, s2 * 0.44, 0.0, TAU, 48, Color(1.0, 0.18, 0.12, 0.25 + 0.3 * pulse), 2.5, true)
+		elif str(m["state"]) == "burning":
+			_threat.draw_circle(c2, s2 * 0.3, Color(1.0, 0.45, 0.1, 0.10 + 0.08 * pulse))
+	var strip := _load(str(th.get("strip", "")))
+	var f := UITheme.font("sans_bold")
+	for sw: Dictionary in th.get("swarms", []):
+		var a := Vector2(sw["from"])
+		var b := Vector2(sw["to"])
+		var s3 := float(sw["size"])
+		if strip != null and a.distance_to(b) > 4.0:
+			var mid := (a + b) / 2.0
+			var ln := a.distance_to(b)
+			_threat.draw_set_transform(mid, (b - a).angle(), Vector2.ONE)
+			_threat.draw_texture_rect(strip, Rect2(-ln / 2.0, -ln * 0.12, ln, ln * 0.24), false, Color(1, 1, 1, 0.85))
+			_threat.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var r3 := s3 * (0.2 + 0.03 * pulse)
+		_threat.draw_circle(b, r3, Color(0.02, 0.0, 0.03, 0.55))
+		_threat.draw_arc(b, r3, 0.0, TAU, 40, Color(0.75, 0.1, 0.12, 0.8), 3.0, true)
+		var t := "рой"
+		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		_threat.draw_string_outline(f, b + Vector2(-w / 2.0, 6.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, 5, Color(0, 0, 0, 0.9))
+		_threat.draw_string(f, b + Vector2(-w / 2.0, 6.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.45, 0.4))
 
 
 func _draw_shade() -> void:
@@ -466,3 +569,11 @@ func _draw_weather() -> void:
 			_weather.draw_line(Vector2(x, y), Vector2(x - 7.0, y + 22.0), Color(0.75, 0.82, 0.92, 0.22), 1.2)
 	if _flash > 0.0:
 		_weather.draw_rect(full, Color(0.85, 0.9, 1.0, 0.22 * _flash))
+	# Тревога (GateRules): красные отблески мигалок по краям
+	if bool(_info.get("alarm", false)) and not Vfx.reduced():
+		var beat := maxf(0.0, sin(_t * 5.0))
+		var edge := 140.0
+		for k in 6:
+			var a := 0.05 * beat * (1.0 - k / 6.0)
+			var e := edge * k / 6.0
+			_weather.draw_rect(Rect2(e, e, full.size.x - 2.0 * e, full.size.y - 2.0 * e), Color(0.9, 0.05, 0.05, a), false, edge / 6.0)

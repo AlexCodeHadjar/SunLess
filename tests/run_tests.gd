@@ -32,13 +32,21 @@ const SUITES := [
 	"res://tests/test_deck.gd",
 	"res://tests/test_map.gd",
 	"res://tests/test_travel.gd",
+	"res://tests/test_gates.gd",
 ]
 
 
 func _initialize() -> void:
 	var total := 0
 	var failed: Array[String] = []
+	# --only=<часть имени набора> — только эти наборы (быстрая проверка одной механики)
+	var only := ""
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--only="):
+			only = arg.substr(7)
 	for path: String in SUITES:
+		if only != "" and not path.contains(only):
+			continue
 		var suite: TestCase = load(path).new()
 		for m: Dictionary in suite.get_method_list():
 			var name: String = m["name"]

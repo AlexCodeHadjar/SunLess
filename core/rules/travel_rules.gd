@@ -26,6 +26,8 @@ static func passable(content: Content, state: RunState, lid: String) -> bool:
 		return false
 	if not content.locations.has(lid) and not content.shops.has(lid):
 		return false
+	if GateRules.blocked(state, lid):
+		return false
 	return not TideRules.flooded(state, lid)
 
 
@@ -67,7 +69,7 @@ static func route(content: Content, state: RunState, from: String, to: String, d
 				continue
 			if not content.locations.has(n) and not content.shops.has(n):
 				continue
-			if dry_only and TideRules.flooded(state, n):
+			if dry_only and (TideRules.flooded(state, n) or GateRules.blocked(state, n)):
 				continue
 			prev[n] = cur
 			queue.append(n)
@@ -111,8 +113,12 @@ static func why_not(content: Content, state: RunState, lid: String) -> String:
 		return "Туда не пройти"
 	if TideRules.flooded(state, lid):
 		return "Место под водой — отлив через %s" % TideRules.left_text(state)
+	if GateRules.blocked(state, lid):
+		return "Забаррикадировано до конца тревоги"
 	if route(content, state, state.party_at, lid).is_empty():
 		if not route(content, state, state.party_at, lid, false).is_empty():
+			if TideRules.phase(state) != "flood":
+				return "Проход перекрыт баррикадами — до конца тревоги"
 			return "Путь отрезан водой — отлив через %s" % TideRules.left_text(state)
 		return "Туда нет тропы"
 	return ""

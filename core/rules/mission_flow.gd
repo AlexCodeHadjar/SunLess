@@ -63,6 +63,7 @@ static func start_chapter(content: Content, state: RunState, chapter: String) ->
 	state.camp = {}
 	for k: String in ["visited", "scouted", "steps", "tasks_done", "watch"]:
 		state.flags.erase(k)
+	GateRules.reset(state)
 	for cid: String in state.characters:
 		state.characters[cid]["sorties"] = 0
 	for lid: String in _sorted(content.locations):
@@ -214,6 +215,15 @@ static func has_scout(content: Content, state: RunState, heroes_ids: Array) -> b
 
 # --- запуск и часы --------------------------------------------------------------------
 
+## Сколько героев нужно в отряд: у сюжета — не больше, чем живых героев (спутники погибли — сюжет не встаёт, docs/17).
+static func squad_min(content: Content, state: RunState, mission_id: String) -> int:
+	var m: Dictionary = content.missions.get(mission_id, {})
+	var need := int(m.get("squad", {}).get("min", 1))
+	if str(m.get("type", "")) == "story":
+		need = mini(need, maxi(1, heroes(content, state).size()))
+	return need
+
+
 ## "" — отряд можно отправить; иначе причина для игрока.
 static func can_launch(content: Content, state: RunState, mission_id: String, heroes_ids: Array) -> String:
 	if state.game_over:
@@ -228,8 +238,9 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 	if not DayRules.mission_reachable(content, state, mission_id):
 		return TravelRules.why_not(content, state, str(m.get("location", "")))
 	var sq: Dictionary = m.get("squad", {})
-	if heroes_ids.size() < int(sq.get("min", 1)):
-		return "Нужно героев: не меньше %d" % int(sq.get("min", 1))
+	var min_n := squad_min(content, state, mission_id)
+	if heroes_ids.size() < min_n:
+		return "Нужно героев: не меньше %d" % min_n
 	if heroes_ids.size() > int(sq.get("max", 1)):
 		return "Мест в отряде: %d" % int(sq.get("max", 1))
 	var seen := {}

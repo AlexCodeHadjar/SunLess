@@ -13,13 +13,25 @@ func _academy() -> RunState:
 	return s
 
 
+func _shore() -> RunState:
+	var c := content()
+	var s := MissionFlow.new_run(c, 21, "shore")
+	for cid: String in ["P02", "P03"]:
+		EffectApplier.add_card(c, s, cid)
+	for mid: String in ["SH19", "SH20"]:
+		s.missions[mid] = {"status": "done", "attempts": 0}
+	return s
+
+
 func test_arrives() -> void:
 	var c := content()
-	var s := _academy()
-	var cfg := OnslaughtRules.config(c, "academy")
-	check(not cfg.is_empty(), "у Академии есть натиск")
-	var none := _academy()
-	none.missions.erase("MA14")
+	# натиск — у Берега; в Академии его заменили прорывы (GateRules, test_gates)
+	check(OnslaughtRules.config(c, "academy").is_empty(), "у Академии натиска нет — там прорывы")
+	var s := _shore()
+	var cfg := OnslaughtRules.config(c, "shore")
+	check(not cfg.is_empty(), "у Берега есть натиск")
+	var none := _shore()
+	none.missions.erase("SH20")
 	for i in 12:
 		DayRules.end_day(c, none)
 	eq(OnslaughtRules.active(c, none), "", "до %d миссий главы натиска нет:" % int(cfg["first_after"]))

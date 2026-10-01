@@ -1,0 +1,459 @@
+{
+ "_doc": "Академия на карте-плане (docs «Глава 2 — Академия — карта», tools/gen_academy_map.py — не править руками). Как у Берега: places{at,size,states}, paths. Воды нет (нет height). threat — прорывы (core/rules/gate_rules.gd): points{at, near (миссии), enter (куда входит рой), alarm (места в тревоге), signal/open (миссии стадий), site/site_states (облик места вместо пролома), weight, once, after}, swarm{место: миссия «Рой в …»}, fire{место: «Пожар»}, core — оборона цели.",
+ "region": "academy",
+ "art": "res://art/map/academy/",
+ "base": "base.webp",
+ "fog": "fog_tile.webp",
+ "view_top": 0.06,
+ "foot": 0.28,
+ "zoom": 1.15,
+ "places": {
+  "gate": {
+   "at": [
+    0.512,
+    0.775
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "barricaded",
+    "repair"
+   ]
+  },
+  "dorm": {
+   "at": [
+    0.27,
+    0.555
+   ],
+   "size": 0.19,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "burning",
+    "barricaded",
+    "repair"
+   ]
+  },
+  "canteen": {
+   "at": [
+    0.518,
+    0.548
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "burning",
+    "barricaded",
+    "repair"
+   ]
+  },
+  "medbay": {
+   "at": [
+    0.776,
+    0.54
+   ],
+   "size": 0.18,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "burning",
+    "barricaded",
+    "repair",
+    "crowded"
+   ]
+  },
+  "library": {
+   "at": [
+    0.705,
+    0.33
+   ],
+   "size": 0.18,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "burning",
+    "barricaded",
+    "repair"
+   ]
+  },
+  "yard": {
+   "at": [
+    0.275,
+    0.39
+   ],
+   "size": 0.19,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "repair"
+   ]
+  },
+  "arena": {
+   "at": [
+    0.52,
+    0.335
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged",
+    "repair"
+   ]
+  },
+  "capsules": {
+   "at": [
+    0.53,
+    0.11
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "lockdown",
+    "damaged"
+   ]
+  },
+  "admin": {
+   "at": [
+    0.35,
+    0.19
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "alarm",
+    "repair"
+   ]
+  },
+  "range": {
+   "at": [
+    0.2,
+    0.2
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "damaged"
+   ]
+  },
+  "lab": {
+   "at": [
+    0.83,
+    0.18
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "leak",
+    "breached",
+    "sealed"
+   ]
+  },
+  "outskirts": {
+   "at": [
+    0.1,
+    0.84
+   ],
+   "size": 0.12,
+   "states": []
+  },
+  "academy_store": {
+   "at": [
+    0.615,
+    0.67
+   ],
+   "size": 0.07,
+   "states": []
+  }
+ },
+ "paths": [
+  [
+   "gate",
+   "outskirts"
+  ],
+  [
+   "gate",
+   "canteen"
+  ],
+  [
+   "gate",
+   "dorm"
+  ],
+  [
+   "gate",
+   "medbay"
+  ],
+  [
+   "dorm",
+   "canteen"
+  ],
+  [
+   "dorm",
+   "yard"
+  ],
+  [
+   "canteen",
+   "arena"
+  ],
+  [
+   "canteen",
+   "medbay"
+  ],
+  [
+   "canteen",
+   "academy_store"
+  ],
+  [
+   "medbay",
+   "library"
+  ],
+  [
+   "yard",
+   "arena"
+  ],
+  [
+   "yard",
+   "range"
+  ],
+  [
+   "yard",
+   "admin"
+  ],
+  [
+   "arena",
+   "admin"
+  ],
+  [
+   "arena",
+   "library"
+  ],
+  [
+   "arena",
+   "capsules"
+  ],
+  [
+   "admin",
+   "capsules"
+  ],
+  [
+   "admin",
+   "range"
+  ],
+  [
+   "library",
+   "lab"
+  ],
+  [
+   "lab",
+   "capsules"
+  ]
+ ],
+ "decals": {
+  "alarm": [
+   "decal_siren"
+  ],
+  "fight": [
+   "decal_siren",
+   "decal_cadet_post"
+  ],
+  "damaged": [
+   "decal_scorch",
+   "decal_broken_windows"
+  ],
+  "burning": [
+   "decal_scorch"
+  ],
+  "barricaded": [
+   "decal_furniture_barricade"
+  ],
+  "repair": [
+   "decal_broken_windows"
+  ],
+  "leak": [
+   "decal_ooze"
+  ],
+  "breached": [
+   "decal_ooze",
+   "decal_siren"
+  ],
+  "lockdown": [
+   "decal_siren",
+   "decal_cadet_post"
+  ],
+  "swarm": "swarm_stain",
+  "point": "breach"
+ },
+ "threat": {
+  "kind": "breach",
+  "signal_text": "Сигнал на стене",
+  "open_text": "Прорыв",
+  "core_text": "Учебная тревога кончилась настоящей — оборона Зала капсул.",
+  "calm_text": "Тревога снята — ремонтные бригады выходят во двор",
+  "first_after": 2,
+  "every": [
+   3,
+   5
+  ],
+  "signal_days": 1,
+  "sealed_days": 3,
+  "repair": [
+   2,
+   3
+  ],
+  "target": "capsules",
+  "burn_chance": 0.35,
+  "alarm_rest": -10,
+  "core_psyche": -15,
+  "core_shards": -4,
+  "points": {
+   "B0": {
+    "name": "окраина за воротами",
+    "at": [
+     0.13,
+     0.8
+    ],
+    "sprite": false,
+    "near": "outskirts",
+    "enter": "gate",
+    "alarm": [
+     "gate"
+    ],
+    "weight": 2,
+    "signal": "BA01",
+    "open": "NA01"
+   },
+   "B1": {
+    "name": "западная стена",
+    "at": [
+     0.13,
+     0.47
+    ],
+    "near": "dorm",
+    "enter": "dorm",
+    "alarm": [
+     "dorm",
+     "yard"
+    ],
+    "weight": 2,
+    "signal": "BA02",
+    "open": "BA08"
+   },
+   "B2": {
+    "name": "стена у ворот",
+    "at": [
+     0.3,
+     0.73
+    ],
+    "near": "gate",
+    "enter": "gate",
+    "alarm": [
+     "gate",
+     "dorm"
+    ],
+    "weight": 2,
+    "signal": "BA03",
+    "open": "NA02"
+   },
+   "B3": {
+    "name": "восточная стена",
+    "at": [
+     0.89,
+     0.55
+    ],
+    "near": "medbay",
+    "enter": "medbay",
+    "alarm": [
+     "medbay"
+    ],
+    "weight": 1,
+    "signal": "BA04",
+    "open": "BA09"
+   },
+   "B4": {
+    "name": "северо-восточная стена",
+    "at": [
+     0.925,
+     0.3
+    ],
+    "near": "library",
+    "enter": "library",
+    "alarm": [
+     "library"
+    ],
+    "weight": 1,
+    "signal": "BA05",
+    "open": "BA10"
+   },
+   "B5": {
+    "name": "Полигон",
+    "at": [
+     0.12,
+     0.2
+    ],
+    "near": "range",
+    "enter": "range",
+    "alarm": [
+     "range",
+     "yard"
+    ],
+    "weight": 1,
+    "signal": "BA06",
+    "open": "BA11"
+   },
+   "B6": {
+    "name": "Лаборатория Кошмаров",
+    "at": [
+     0.84,
+     0.1
+    ],
+    "sprite": false,
+    "near": "lab",
+    "enter": "lab",
+    "alarm": [
+     "library"
+    ],
+    "site": "lab",
+    "site_states": {
+     "signal": "leak",
+     "open": "breached",
+     "sealed": "sealed"
+    },
+    "weight": 1,
+    "once": true,
+    "after": 6,
+    "signal": "BA07",
+    "open": "BA12"
+   }
+  },
+  "swarm": {
+   "gate": "BA13",
+   "dorm": "BA14",
+   "canteen": "BA15",
+   "medbay": "BA16",
+   "library": "BA17",
+   "yard": "BA18",
+   "arena": "BA19",
+   "admin": "BA20",
+   "range": "BA21",
+   "lab": "BA22"
+  },
+  "fire": {
+   "dorm": "BA23",
+   "canteen": "BA24",
+   "medbay": "BA25",
+   "library": "BA26"
+  },
+  "core": "BA27"
+ }
+}

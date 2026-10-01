@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "edge", "recover", "psyche",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
-	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide", "map_mark", "emerge"]
+	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide", "map_mark", "emerge", "threat"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_on_edge"]
 const STATS := ["power", "will", "cunning"]
@@ -65,13 +65,16 @@ static func _validate_maps(c: Content, errors: Array[String]) -> void:
 		var m: Dictionary = c.maps[region]
 		var art := str(m.get("art", ""))
 		for key: String in ["base", "height", "water", "fog"]:
+			if key in ["height", "water"] and not m.has("height"):
+				continue   # карта без воды (Академия, город без реки-шейдера)
 			if not ResourceLoader.exists(art + str(m.get(key, ""))):
 				errors.append("maps/%s: нет файла %s" % [region, m.get(key, "")])
+		_validate_threat(c, region, m, errors)
 		var places: Dictionary = m.get("places", {})
 		for lid: String in places:
 			if not c.locations.has(lid) and not c.shops.has(lid):
 				errors.append("maps/%s: место %s не описано в locations.json или shops.json" % [region, lid])
-			for st: String in places[lid].get("states", ["dry"]):
+			for st: String in places[lid].get("states", ["dry"]):   # [] — место без виньетки (нарисовано на основе)
 				if not ResourceLoader.exists("%s%s_%s.webp" % [art, lid, st]):
 					errors.append("maps/%s: нет виньетки %s_%s" % [region, lid, st])
 		for lid: String in m.get("variants", {}):
@@ -81,7 +84,7 @@ static func _validate_maps(c: Content, errors: Array[String]) -> void:
 		for lid: String in c.locations:
 			if str(c.locations[lid].get("region", "")) == region and not places.has(lid):
 				errors.append("maps/%s: у места %s нет точки на карте" % [region, lid])
-			if bool(c.locations[lid].get("emerge", false)) and m.get("sockets", []).is_empty():
+			if str(c.locations[lid].get("region", "")) == region and bool(c.locations[lid].get("emerge", false)) and m.get("sockets", []).is_empty():
 				errors.append("maps/%s: появляющемуся месту %s негде встать — нет площадок" % [region, lid])
 		for pair: Array in m.get("paths", []):
 			for lid: String in pair:
@@ -132,6 +135,41 @@ static func dry_spine_errors(c: Content) -> Array[String]:
 			if deg < 2 and not c.shops.has(lid):
 				out.append("maps/%s: тупик — у высоты %s одна тропа (нужно не меньше двух)" % [region, lid])
 	return out
+
+
+## Угрозы-точки карты (GateRules): точки на карте, места и миссии существуют, у мест есть миссии роя.
+static func _validate_threat(c: Content, region: String, m: Dictionary, errors: Array[String]) -> void:
+	var t: Dictionary = m.get("threat", {})
+	if t.is_empty():
+		return
+	var places: Dictionary = m.get("places", {})
+	var w := "maps/%s threat" % region
+	if not places.has(str(t.get("target", ""))):
+		errors.append("%s: цель роя %s не на карте" % [w, t.get("target", "")])
+	for key: String in ["core"]:
+		if str(t.get(key, "")) != "" and not c.missions.has(str(t[key])):
+			errors.append("%s: нет миссии %s" % [w, t[key]])
+	var pts: Dictionary = t.get("points", {})
+	if pts.is_empty():
+		errors.append("%s: нет точек" % w)
+	for pid: String in pts:
+		var p: Dictionary = pts[pid]
+		for key: String in ["near", "enter"]:
+			if p.has(key) and not c.locations.has(str(p[key])):
+				errors.append("%s %s: %s — нет места %s" % [w, pid, key, p[key]])
+		for key: String in ["signal", "open"]:
+			if not c.missions.has(str(p.get(key, ""))):
+				errors.append("%s %s: нет миссии %s «%s»" % [w, pid, key, p.get(key, "")])
+		var at: Array = p.get("at", [])
+		if at.size() != 2:
+			errors.append("%s %s: at должен быть [x, y]" % [w, pid])
+	for key: String in ["swarm", "fire"]:
+		var mp: Dictionary = t.get(key, {})
+		for lid: String in mp:
+			if not places.has(lid):
+				errors.append("%s %s: места %s нет на карте" % [w, key, lid])
+			if not c.missions.has(str(mp[lid])):
+				errors.append("%s %s: нет миссии %s" % [w, key, mp[lid]])
 
 
 ## Колода событий (docs/16 §11.4): миссии существуют, из своей главы, не повторяются; pick не больше единиц.

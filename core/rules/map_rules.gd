@@ -71,6 +71,10 @@ static func place_state(content: Content, state: RunState, lid: String, sky: Str
 	var have := states(content, state, lid)
 	if TideRules.flooded(state, lid) and have.has("flooded"):
 		return "flooded"
+	# угрозы-точки (GateRules): тревога, бой, повреждён, горит, баррикада, ремонт…
+	var gs: String = GateRules.visible_state(state, lid, have)
+	if gs != "":
+		return gs
 	var mark: Dictionary = Dictionary(state.tide.get("marks", {})).get(lid, {})
 	if not mark.is_empty() and have.has(str(mark.get("state", ""))):
 		return str(mark["state"])

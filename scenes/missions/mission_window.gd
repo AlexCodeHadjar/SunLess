@@ -163,7 +163,7 @@ func show_brief(mid: String, with_hero: String = "") -> void:
 	_footer.add_child(_go)
 	# по умолчанию — первые свободные герои (сколько нужно минимум)
 	for cid: String in MissionFlow.free_heroes(c, GameState.state):
-		if picked.size() >= int(m.get("squad", {}).get("min", 1)):
+		if picked.size() >= MissionFlow.squad_min(c, GameState.state, mid):
 			break
 		if not picked.has(cid) and not MissionFlow.excluded(c, mid, cid):
 			picked.append(cid)
