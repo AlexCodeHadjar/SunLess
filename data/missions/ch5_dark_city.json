@@ -219,7 +219,15 @@
       "value": 8
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "statues",
+      "days": 30
+     }
+    ]
    },
    {
     "id": "DS03_retreat",
@@ -598,6 +606,14 @@
       "resource": "shards",
       "value": 5
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 12
+     }
     ]
    },
    {
@@ -630,6 +646,14 @@
       "resource": "shards",
       "value": 3
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 8
+     }
     ]
    },
    {
@@ -639,7 +663,8 @@
     "retreat": true
    }
   ],
-  "from_event": "M18"
+  "from_event": "M18",
+  "no_wash": true
  },
  {
   "id": "DK02",
@@ -710,6 +735,14 @@
       "resource": "shards",
       "value": 5
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 12
+     }
     ]
    },
    {
@@ -741,6 +774,14 @@
       "resource": "shards",
       "value": 3
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 8
+     }
     ]
    },
    {
@@ -750,7 +791,8 @@
     "retreat": true
    }
   ],
-  "from_event": "M08"
+  "from_event": "M08",
+  "no_wash": true
  },
  {
   "id": "DK03",
@@ -821,6 +863,14 @@
       "resource": "shards",
       "value": 5
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 12
+     }
     ]
    },
    {
@@ -853,6 +903,14 @@
       "resource": "shards",
       "value": 3
      }
+    ],
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 8
+     }
     ]
    },
    {
@@ -862,7 +920,8 @@
     "retreat": true
    }
   ],
-  "from_event": "M28"
+  "from_event": "M28",
+  "no_wash": true
  },
  {
   "id": "DS08",
@@ -1041,7 +1100,15 @@
       "missions": 30
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 20
+     }
+    ]
    },
    {
     "id": "DS09_retreat",
@@ -1213,7 +1280,15 @@
       "value": 5
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 30
+     }
+    ]
    },
    {
     "id": "DS11_retreat",
@@ -1299,7 +1374,15 @@
       "days": 30
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 30
+     }
+    ]
    },
    {
     "id": "DS12_retreat",

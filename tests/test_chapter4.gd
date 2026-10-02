@@ -267,3 +267,11 @@ func test_chapter4_runs() -> void:
 		eq(stuck, "", "без тупиков (%s):" % chapter)
 		eq(empty, 0, "пустых утр (%s):" % chapter)
 		check(done >= runs * 8 / 10, "%s проходится: %d из %d" % [chapter, done, runs])
+
+
+## Заказы Гильдии нужны сюжету (зачищенные районы) — шторм Мрачного города их не смывает.
+func test_contracts_survive_storm() -> void:
+	var c := content()
+	for mid: String in ["DK01", "DK02", "DK03"]:
+		check(not TideRules.washable(c, mid), "%s не смывает водой" % mid)
+	check(TideRules.washable(c, "DL01"), "обычная встреча — смывает")

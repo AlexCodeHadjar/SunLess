@@ -273,7 +273,15 @@
       "missions": 999
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "mover",
+      "do": "spawn",
+      "mover": "demon",
+      "place": "ash_bones"
+     }
+    ]
    },
    {
     "id": "TS04_retreat",
@@ -353,7 +361,16 @@
       "missions": 999
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "mover",
+      "do": "lure",
+      "mover": "demon",
+      "place": "death_beacon",
+      "days": 4
+     }
+    ]
    },
    {
     "id": "TS05_retreat",
@@ -436,7 +453,14 @@
       "value": 8
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "mover",
+      "do": "kill",
+      "mover": "demon"
+     }
+    ]
    },
    {
     "id": "TS06_retreat",
@@ -523,7 +547,15 @@
       "state": "collapsed"
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "terrain",
+      "do": "set",
+      "place": "abyss_bridge",
+      "state": "collapsed"
+     }
+    ]
    },
    {
     "id": "TS07_retreat",
@@ -837,7 +869,14 @@
       "missions": 0
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "zone",
+      "do": "break",
+      "zone": "charm"
+     }
+    ]
    },
    {
     "id": "TS11_retreat",
@@ -929,7 +968,14 @@
       "missions": 999
      }
     ],
-    "story": true
+    "story": true,
+    "on_partial": [
+     {
+      "cmd": "set_flag",
+      "flag": "boat",
+      "text": "Лодка готова — по Чёрной воде можно плыть ночью"
+     }
+    ]
    },
    {
     "id": "TS12_retreat",

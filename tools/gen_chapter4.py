@@ -65,10 +65,18 @@ def fight(name, enemies, field, ok, fail, power=None):
 	return {"name": name, "combat": cb, "tags": ["combat"], "ok": ok, "fail": fail}
 
 
+# команды, без которых сюжет главы встанет: при частичном успехе они тоже срабатывают (сюжетная миссия «выполнена с
+# потерями» всё равно ведёт дальше — чары Древа, лодка, зачистка районов не должны теряться)
+KEY_CMDS = ("zone", "set_flag", "mover", "terrain")
+
+
 def act(aid, label, text, stages, win, story=False):
 	a = {"id": aid, "label": label, "text": text, "stages": stages, "on_success": win}
 	if story:
 		a["story"] = True
+	key = [e for e in win if e.get("cmd") in KEY_CMDS]
+	if key:
+		a["on_partial"] = key
 	return a
 
 
@@ -440,7 +448,7 @@ def dark_story():
 				[{"cmd": "zone", "do": "clear", "zone": zone, "days": 12}, shards(5)]),
 			 act(mid + "_alt", alt[0], alt[1], [chk(alt[0], alt[2], alt[3], "Район затих.", "Хозяева заметили вас.")],
 				[{"cmd": "zone", "do": "clear", "zone": zone, "days": 8}, shards(3)]),
-			 retreat(mid + "_retreat")]))
+			 retreat(mid + "_retreat")], no_wash=True))   # без заказов сюжет не пройти — шторм их не смывает
 	S.append(story("DS08", "ruined_cathedral", "Разрушенный собор",
 		"В соборе без крыши живёт Чёрный Рыцарь. Пока он там — путь в южные руины закрыт.",
 		"Роза-окно, лунный свет, шаги в доспехах.",
