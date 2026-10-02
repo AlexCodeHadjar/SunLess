@@ -43,6 +43,24 @@ func test_ash_storm_changes_paths() -> void:
 		check(not TravelRules.route(c, s, "shore_exit", "death_beacon").is_empty(), "сеть %d: путь к Маяку есть" % i)
 
 
+func test_ash_pits_and_islets_emerge() -> void:
+	var c := content()
+	var s := _tree()
+	s.day = 2
+	DayRules.end_day(c, s)
+	eq(str(DayRules.phase(c, s)["id"]), "dawn", "третий день — Рассвет:")
+	var ash := MapRules.emerged(s).keys().filter(func(l: String) -> bool: return str(c.locations[l].get("socket_group", "")) == "ash")
+	var lake := MapRules.emerged(s).keys().filter(func(l: String) -> bool: return str(c.locations[l].get("socket_group", "")) == "lake")
+	check(not ash.is_empty(), "на Рассвете в пепле поднялись котловины: %s" % str(ash))
+	check(not lake.is_empty(), "и островки в Чёрной воде: %s" % str(lake))
+	for l: String in ash:
+		check(int(MapRules.emerged(s)[l]) in [0, 1, 2, 3], "котловина на своей площадке")
+	DayRules.end_day(c, s)
+	DayRules.end_day(c, s)
+	check(MapRules.emerged(s).keys().all(func(l: String) -> bool: return str(c.locations[l].get("socket_group", "")) != "lake"),
+		"после Рассвета островки ушли под воду")
+
+
 func test_bridge_cracks_and_collapses() -> void:
 	var c := content()
 	var s := _tree()

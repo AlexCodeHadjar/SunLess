@@ -5,6 +5,7 @@ extends Node
 
 var out_dir := ""
 var from_ch4 := false   # --mshots-from=ch4: снять только Главу 4
+var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
 
 func _ready() -> void:
@@ -13,6 +14,8 @@ func _ready() -> void:
 			out_dir = a.substr(9)
 		if a == "--mshots-from=ch4":
 			from_ch4 = true
+		if a == "--mshots-from=timeline":
+			timeline = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -66,6 +69,10 @@ func _run() -> void:
 	SettingsService.values["roll_speed"] = 0.0
 	if from_ch4:
 		await _ch4(true)
+		get_tree().quit()
+		return
+	if timeline:
+		await _timeline()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -545,3 +552,139 @@ func _ch4(fresh: bool) -> void:
 	get_tree().current_scene.call("_open_mission", "DK01")
 	await _wait(0.8)
 	await _shot("m55_dark_contract")
+
+
+# --- карта по дням (коллажи) ---------------------------------------------------------------------------------
+
+## Каждая глава: бот играет, каждое утро — снимок состояния; выбираются 6 дней с самыми заметными переменами
+## (первый и последний — всегда) и снимаются без интерфейса. Академия — сценарий прорыва (бот гасит прорывы на сигнале).
+## Подписи — timeline.json (MapStory.snapshot): облик каждого места и почему.
+func _timeline() -> void:
+	var c := ContentDB.data
+	var meta := {}
+	var first := true
+	for chapter: String in ["academy", "shore", "city", "tree", "dark_city"]:
+		var frames: Array = _academy_script(c) if chapter == "academy" else _bot_frames(c, chapter)
+		var picked := _pick_frames(frames, 6)
+		var out: Array = []
+		for i in picked.size():
+			var fr: Dictionary = picked[i]
+			var st: RunState = (fr["state"] as RunState).copy()
+			StoryRules.mark_seen(st, chapter)
+			GameState.state = st
+			if first:
+				get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+				first = false
+			else:
+				get_tree().reload_current_scene()
+			await _wait(2.8)
+			_map_only()
+			await _wait(1.2)
+			_map_only()
+			var name := "tl_%s_%d" % [chapter, i]
+			await _shot(name)
+			var snap: Dictionary = fr["snap"]
+			snap["file"] = name + ".png"
+			snap["note"] = str(fr.get("note", ""))
+			out.append(snap)
+		meta[chapter] = out
+	var f := FileAccess.open("%s/timeline.json" % out_dir, FileAccess.WRITE)
+	f.store_string(JSON.stringify(meta, " "))
+	f.close()
+
+
+func _bot_frames(c: Content, chapter: String) -> Array:
+	var best: Array = []
+	var best_score := -1
+	for sd in 3:
+		var s := MapStory.start(c, chapter, 5200 + sd * 31)
+		var frames: Array = [{"state": s.copy(), "snap": MapStory.snapshot(c, s)}]
+		var last := s.day
+		for step in 3000:
+			var r := AutoPlay.step(c, s)
+			s = r["state"]
+			if str(r["error"]) != "" or s.game_over or s.chapter != chapter:
+				break
+			if s.day != last or s.demo_complete:
+				if s.day == last and frames.size() > 1:
+					frames.pop_back()   # финал главы в тот же день — вместо утреннего снимка
+				last = s.day
+				frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s)})
+			if s.demo_complete:
+				break
+		var score := 0
+		for i in range(1, frames.size()):
+			score += _change(frames[i - 1]["snap"], frames[i]["snap"])
+		if score > best_score:
+			best_score = score
+			best = frames
+	return best
+
+
+## Академия: прорыв по шагам, как в тесте (сигнал → пролом → рой → повреждение → отбит → ремонт).
+func _academy_script(c: Content) -> Array:
+	var s := MapStory.start(c, "academy", 5)
+	for mid: String in MissionFlow.open_missions(s):
+		s.missions[mid]["status"] = "done"
+	s.party_at = "capsules"
+	var frames: Array = [{"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "начало: тихий кампус"}]
+	GateRules.raise_signal(c, s, "B3")
+	frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "сигнал на восточной стене"})
+	DayRules.end_day(c, s)
+	frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "ночь: прорыв, тревога в медкрыле"})
+	DayRules.end_day(c, s)
+	frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "пролом не закрыли: рой в кампусе"})
+	DayRules.end_day(c, s)
+	frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "рой не отбили: медкрыло повреждено, рой идёт дальше"})
+	if not GateRules.swarms(s).is_empty():
+		GateRules.command(c, s, {"do": "clear", "place": str(GateRules.swarms(s)[0]["at"])})
+	DayRules.end_day(c, s)
+	frames.append({"state": s.copy(), "snap": MapStory.snapshot(c, s), "note": "рой отбит: ремонт"})
+	return frames
+
+
+## Сколько заметных перемен между двумя снимками.
+func _change(a: Dictionary, b: Dictionary) -> int:
+	var n := 0
+	var pa: Dictionary = a.get("places", {})
+	var pb: Dictionary = b.get("places", {})
+	for lid: String in pb:
+		if str(pa.get(lid, {}).get("state", "")) != str(pb[lid].get("state", "")):
+			n += 2
+		if bool(pa.get(lid, {}).get("known", false)) != bool(pb[lid].get("known", false)):
+			n += 1
+	for k: String in ["emerged", "flooded", "rubble"]:
+		if str(a.get(k, [])) != str(b.get(k, [])):
+			n += 3
+	for k: String in ["gates", "zones", "movers"]:
+		if str(a.get(k, {})) != str(b.get(k, {})):
+			n += 2
+	if int(a.get("path_set", 0)) != int(b.get("path_set", 0)):
+		n += 3
+	return n
+
+
+func _pick_frames(frames: Array, n: int) -> Array:
+	if frames.size() <= n:
+		return frames
+	var scored: Array = []
+	for i in range(1, frames.size() - 1):
+		scored.append({"i": i, "score": _change(frames[i - 1]["snap"], frames[i]["snap"])})
+	scored.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return int(x["score"]) > int(y["score"]))
+	var idx: Array = [0, frames.size() - 1]
+	for e: Dictionary in scored.slice(0, n - 2):
+		idx.append(int(e["i"]))
+	idx.sort()
+	return idx.map(func(i: int) -> Dictionary: return frames[i])
+
+
+## Только карта: интерфейс, метки миссий, туман-частицы скрыты; карта по центру.
+func _map_only() -> void:
+	var game := get_tree().current_scene
+	var sl: SleeperMap = game.get("_sleeper")
+	if sl == null:
+		return
+	for ch in game.get_children():
+		if ch is CanvasItem and ch != sl:
+			(ch as CanvasItem).visible = false
+	sl.set_pan(Vector2((sl.view.size.x - sl.rect.size.x) / 2.0, -float(sl.cfg.get("view_top", 0.08)) * sl.rect.size.y))

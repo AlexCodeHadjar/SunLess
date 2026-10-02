@@ -991,7 +991,7 @@
         "M12"
        ],
        "field": "F_16",
-       "power": 0.75
+       "power": 0.5
       },
       "tags": [
        "combat"

@@ -139,7 +139,7 @@ static func emerge(content: Content, state: RunState, lid: String, rng: RandomNu
 	var free: Array = []
 	# у места своя группа площадок (котловины пепла, островки Чёрной воды — TerrainRules.emerge_groups)
 	var group := str(content.locations.get(lid, {}).get("socket_group", ""))
-	var allowed: Array = cfg.get("emerge_groups", {}).get(group, {}).get("sockets", []) if group != "" else []
+	var allowed: Array = Array(cfg.get("emerge_groups", {}).get(group, {}).get("sockets", [])).map(func(x: Variant) -> int: return int(x)) 		if group != "" else []   # номера из JSON — дробные: [0.0].has(0) == false
 	for i in sk.size():
 		if not taken.has(i) and (allowed.is_empty() or allowed.has(i)):
 			free.append(i)
