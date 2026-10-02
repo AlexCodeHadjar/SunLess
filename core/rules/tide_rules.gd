@@ -76,7 +76,8 @@ static func mission_flooded(content: Content, state: RunState, mid: String) -> b
 ## Смывает ли вода миссию: побочные и случайные — да; сюжетные и звенья цепочек (DeckRules) ждут отлива.
 static func washable(content: Content, mid: String) -> bool:
 	var m: Dictionary = content.missions.get(mid, {})
-	return str(m.get("type", "")) in ["side", "random"] and DeckRules.chain_info(content, mid).is_empty()
+	# no_wash — событие, без которого не пройти сюжет (заказы Гильдии Мрачного города): вода его не смывает
+	return str(m.get("type", "")) in ["side", "random"] and DeckRules.chain_info(content, mid).is_empty() and not bool(m.get("no_wash", false))
 
 
 ## Опасно отправлять: другие отряды в деле могут закончить свои миссии раньше и привести воду,
