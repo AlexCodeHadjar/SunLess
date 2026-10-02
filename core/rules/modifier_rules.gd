@@ -54,6 +54,10 @@ static func roll(content: Content, state: RunState, mid: String) -> Array:
 	var m: Dictionary = content.missions[mid]
 	var pool: Array = []
 	for d: Dictionary in content.modifiers.get("list", []):
+		if not bool(d.get("roll", true)):
+			continue   # ставит правило (ранг Врат), а не случай
+		if d.has("chapters") and not Array(d["chapters"]).has(MissionFlow.chapter_of(content, mid)):
+			continue   # модификатор своей главы (вода и лабиринт — Берег, темнота и толпа — Город)
 		match str(d.get("needs", "")):
 			"combat":
 				if not has_combat(m):

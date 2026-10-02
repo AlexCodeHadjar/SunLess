@@ -138,30 +138,6 @@
   }
  },
  {
-  "id": "outskirts",
-  "name": "Окраины города",
-  "chapter": "academy",
-  "region": "academy",
-  "pos": [
-   0.05,
-   0.08
-  ],
-  "text": "Подработка и слухи за пределами Академии.",
-  "random": {
-   "pool": [
-    "RA03",
-    "RA06"
-   ],
-   "every": 2
-  },
-  "camp": {
-   "rest": 10,
-   "beds": 1,
-   "danger": 0.15,
-   "services": []
-  }
- },
- {
   "id": "canteen",
   "name": "Общий зал",
   "chapter": "academy",
@@ -795,6 +771,301 @@
    0.18
   ],
   "text": "Низкий бункер с клетками и антеннами. Здесь изучают тварей. Иногда твари изучают лабораторию.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  }
+ },
+ {
+  "id": "outskirts",
+  "name": "Окраины",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.12,
+   0.58
+  ],
+  "text": "Тесные коробки-многоэтажки, бельё между домами, самострой. Здесь вырос Санни. Их защищают последними.",
+  "camp": {
+   "rest": 10,
+   "beds": 1,
+   "danger": 0.25,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR01"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "industry",
+  "name": "Промзона",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.21,
+   0.215
+  ],
+  "text": "Цеха, трубы, цистерны. Мастерская — и пустыри, где трещины в воздухе появляются чаще всего.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": [
+    "repair"
+   ]
+  },
+  "random": {
+   "pool": [
+    "CR02"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "monorail",
+  "name": "Вокзал монорельса",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.39,
+   0.19
+  ],
+  "text": "Купол вокзала на эстакаде. В Тревогу его закрывают первым.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR06"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "gov_quarter",
+  "name": "Правительственный квартал",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.63,
+   0.14
+  ],
+  "text": "Башни из стекла и бетона за второй стеной. Здесь решают, кого спасать.",
+  "camp": {
+   "rest": 30,
+   "beds": 2,
+   "danger": 0.05,
+   "services": [
+    "equip"
+   ]
+  }
+ },
+ {
+  "id": "hospital",
+  "name": "Госпиталь",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.725,
+   0.39
+  ],
+  "text": "Большой корпус с площадкой на крыше. Лечат всех — пока хватает коек.",
+  "camp": {
+   "rest": 25,
+   "beds": 4,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR08"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "old_center",
+  "name": "Старый центр",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.475,
+   0.36
+  ],
+  "text": "Старая площадь с башней-часами и аркадами. Сердце города — и туда тянутся волны.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR03"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "metro_hub",
+  "name": "Узел подземки",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.57,
+   0.465
+  ],
+  "text": "Стеклянный павильон над спуском в подземку. Быстрые пути — и тёмные туннели.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.15,
+   "services": []
+  }
+ },
+ {
+  "id": "bunker",
+  "name": "Убежище",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.257,
+   0.425
+  ],
+  "text": "Бетонный купол бункера в сквере. Самая спокойная ночь в городе.",
+  "camp": {
+   "rest": 35,
+   "beds": 3,
+   "danger": 0.02,
+   "services": [
+    "equip",
+    "repair"
+   ]
+  }
+ },
+ {
+  "id": "market",
+  "name": "Рынок",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.375,
+   0.54
+  ],
+  "text": "Крытые ряды под латаными навесами. Слухи, сделки и толпа.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.12,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR04"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "bridges",
+  "name": "Мосты",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.54,
+   0.705
+  ],
+  "text": "Два моста через тёмную реку. Волна перейдёт реку только здесь.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  }
+ },
+ {
+  "id": "port",
+  "name": "Речной порт",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.585,
+   0.83
+  ],
+  "text": "Причалы, краны, контейнеры. За рекой — и за мостами.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR05"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "park",
+  "name": "Старый парк",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.8,
+   0.6
+  ],
+  "text": "Старые деревья, пруд и беседка. Тишина — пока не открылись Врата на бульваре.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR07"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "academy_link",
+  "name": "Дорога в Академию",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.89,
+   0.13
+  ],
+  "text": "Шоссе к воротам Академии и КПП. Отсюда в город приходят Пробуждённые.",
+  "camp": {
+   "rest": 20,
+   "beds": 1,
+   "danger": 0.05,
+   "services": [
+    "equip"
+   ]
+  }
+ },
+ {
+  "id": "wall",
+  "name": "Стена периметра",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.075,
+   0.38
+  ],
+  "text": "Высокая бетонная стена с вышками. За ней — пустошь, где Врата открываются чаще всего.",
   "camp": {
    "rest": 5,
    "beds": 0,

@@ -445,4 +445,33 @@ func _run() -> void:
 		await _shot("m30_inspect_" + id)
 		insp.call("_close")
 		await _wait(0.2)
+	# Город людей (глава-черновик): Врата по стадиям, волна, разрушения, взорванный мост, паника
+	var cs := AutoPlay.draft_start(ContentDB.data, "city", 77)
+	StoryRules.mark_seen(cs, "city")
+	GameState.state = cs
+	get_tree().reload_current_scene()
+	await _wait(2.0)
+	await _shot("m40_city_map")
+	cs = GameState.state
+	var cc := ContentDB.data
+	GateRules.raise_signal(cc, cs, "G4")
+	GateRules.command(cc, cs, {"do": "raise", "point": "G3", "rank": 2, "open": true})
+	GateRules.command(cc, cs, {"do": "raise", "point": "G2", "rank": 1, "open": true})
+	cs.flags["gates"]["G2"]["open_day"] = cs.day - 1
+	cs.flags["swarms"] = [{"at": "old_center", "from": "bunker", "point": "G2", "nights": 0, "path": ["industry", "bunker", "old_center"]}]
+	GateRules.set_site(cs, "old_center", "fight")
+	GateRules.set_site(cs, "industry", "ruined")
+	GateRules.set_site(cs, "bunker", "damaged")
+	GateRules.set_site(cs, "monorail", "repair", 3)
+	GateRules.command(cc, cs, {"do": "blow", "place": "bridges"})
+	GateRules.command(cc, cs, {"do": "evacuate", "place": "market"})
+	cs.flags["panic"] = 55
+	GateRules._city_alarm_states(cc, cs)
+	MissionFlow.open(cc, cs, "CW06", true)
+	GameState.missions_changed.emit()
+	await _wait(1.5)
+	await _shot("m41_city_gates")
+	get_tree().current_scene.call("_open_mission", "CG3")
+	await _wait(0.8)
+	await _shot("m42_city_gate_brief")
 	get_tree().quit()

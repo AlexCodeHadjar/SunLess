@@ -42,6 +42,10 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		var sx := str(c.missions[x]["type"]) == "story"
 		var sy := str(c.missions[y]["type"]) == "story"
 		return sx and not sy if sx != sy else x < y)
+	# сюжет стоит (ждёт закрытых Врат) дольше 4 дней — бот, как игрок, идёт на Врата при любом прогнозе
+	if open.any(func(x: String) -> bool: return str(c.missions[x]["type"]) == "story"):
+		s.flags["bot_story_day"] = s.day
+	var desperate := s.day - int(s.flags.get("bot_story_day", s.day)) > 4
 	for mid: String in open:
 		if TideRules.mission_flooded(c, s, mid) or not DayRules.mission_reachable(c, s, mid):
 			continue
@@ -52,8 +56,9 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 			continue
 		if not story and DayRules.restricted(c, s) and str(c.missions[mid]["type"]) != "onslaught" 				and TravelRules.march_steps(c, s, TravelRules.distance(c, s, str(c.missions[mid].get("location", "")))) > 0:
 			continue
+		var push := desperate and GateRules.mission_ids(c, s).has(mid)   # сюжет стоит — идут и усталыми
 		var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) \
-			and (story or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED)))
+			and (story or push or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED)))
 		if free.is_empty():
 			continue
 		var mx := int(c.missions[mid]["squad"]["max"])
@@ -71,7 +76,8 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		if DayRules.can_equip(c, s) == "":
 			equip(c, s, team)
 		# как осторожный игрок: на несюжетное — только с хорошим прогнозом
-		if not story and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < 50:
+		var urgent := GateRules.mission_ids(c, s).has(mid)   # Врата, волны, прорывы — как игрок, бот их не бросает
+		if not story and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < ((0 if desperate else 30) if urgent else 50):
 			continue
 		MissionFlow.launch(c, s, mid, team)
 		return {"state": s, "error": "", "chapter_started": started}
@@ -125,7 +131,8 @@ static func _resolve(c: Content, s: RunState, on_report: Callable) -> Dictionary
 					best_v = v
 					best = str(a["id"])
 		var story_m := str(c.missions[sq["mission"]]["type"]) == "story"
-		var need := 20 if story_m else 50
+		var urgent_m := GateRules.mission_ids(c, s).has(str(sq["mission"]))
+		var need := 20 if story_m else ((0 if s.day - int(s.flags.get("bot_story_day", s.day)) > 4 else 30) if urgent_m else 50)
 		# сюжет не ждёт вечно: после двух отступлений идут на лучшее, что есть (иначе глава встала бы без спутников)
 		if story_m and int(s.missions.get(sq["mission"], {}).get("retreats", 0)) >= 2:
 			need = 0
@@ -139,6 +146,28 @@ static func _resolve(c: Content, s: RunState, on_report: Callable) -> Dictionary
 		if not r.has("fork") and on_report.is_valid():
 			on_report.call(sq["mission"], r["report"])
 	return {"state": s, "error": "", "chapter_started": started}
+
+
+## Ведёт ли в главу сюжет (у какой-нибудь миссии next_chapter = глава).
+static func _reachable_chapter(c: Content, chapter: String) -> bool:
+	for mid: String in c.missions:
+		if str(c.missions[mid].get("next_chapter", "")) == chapter:
+			return true
+	return false
+
+
+## Начало главы-черновика: новое прохождение сразу с этой главы, отряд и осколки — из регионa (start_heroes, start_shards).
+static func draft_start(c: Content, chapter: String, seed_value: int) -> RunState:
+	var s := MissionFlow.new_run(c, seed_value, chapter)
+	var reg := DayRules.region_of(c, chapter)
+	var r: Dictionary = c.regions.get(reg, {})
+	for cid: String in r.get("start_heroes", []):
+		EffectApplier.add_card(c, s, cid)
+	for card: String in r.get("start_cards", []):
+		EffectApplier.add_card(c, s, card)
+	s.resources["shards"] = int(r.get("start_shards", s.resources.get("shards", 10)))
+	s.region = reg
+	return s
 
 
 ## Усиления, не занятые героями на миссии, — по три в кармашек каждому из отряда (сначала первому).
@@ -170,6 +199,9 @@ static func equip(c: Content, s: RunState, team: Array) -> void:
 ## пока прохождение не дойдёт живым. Возвращает {ok, state, error}.
 static func to_chapter(c: Content, chapter: String, seed_value: int = 1, tries: int = 12) -> Dictionary:
 	var last := ""
+	# глава-черновик, в которую сюжет пока не ведёт: начать сразу со стартовым отрядом региона
+	if chapter != "nightmare" and not _reachable_chapter(c, chapter):
+		return {"ok": true, "state": draft_start(c, chapter, seed_value), "error": ""}
 	for t in tries:
 		var s := MissionFlow.new_run(c, seed_value + t)
 		if s.chapter == chapter:

@@ -367,7 +367,10 @@ static func after_completion(content: Content, state: RunState) -> Array:
 			out.append_array(open(content, state, mid))
 		# «после всех»: миссия открывается, когда выполнены все перечисленные
 		var all: Array = m.get("unlock", {}).get("after_all", [])
+		# «после N закрытых Врат» (Город, GateRules) — ещё и это условие
+		var gates_need := int(m.get("unlock", {}).get("gates_closed", 0))
 		if not all.is_empty() and not state.missions.has(mid) and chapter_of(content, mid) == state.chapter \
+				and int(state.flags.get("gates_closed", 0)) >= gates_need \
 				and all.all(func(x: String) -> bool: return str(state.missions.get(x, {}).get("status", "")) == "done"):
 			out.append_array(open(content, state, mid))
 	for lid: String in _sorted(content.locations):

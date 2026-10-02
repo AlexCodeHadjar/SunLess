@@ -1,0 +1,563 @@
+{
+ "_doc": "Город людей (реальный мир) — карта-план (tools/gen_city.py, не править руками). places/paths как у Берега; threat (kind gate) — Врата Кошмара (core/rules/gate_rules.gd): points G1–G8 {at, near, signal (предвестие), open (Врата), scar (шрам), weight, rank_bias}, swarm {квартал: миссия волны}, people (жителей — куда идёт волна), center, ranks, panic, alarm_states (Тревога: двое Врат и больше), open_phases/move_phases (фазы недели).",
+ "region": "real_city",
+ "art": "res://art/map/real_city/",
+ "base": "base.webp",
+ "fog": "fog_tile.webp",
+ "view_top": 0.06,
+ "foot": 0.28,
+ "zoom": 1.15,
+ "places": {
+  "outskirts": {
+   "at": [
+    0.12,
+    0.58
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair"
+   ]
+  },
+  "industry": {
+   "at": [
+    0.21,
+    0.215
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair"
+   ]
+  },
+  "monorail": {
+   "at": [
+    0.39,
+    0.19
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair",
+    "closed"
+   ]
+  },
+  "gov_quarter": {
+   "at": [
+    0.63,
+    0.14
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged"
+   ]
+  },
+  "hospital": {
+   "at": [
+    0.725,
+    0.39
+   ],
+   "size": 0.16,
+   "states": [
+    "dry",
+    "alarm",
+    "overcrowded",
+    "damaged"
+   ]
+  },
+  "old_center": {
+   "at": [
+    0.475,
+    0.36
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair"
+   ]
+  },
+  "metro_hub": {
+   "at": [
+    0.57,
+    0.465
+   ],
+   "size": 0.1,
+   "states": [
+    "dry",
+    "closed",
+    "flooded",
+    "infested"
+   ]
+  },
+  "bunker": {
+   "at": [
+    0.257,
+    0.425
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "crowded",
+    "sealed"
+   ]
+  },
+  "market": {
+   "at": [
+    0.375,
+    0.54
+   ],
+   "size": 0.14,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair"
+   ]
+  },
+  "bridges": {
+   "at": [
+    0.54,
+    0.705
+   ],
+   "size": 0.2,
+   "states": [
+    "dry",
+    "damaged",
+    "collapsed",
+    "temporary"
+   ]
+  },
+  "port": {
+   "at": [
+    0.585,
+    0.83
+   ],
+   "size": 0.17,
+   "states": [
+    "dry",
+    "alarm",
+    "fight",
+    "damaged",
+    "ruined",
+    "repair",
+    "flooded"
+   ]
+  },
+  "park": {
+   "at": [
+    0.8,
+    0.6
+   ],
+   "size": 0.15,
+   "states": [
+    "dry",
+    "fight",
+    "burned"
+   ]
+  },
+  "academy_link": {
+   "at": [
+    0.89,
+    0.13
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "closed"
+   ]
+  },
+  "wall": {
+   "at": [
+    0.075,
+    0.38
+   ],
+   "size": 0.1,
+   "states": [
+    "dry",
+    "breached"
+   ]
+  },
+  "city_market": {
+   "at": [
+    0.33,
+    0.6
+   ],
+   "size": 0.06,
+   "states": []
+  }
+ },
+ "paths": [
+  [
+   "wall",
+   "outskirts"
+  ],
+  [
+   "wall",
+   "industry"
+  ],
+  [
+   "outskirts",
+   "bunker"
+  ],
+  [
+   "outskirts",
+   "market"
+  ],
+  [
+   "industry",
+   "monorail"
+  ],
+  [
+   "industry",
+   "bunker"
+  ],
+  [
+   "monorail",
+   "old_center"
+  ],
+  [
+   "monorail",
+   "gov_quarter"
+  ],
+  [
+   "bunker",
+   "old_center"
+  ],
+  [
+   "bunker",
+   "market"
+  ],
+  [
+   "market",
+   "old_center"
+  ],
+  [
+   "market",
+   "bridges"
+  ],
+  [
+   "market",
+   "city_market"
+  ],
+  [
+   "old_center",
+   "metro_hub"
+  ],
+  [
+   "metro_hub",
+   "gov_quarter"
+  ],
+  [
+   "metro_hub",
+   "hospital"
+  ],
+  [
+   "metro_hub",
+   "bridges"
+  ],
+  [
+   "gov_quarter",
+   "academy_link"
+  ],
+  [
+   "gov_quarter",
+   "hospital"
+  ],
+  [
+   "hospital",
+   "park"
+  ],
+  [
+   "hospital",
+   "academy_link"
+  ],
+  [
+   "park",
+   "bridges"
+  ],
+  [
+   "bridges",
+   "port"
+  ]
+ ],
+ "decals": {
+  "alarm": [
+   "decal_police_tape"
+  ],
+  "fight": [
+   "decal_burnt_car",
+   "decal_crater_s"
+  ],
+  "damaged": [
+   "decal_crater_m",
+   "decal_burnt_car"
+  ],
+  "ruined": [
+   "decal_crater_l",
+   "decal_fallen_pylon"
+  ],
+  "repair": [
+   "decal_checkpoint"
+  ],
+  "crowded": [
+   "decal_bus_evac"
+  ],
+  "overcrowded": [
+   "decal_bus_evac"
+  ],
+  "collapsed": [
+   "decal_barricade"
+  ],
+  "closed": [
+   "decal_police_tape"
+  ],
+  "swarm": "wave_stain",
+  "point": "gate",
+  "glow": "gate_glow",
+  "ally": "ally_checkpoint",
+  "evac": "decal_bus_evac",
+  "roads": {
+   "damaged": "road_cracks",
+   "ruined": "road_cars",
+   "repair": "road_repair",
+   "collapsed": "road_blocked"
+  }
+ },
+ "point_tex": {
+  "signal": "gate_omen",
+  "opening": "gate_opening",
+  "open": "gate_open",
+  "closing": "gate_closing",
+  "scar": "gate_scar"
+ },
+ "threat": {
+  "kind": "gate",
+  "signal_text": "Предвестие",
+  "open_text": "Врата Кошмара",
+  "events": {
+   "signal": "gate_omen",
+   "open": "gate_open",
+   "swarm": "wave"
+  },
+  "first_after": 2,
+  "first_delay": 2,
+  "every": [
+   3,
+   5
+  ],
+  "signal_days": [
+   1,
+   2
+  ],
+  "max_gates": 2,
+  "alarm_gates": 2,
+  "open_phases": [
+   "night"
+  ],
+  "move_phases": [
+   "dusk",
+   "night"
+  ],
+  "repair": [
+   3,
+   5
+  ],
+  "scar_days": 7,
+  "alarm_danger": 1.2,
+  "scar_chance": 0.3,
+  "evac_days": 5,
+  "bridge_days": 7,
+  "ranks": {
+   "1": 6,
+   "2": 3,
+   "3": 1
+  },
+  "panic": {
+   "open": 10,
+   "damaged": 5,
+   "ruined": 15,
+   "closed": -15,
+   "calm": -3
+  },
+  "center": "old_center",
+  "people": {
+   "outskirts": 3,
+   "industry": 2,
+   "monorail": 2,
+   "gov_quarter": 2,
+   "hospital": 3,
+   "old_center": 3,
+   "metro_hub": 2,
+   "bunker": 2,
+   "market": 3,
+   "bridges": 1,
+   "port": 1,
+   "park": 1,
+   "academy_link": 1,
+   "wall": 0
+  },
+  "sturdy": [
+   "bunker",
+   "hospital",
+   "gov_quarter"
+  ],
+  "alarm_states": {
+   "bunker": "crowded",
+   "hospital": "overcrowded",
+   "metro_hub": "closed",
+   "monorail": "closed",
+   "academy_link": "closed"
+  },
+  "points": {
+   "G1": {
+    "name": "пустошь за окраинами",
+    "at": [
+     0.12,
+     0.84
+    ],
+    "near": "outskirts",
+    "weight": 3,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO1",
+    "open": "CG1",
+    "scar": "CX1"
+   },
+   "G2": {
+    "name": "пустырь у промзоны",
+    "at": [
+     0.29,
+     0.12
+    ],
+    "near": "industry",
+    "weight": 3,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO2",
+    "open": "CG2",
+    "scar": "CX2"
+   },
+   "G3": {
+    "name": "перекрёсток в центре",
+    "at": [
+     0.47,
+     0.47
+    ],
+    "near": "old_center",
+    "weight": 1,
+    "rank_bias": 1,
+    "size": 0.08,
+    "signal": "CO3",
+    "open": "CG3",
+    "scar": "CX3"
+   },
+   "G4": {
+    "name": "двор у рынка",
+    "at": [
+     0.28,
+     0.56
+    ],
+    "near": "market",
+    "weight": 2,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO4",
+    "open": "CG4",
+    "scar": "CX4"
+   },
+   "G5": {
+    "name": "бульвар у госпиталя",
+    "at": [
+     0.68,
+     0.54
+    ],
+    "near": "hospital",
+    "weight": 1,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO5",
+    "open": "CG5",
+    "scar": "CX5"
+   },
+   "G6": {
+    "name": "река ниже порта",
+    "at": [
+     0.52,
+     0.93
+    ],
+    "near": "port",
+    "weight": 2,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO6",
+    "open": "CG6",
+    "scar": "CX6"
+   },
+   "G7": {
+    "name": "у дороги в Академию",
+    "at": [
+     0.84,
+     0.34
+    ],
+    "near": "gov_quarter",
+    "weight": 1,
+    "rank_bias": 1,
+    "size": 0.08,
+    "signal": "CO7",
+    "open": "CG7",
+    "scar": "CX7"
+   },
+   "G8": {
+    "name": "набережная у мостов",
+    "at": [
+     0.4,
+     0.84
+    ],
+    "near": "bridges",
+    "weight": 2,
+    "rank_bias": 0,
+    "size": 0.08,
+    "signal": "CO8",
+    "open": "CG8",
+    "scar": "CX8"
+   }
+  },
+  "swarm": {
+   "outskirts": "CW01",
+   "industry": "CW02",
+   "monorail": "CW03",
+   "gov_quarter": "CW04",
+   "hospital": "CW05",
+   "old_center": "CW06",
+   "metro_hub": "CW07",
+   "bunker": "CW08",
+   "market": "CW09",
+   "bridges": "CW10",
+   "port": "CW11",
+   "park": "CW12",
+   "academy_link": "CW13",
+   "wall": "CW14"
+  }
+ }
+}

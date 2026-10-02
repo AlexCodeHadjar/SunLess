@@ -144,8 +144,11 @@ static func _validate_threat(c: Content, region: String, m: Dictionary, errors: 
 		return
 	var places: Dictionary = m.get("places", {})
 	var w := "maps/%s threat" % region
-	if not places.has(str(t.get("target", ""))):
-		errors.append("%s: цель роя %s не на карте" % [w, t.get("target", "")])
+	if str(t.get("kind", "breach")) == "breach" and not places.has(str(t.get("target", ""))):
+		errors.append("%s: цель роя %s не на карте" % [w, t.get("target", "")])   # у Врат города цели нет — волна идёт к людям
+	for key2: String in ["center"]:
+		if t.has(key2) and not places.has(str(t[key2])):
+			errors.append("%s: %s %s не на карте" % [w, key2, t[key2]])
 	for key: String in ["core"]:
 		if str(t.get(key, "")) != "" and not c.missions.has(str(t[key])):
 			errors.append("%s: нет миссии %s" % [w, t[key]])

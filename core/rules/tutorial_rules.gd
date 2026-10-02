@@ -5,7 +5,7 @@ extends RefCounted
 ## 2) Подсказки (data/tutorial.json {id, event, title, text}) — при первом событии, один раз за прохождение;
 ##    показанные — в state.flags["tut_seen"]. Выключаются в настройках («Подсказки обучения»).
 
-const CHAPTERS := ["nightmare", "academy", "shore", "tree"]
+const CHAPTERS := ["nightmare", "academy", "shore", "tree", "dark_city", "city"]
 ## механика -> глава, с которой она работает
 const UNLOCK := {"trust": "academy", "bonds": "academy", "panic": "academy", "growth": "academy", "camp": "academy"}
 
@@ -70,14 +70,18 @@ static func state_events(content: Content, state: RunState) -> Array:
 		for pid: String in GateRules.points(state):
 			match GateRules.stage(state, pid):
 				"signal":
-					out.append("breach_signal")
+					out.append(GateRules._ev(content, state, "signal"))
 				"open":
-					out.append("breach")
+					out.append(GateRules._ev(content, state, "open"))
+				"scar":
+					out.append("scar")
 		if not GateRules.swarms(state).is_empty():
-			out.append("swarm")
+			out.append(GateRules._ev(content, state, "swarm"))
 		for lid: String in GateRules.sites(state):
 			if GateRules.site_state(state, lid) == "repair":
 				out.append("repair")
+		if GateRules.panic(state) >= 25:
+			out.append("panic")
 	# дни, переходы, лагерь-стоянка (docs/16 §12, docs/17)
 	out.append("day")
 	if DayRules.restricted(content, state):

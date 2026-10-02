@@ -19,5 +19,28 @@
   "arc": "shore",
   "arc_name": "Забытый Берег",
   "combat_field": "F_08"
+ },
+ {
+  "id": "real_city",
+  "name": "Город людей",
+  "arc": "city",
+  "arc_name": "Город людей",
+  "combat_field": "F_06",
+  "start_heroes": [
+   "P01",
+   "P02",
+   "P03"
+  ],
+  "start_shards": 30,
+  "start_cards": [
+   "K04",
+   "K05",
+   "K06",
+   "K02",
+   "U15",
+   "U14",
+   "U01",
+   "K07"
+  ]
  }
 ]

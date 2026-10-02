@@ -301,14 +301,24 @@ func _threat_info(content: Content, state: RunState, revealed: Array) -> Diction
 	if not GateRules.active(content, state):
 		return {}
 	var dec: Dictionary = cfg.get("decals", {})
+	var ptex: Dictionary = cfg.get("point_tex", {})
 	var pts: Array = []
 	for pid: String in GateRules.points(state):
 		var d := GateRules.point_def(content, state, pid)
 		if not bool(d.get("sprite", true)):
 			continue
+		var e: Dictionary = GateRules.points(state)[pid]
+		var st0 := GateRules.stage(state, pid)
+		# Врата: в первый день открытия — «открываются», в день закрытия — «схлопываются»
+		var look := st0
+		if st0 == "open" and int(e.get("open_day", -1)) == state.day and ptex.has("opening"):
+			look = "opening"
+		elif st0 == "scar" and int(e.get("closed_day", -1)) == state.day and ptex.has("closing"):
+			look = "closing"
 		var at: Array = d.get("at", [0.5, 0.5])
 		pts.append({"at": to_screen(Vector2(float(at[0]), float(at[1]))) - view.position, "size": float(d.get("size", 0.11)) * rect.size.x,
-			"tex": "%s_%s" % [str(dec.get("point", "breach")), GateRules.stage(state, pid)], "stage": GateRules.stage(state, pid)})
+			"tex": str(ptex.get(look, "%s_%s" % [str(dec.get("point", "breach")), look])), "stage": st0,
+			"glow": str(dec.get("glow", "")) if st0 in ["open", "signal"] else "", "scar_fade": float(e.get("left", 7)) / 7.0 if st0 == "scar" else 1.0})
 	var marks: Array = []
 	for lid: String in GateRules.sites(state):
 		if not revealed.has(lid):
@@ -316,6 +326,29 @@ func _threat_info(content: Content, state: RunState, revealed: Array) -> Diction
 		var st := GateRules.site_state(state, lid)
 		marks.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid), "state": st,
 			"decals": Array(dec.get(st, []))})
+	# эвакуированные кварталы — автобусы; в Тревогу — армейские блокпосты у мест с людьми
+	for lid: String in Dictionary(state.flags.get("evac", {})):
+		if GateRules.evacuated(state, lid) and revealed.has(lid) and str(dec.get("evac", "")) != "":
+			marks.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid), "state": "evac",
+				"decals": [str(dec["evac"])]})
+	if GateRules.big_alarm(content, state) and str(dec.get("ally", "")) != "":
+		for lid: String in ["gov_quarter", "hospital", "bunker"]:
+			if revealed.has(lid):
+				marks.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid), "state": "ally",
+					"decals": [str(dec["ally"])]})
+	# дороги у разбитых кварталов и у обрушенного моста — полосы повреждений
+	var roads: Array = []
+	var rd: Dictionary = dec.get("roads", {})
+	if not rd.is_empty():
+		for pair: Array in cfg.get("paths", []):
+			var worst := ""
+			for k in 2:
+				var st2 := GateRules.site_state(state, str(pair[k]))
+				if rd.has(st2) and (worst == "" or ["repair", "damaged", "ruined", "collapsed"].find(st2) > ["repair", "damaged", "ruined", "collapsed"].find(worst)):
+					worst = st2
+			if worst != "" and revealed.has(pair[0]) and revealed.has(pair[1]):
+				roads.append({"a": center(content, state, str(pair[0])) - view.position, "b": center(content, state, str(pair[1])) - view.position,
+					"tex": str(rd[worst])})
 	var sw: Array = []
 	for e: Dictionary in GateRules.swarms(state):
 		var to := center(content, state, str(e.get("at", ""))) - view.position
@@ -327,7 +360,8 @@ func _threat_info(content: Content, state: RunState, revealed: Array) -> Diction
 			if at2.size() == 2:
 				from = to_screen(Vector2(float(at2[0]), float(at2[1]))) - view.position
 		sw.append({"from": from, "to": to, "size": _sprite_size(content, state, str(e.get("at", "")))})
-	return {"points": pts, "marks": marks, "swarms": sw, "strip": str(dec.get("swarm", ""))}
+	return {"points": pts, "marks": marks, "swarms": sw, "strip": str(dec.get("swarm", "")), "roads": roads,
+		"label": "волна" if GateRules.kind(content, state) == "gate" else "рой"}
 
 
 ## Сменить облик места наплывом ("" — место уходит с карты).
@@ -421,12 +455,29 @@ func _draw_threat() -> void:
 	if th.is_empty():
 		return
 	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+	# дороги: трещины, брошенные машины, завалы — вдоль троп (между центрами мест, без краёв у самих мест)
+	for rd: Dictionary in th.get("roads", []):
+		var rt := _load(str(rd["tex"]))
+		if rt == null:
+			continue
+		var a0 := Vector2(rd["a"])
+		var b0 := Vector2(rd["b"])
+		var ln0 := a0.distance_to(b0) * 0.6
+		_threat.draw_set_transform((a0 + b0) / 2.0, (b0 - a0).angle(), Vector2.ONE)
+		_threat.draw_texture_rect(rt, Rect2(-ln0 / 2.0, -ln0 * 0.1, ln0, ln0 * 0.2), false, Color(1, 1, 1, 0.9))
+		_threat.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for p: Dictionary in th.get("points", []):
 		var tex := _load(str(p["tex"]))
 		var sz := float(p["size"])
 		var r := Rect2(Vector2(p["at"]) - Vector2(sz, sz) / 2.0, Vector2(sz, sz))
+		var glow := _load(str(p.get("glow", "")))
+		if glow != null:
+			var gs := sz * (1.6 + 0.15 * pulse)
+			_threat.draw_texture_rect(glow, Rect2(Vector2(p["at"]) - Vector2(gs, gs) / 2.0, Vector2(gs, gs)), false,
+				Color(1, 1, 1, (0.35 if str(p["stage"]) == "signal" else 0.7) * (0.7 + 0.3 * pulse)))
 		if tex != null:
-			_threat.draw_texture_rect(tex, r, false, Color(1, 1, 1, 0.75 + 0.25 * pulse) if str(p["stage"]) == "signal" else Color.WHITE)
+			var alpha := float(p.get("scar_fade", 1.0)) * 0.6 + 0.4 if str(p["stage"]) == "scar" else 1.0
+			_threat.draw_texture_rect(tex, r, false, Color(1, 1, 1, 0.75 + 0.25 * pulse) if str(p["stage"]) == "signal" else Color(1, 1, 1, alpha))
 		if str(p["stage"]) in ["signal", "open"]:
 			var c := Vector2(p["at"])
 			for k in 2:
@@ -462,7 +513,7 @@ func _draw_threat() -> void:
 		var r3 := s3 * (0.2 + 0.03 * pulse)
 		_threat.draw_circle(b, r3, Color(0.02, 0.0, 0.03, 0.55))
 		_threat.draw_arc(b, r3, 0.0, TAU, 40, Color(0.75, 0.1, 0.12, 0.8), 3.0, true)
-		var t := "рой"
+		var t := str(th.get("label", "рой"))
 		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		_threat.draw_string_outline(f, b + Vector2(-w / 2.0, 6.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, 5, Color(0, 0, 0, 0.9))
 		_threat.draw_string(f, b + Vector2(-w / 2.0, 6.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.45, 0.4))

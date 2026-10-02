@@ -154,3 +154,150 @@ func test_academy_runs() -> void:
 	check(done >= runs * 3 / 4, "Академия проходится: %d из %d" % [done, runs])
 	check(signals > 0, "прорывы случаются")
 	eq(empty, 0, "пустых утр:")
+
+
+# --- Город людей: Врата Кошмара (kind gate) ------------------------------------------------------
+
+func _city(seed_value: int = 5) -> RunState:
+	var s := AutoPlay.draft_start(content(), "city", seed_value)
+	for mid: String in MissionFlow.open_missions(s):
+		s.missions[mid]["status"] = "done"
+	return s
+
+
+## Довести до ночной фазы (Врата открываются только ночью).
+func _to_night(c: Content, s: RunState) -> void:
+	for i in 6:
+		if str(DayRules.phase(c, s)["id"]) == "night":
+			return
+		DayRules.end_day(c, s)
+
+
+func test_city_map() -> void:
+	var c := content()
+	check(MapRules.has_map(c, "city"), "у Города карта-план")
+	var s := _city()
+	eq(GateRules.kind(c, s), "gate", "в Городе — Врата:")
+	eq(s.characters.size(), 3, "глава-черновик начинается с отрядом региона:")
+	var cfg := MapRules.config(c, "city")
+	eq(Array(cfg["threat"]["points"].keys()).size(), 8, "точек Врат (G1–G8):")
+	for lid: String in c.locations:
+		if str(c.locations[lid].get("chapter", "")) == "city":
+			check(cfg["threat"]["swarm"].has(lid), "у квартала %s есть миссия волны" % lid)
+
+
+func test_gate_opens_at_night_wave_ruins() -> void:
+	var c := content()
+	var s := _city(21)
+	s.party_at = "academy_link"
+	GateRules.raise_signal(c, s, "G2")
+	eq(GateRules.stage(s, "G2"), "signal", "предвестие у промзоны:")
+	var opened := false
+	for i in 8:
+		DayRules.end_day(c, s)
+		if GateRules.stage(s, "G2") == "open":
+			opened = true
+			break
+	check(opened, "Врата открылись")
+	eq(str(DayRules.phase(c, s)["id"]), "night", "только ночью:")
+	check(GateRules.panic(s) > 0, "паника выросла: %d" % GateRules.panic(s))
+	check(str(s.missions.get("CG2", {}).get("status", "")) == "open", "миссия Врат открыта")
+	check(GateRules.swarms(s).any(func(w: Dictionary) -> bool: return str(w["point"]) == "G2"), "из Врат вышла волна")
+	eq(GateRules.site_state(s, "industry"), "fight", "в промзоне бой:")
+	# волну не встретили: квартал повреждён, затем разрушен, волна идёт дальше
+	var ruined := false
+	for i in 10:
+		DayRules.end_day(c, s)
+		if GateRules.site_state(s, "industry") == "ruined":
+			ruined = true
+			break
+	check(ruined, "без помощи промзона разрушена")
+	# закрыли Врата — шрам, паника падает
+	var before := GateRules.panic(s)
+	GateRules.command(c, s, {"do": "close", "point": "G2"})
+	eq(GateRules.stage(s, "G2"), "scar", "закрытые Врата — шрам:")
+	check(GateRules.panic(s) < before, "паника падает, когда Врата закрыты")
+
+
+func test_evacuate_and_bridge() -> void:
+	var c := content()
+	var s := _city(31)
+	GateRules.command(c, s, {"do": "evacuate", "place": "market"})
+	check(GateRules.evacuated(s, "market"), "рынок эвакуирован")
+	var w := {"at": "market", "from": "", "point": "G4", "nights": 0, "path": ["market"]}
+	var out: Array = []
+	GateRules._wave_arrive(c, s, w, out)
+	check(bool(w.get("passing", false)), "волна проходит мимо эвакуированного квартала")
+	eq(GateRules.site_state(s, "market"), "damaged", "но квартал задет:")
+	GateRules.command(c, s, {"do": "blow", "place": "bridges"})
+	check(GateRules.blocked(s, "bridges"), "взорванный мост не пройти")
+	eq(GateRules._wave_target(c, s, "market", ["market"]) != "bridges", true, "волна не идёт на взорванный мост:")
+	s.party_at = "market"
+	check(TravelRules.route(c, s, "market", "port").is_empty(), "порт отрезан")
+
+
+func test_big_alarm() -> void:
+	var c := content()
+	var s := _city(41)
+	s.flags["gates"] = {"G1": {"stage": "open", "open_day": s.day, "rank": 1}, "G4": {"stage": "open", "open_day": s.day, "rank": 2}}
+	check(GateRules.big_alarm(c, s), "двое Врат — Тревога")
+	GateRules._city_alarm_states(c, s)
+	eq(GateRules.site_state(s, "bunker"), "crowded", "убежище переполнено:")
+	eq(GateRules.site_state(s, "metro_hub"), "closed", "подземка закрыта:")
+	s.flags["gates"] = {}
+	GateRules._city_alarm_states(c, s)
+	eq(GateRules.site_state(s, "bunker"), "", "Тревога снята — убежище как обычно:")
+
+
+func test_gate_rank_mods() -> void:
+	var c := content()
+	var s := _city(51)
+	GateRules.command(c, s, {"do": "raise", "point": "G3", "rank": 3, "open": true})
+	eq(GateRules.stage(s, "G3"), "open", "сюжет открыл Врата:")
+	check(Array(s.missions["CG3"].get("mods", [])).has("gate_rank3"), "ранг 3 — модификатор силы")
+	check(ModifierRules.threat(c, s, "CG3") > int(c.missions["CG3"]["threat"]), "угроза выше")
+
+
+## Прогоны бота по Городу: глава проходится, Врата открываются и закрываются, пустых утр нет.
+func test_city_runs() -> void:
+	var c := content()
+	var runs := 15
+	var done := 0
+	var died := 0
+	var stuck := ""
+	var opened := 0
+	var closed := 0
+	var empty := 0
+	var max_panic := 0
+	for sd in runs:
+		var s := AutoPlay.draft_start(c, "city", 9000 + sd * 11)
+		var last := 0
+		var seen_open := {}
+		for step in 2000:
+			if s.day != last:
+				last = s.day
+				if DayPlanner.count_today(c, s) == 0 and not MissionFlow.free_heroes(c, s).is_empty() and s.squads.is_empty():
+					empty += 1
+				for pid: String in GateRules.points(s):
+					var key := "%s@%d" % [pid, int(GateRules.points(s)[pid].get("open_day", 0))]
+					if GateRules.stage(s, pid) == "open" and not seen_open.has(key):
+						seen_open[key] = true
+						opened += 1
+					if GateRules.stage(s, pid) == "scar" and int(GateRules.points(s)[pid].get("closed_day", -1)) == s.day - 1:
+						closed += 1
+				max_panic = maxi(max_panic, GateRules.panic(s))
+			s = AutoPlay.step(c, s)["state"]
+			if s.demo_complete or s.game_over:
+				break
+		if s.demo_complete:
+			done += 1
+		elif s.game_over:
+			died += 1
+		elif stuck == "":
+			stuck = "зерно %d: день %d, открыто %s, отряды %s, герои %s" % [9000 + sd * 11, s.day, str(MissionFlow.open_missions(s)),
+				str(s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]])), str(MissionFlow.heroes(c, s))]
+	print("   [Город] прогонов: %d, пройдено: %d, гибель: %d, Врат открыто: %d, закрыто: %d, паника до %d, пустых утр: %d" % [runs, done, died, opened, closed, max_panic, empty])
+	check(done + died == runs, "Город не застревает: %s" % stuck)
+	check(done >= runs * 2 / 3, "Город проходится: %d из %d" % [done, runs])
+	check(opened > 0, "Врата открываются")
+	eq(empty, 0, "пустых утр:")

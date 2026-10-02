@@ -28,6 +28,11 @@ static func chapters(c: Content) -> Array:
 			continue
 		seen[ch] = true
 		out.append([ch, str(c.regions.get(str(loc.get("region", "")), {}).get("arc_name", ch))])
+	# по порядку сюжета (TutorialRules.CHAPTERS), незнакомые — в конце
+	out.sort_custom(func(a: Array, b: Array) -> bool:
+		var ia := TutorialRules.CHAPTERS.find(a[0])
+		var ib := TutorialRules.CHAPTERS.find(b[0])
+		return (ia if ia >= 0 else 99) < (ib if ib >= 0 else 99))
 	return out
 
 

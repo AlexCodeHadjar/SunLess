@@ -16,7 +16,9 @@ func test_to_chapter() -> void:
 
 func test_chapters_listed() -> void:
 	var ids: Array = DevPanel.chapters(content()).map(func(p: Array) -> String: return p[0])
-	eq(ids, ["nightmare", "academy", "shore"], "главы по порядку:")
+	var order := ids.filter(func(x: String) -> bool: return TutorialRules.CHAPTERS.has(x))
+	eq(order, TutorialRules.CHAPTERS.filter(func(x: String) -> bool: return ids.has(x)), "главы по порядку сюжета:")
+	check(ids.slice(0, 3) == ["nightmare", "academy", "shore"], "первые главы: %s" % str(ids))
 
 
 func test_point_roundtrip() -> void:

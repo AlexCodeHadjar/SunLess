@@ -660,8 +660,10 @@ func _show_night(ev: Array) -> void:
 				col = Palette.SILVER
 			"planner", "mission":
 				col = Palette.GOLD
-			"breach", "breach_signal", "swarm", "damage":
+			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave":
 				col = Color(1.0, 0.45, 0.35)
+			"gate_close":
+				col = Palette.STAT_UP
 			"repair":
 				col = Palette.STAT_UP
 		var l := UITheme.label("• " + t, "sans", 18, col)
@@ -704,9 +706,11 @@ func _build_toast() -> void:
 	_tide_banner = UITheme.label("", "sans_bold", 21, Color(0.72, 0.88, 1.0))
 	_tide_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_tide_banner.anchor_right = 1.0
-	_tide_banner.offset_left = 0
+	_tide_banner.offset_left = 420     # между надписями главы и меню; длинная строка переносится
+	_tide_banner.offset_right = -420
 	_tide_banner.offset_top = 104
-	_tide_banner.offset_bottom = 138
+	_tide_banner.offset_bottom = 170
+	_tide_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_tide_banner.add_theme_constant_override("outline_size", 8)
 	_tide_banner.add_theme_color_override("font_outline_color", Color(0, 0.02, 0.05, 0.95))
 	_tide_banner.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1101,7 +1105,7 @@ func _on_events(events: Array) -> void:
 				_show_toast("%s — щёлкните по карте миссии" % e["text"])
 			"rested", "expired", "move", "task", "planner", "repair":
 				_show_toast(str(e["text"]))
-			"breach", "breach_signal", "swarm", "damage":
+			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave", "gate_close":
 				AudioManager.play("bell", -3.0, 0.6)
 				_show_toast(str(e["text"]))
 			"onslaught":
