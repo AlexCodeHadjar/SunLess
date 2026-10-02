@@ -36,6 +36,10 @@ static func options(content: Content, state: RunState) -> Dictionary:
 		if TideRules.flooded(state, lid):
 			out["cut"].append(mid)
 			continue
+		if FigureRules.on(content, state):   # фигура: сегодня — здесь и на соседних участках, дальше — путь
+			var r := FigureRules.reach(content, state, mid)
+			out["cut" if r < 0 else ("today" if r <= 1 else "march")].append(mid)
+			continue
 		var d := TravelRules.distance(content, state, lid)
 		if d < 0:
 			out["cut"].append(mid)
@@ -59,7 +63,7 @@ static func ensure(content: Content, state: RunState) -> Array:
 	var need := min_options(content) - (options(content, state)["today"] as Array).size()
 	if need <= 0:
 		return out
-	for lid: String in _candidates(content, state, TravelRules.free_steps(content)):
+	for lid: String in _candidates(content, state, 1 if FigureRules.on(content, state) else TravelRules.free_steps(content)):
 		if need <= 0:
 			break
 		var ev := spawn_local(content, state, lid)

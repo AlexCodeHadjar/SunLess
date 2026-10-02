@@ -238,6 +238,9 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 		return "Под водой — ждите отлива"
 	if not state.squads.is_empty():
 		return "Отряд уже на миссии — сначала решите, что он делает"
+	# фигура (docs/18): события — только там, где она стоит (Натиск приходит к ней сам)
+	if FigureRules.on(content, state) and FigureRules.reach(content, state, mission_id) != 0:
+		return "Событие не здесь — поставьте фигуру на этот участок (1 день)"
 	if not DayRules.mission_reachable(content, state, mission_id):
 		return TravelRules.why_not(content, state, str(m.get("location", "")))
 	var sq: Dictionary = m.get("squad", {})
@@ -283,7 +286,8 @@ static func launch(content: Content, state: RunState, mission_id: String, heroes
 	# миссия дальше лагеря: отряд идёт по маршруту (шаги дня, марш-бросок сверх бесплатных) — docs/17 §2
 	var entries: Array = []
 	var lid := str(content.missions.get(mission_id, {}).get("location", ""))
-	if DayRules.restricted(content, state) and lid != state.party_at and str(content.missions[mission_id].get("type", "")) != "onslaught":
+	if DayRules.restricted(content, state) and lid != state.party_at and str(content.missions[mission_id].get("type", "")) != "onslaught" \
+			and not FigureRules.on(content, state):
 		TravelRules.travel(content, state, lid, entries)
 	entries.append_array(DayRules.on_launch(content, state, mission_id, heroes_ids))
 	state.squads.append(sq)

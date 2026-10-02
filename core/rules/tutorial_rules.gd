@@ -83,6 +83,23 @@ static func _terrain_events(content: Content, state: RunState) -> Array:
 	return out
 
 
+## Фигура (docs/18): подсказки о фигуре, событиях рядом и вдали, лагере у фигуры, ожидании.
+static func _figure_events(content: Content, state: RunState) -> Array:
+	var out: Array = ["figure"]
+	var opt := DayPlanner.options(content, state)
+	for mid: String in MissionFlow.open_missions(state):
+		if MissionFlow.chapter_of(content, mid) == state.chapter and FigureRules.reach(content, state, mid) != 0:
+			out.append("figure_far")
+			break
+	if (opt["today"] as Array).is_empty():
+		out.append("figure_wait")
+	if state.day >= 2:
+		out.append("figure_camp")
+	if (opt["today"] as Array).size() < DayPlanner.min_options(content) and not DayPlanner.tasks_left(content, state).is_empty():
+		out.append("tasks")
+	return out
+
+
 static func state_events(content: Content, state: RunState) -> Array:
 	var out: Array = []
 	if state.chapter == "academy":
@@ -130,7 +147,9 @@ static func state_events(content: Content, state: RunState) -> Array:
 	out.append_array(_terrain_events(content, state))
 	# дни, переходы, лагерь-стоянка (docs/16 §12, docs/17)
 	out.append("day")
-	if DayRules.restricted(content, state):
+	if FigureRules.on(content, state):
+		out.append_array(_figure_events(content, state))
+	elif DayRules.restricted(content, state):
 		out.append("travel")
 		out.append("camp_place")
 		if not MapRules.emerged(state).is_empty():
@@ -140,7 +159,7 @@ static func state_events(content: Content, state: RunState) -> Array:
 			out.append("far")
 		if (opt["today"] as Array).size() < DayPlanner.min_options(content) and not DayPlanner.tasks_left(content, state).is_empty():
 			out.append("tasks")
-	for cid2: String in MissionFlow.heroes(content, state):
+	for cid2: String in ([] if FigureRules.on(content, state) else MissionFlow.heroes(content, state)):
 		if DayRules.sorties(state, cid2) >= 1:
 			out.append("fatigue")
 			break

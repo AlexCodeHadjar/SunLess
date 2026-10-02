@@ -329,6 +329,7 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 			report["deaths"].append(cid)
 
 	state.squads = state.squads.filter(func(s: Dictionary) -> bool: return int(s["id"]) != squad_id)
+	state.flags["event_done"] = mid   # фигура (docs/18): событие проведено — после него ночь
 	state.log.append({"clock": state.clock, "mission": mid, "action": str(run["action"]), "outcome": report["outcome"], "heroes": heroes})
 	state.rng_state = rng.state
 	return {"ok": true, "error": "", "state": state, "report": report}

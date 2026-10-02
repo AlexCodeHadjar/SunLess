@@ -207,5 +207,7 @@
    "text": "Сторожить лагерь: ночное нападение вдвое реже.",
    "danger_mult": 0.5
   }
- }
+ },
+ "movement": "figure",
+ "_movement": "figure — фигура (docs/18, ветка gameplay/figure): день — одно действие; steps — шаги дня и марш-бросок (docs/17)"
 }

@@ -37,6 +37,8 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 	for h2: String in MissionFlow.free_heroes(c, s):
 		if EdgeRules.on_edge(s, h2):
 			CampRules.put(c, s, h2)
+	if FigureRules.on(c, s):
+		return _figure_step(c, s, started)
 	var open := MissionFlow.open_missions(s)
 	open.sort_custom(func(x: String, y: String) -> bool:
 		var sx := str(c.missions[x]["type"]) == "story"
@@ -145,7 +147,102 @@ static func _resolve(c: Content, s: RunState, on_report: Callable) -> Dictionary
 		s = r["state"]
 		if not r.has("fork") and on_report.is_valid():
 			on_report.call(sq["mission"], r["report"])
+	FigureRules.end_after_event(c, s)   # фигура: событие — это день, дальше ночь
 	return {"state": s, "error": "", "chapter_started": started}
+
+
+## Фигура (docs/18): день — одно действие. Лучшее событие (сюжет первым) — здесь: провести; на другом участке —
+## шаг фигуры к нему (день); иначе дела лагеря (бесплатно) и переждать день. Не ночевать там, куда придёт вода.
+static func _figure_step(c: Content, s: RunState, started: String) -> Dictionary:
+	var open := MissionFlow.open_missions(s)
+	open.sort_custom(func(x: String, y: String) -> bool:
+		var sx := str(c.missions[x]["type"]) == "story"
+		var sy := str(c.missions[y]["type"]) == "story"
+		return sx and not sy if sx != sy else x < y)
+	if open.any(func(x: String) -> bool: return str(c.missions[x]["type"]) == "story"):
+		s.flags["bot_story_day"] = s.day
+	# сюжет стоит больше 4 дней или бот два дня подряд просто ждал — идёт на лучшее при любом прогнозе
+	var desperate := s.day - int(s.flags.get("bot_story_day", s.day)) > 4 or int(s.flags.get("bot_idle", 0)) >= 2
+	# события по близости: сюжет первым, затем ближние; прогноз — только пока не нашлось подходящее
+	var cands: Array = []
+	for mid: String in open:
+		if MissionFlow.chapter_of(c, mid) != s.chapter or TideRules.mission_flooded(c, s, mid):
+			continue
+		var r := FigureRules.reach(c, s, mid)
+		if r < 0:
+			continue
+		if str(c.missions[mid]["type"]) != "onslaught" and not MapRules.revealed(c, s, str(c.missions[mid].get("location", ""))):
+			s.flags["bot_hidden"] = int(s.flags.get("bot_hidden", 0)) + 1
+			continue
+		# сюжет, затем побочные, Врата, волны и Натиск, затем случайные встречи; внутри — ближние первыми
+		var typ := str(c.missions[mid]["type"])
+		var rank := 0 if typ == "story" else (1 if typ in ["side", "onslaught"] or GateRules.mission_ids(c, s).has(mid) else 2)
+		cands.append([rank, r, mid])
+	cands.sort_custom(func(x: Array, y: Array) -> bool: return x < y)
+	var target := ""
+	for cd: Array in cands:
+		var mid: String = cd[2]
+		var team := _team(c, s, mid, desperate)
+		if team.is_empty():
+			continue
+		if int(cd[1]) == 0:
+			if MissionFlow.can_launch(c, s, mid, team) != "":
+				continue
+			if DayRules.can_equip(c, s) == "":
+				equip(c, s, team)
+			MissionFlow.launch(c, s, mid, team)
+			s.flags["bot_idle"] = 0
+			return {"state": s, "error": "", "chapter_started": started}
+		target = mid   # ближайшее подходящее (сюжет — первым)
+		break
+	# дела лагеря — бесплатно, до того как день кончится
+	for task: String in DayPlanner.tasks_left(c, s):
+		if task == "watch" and float(DayRules.camp(c, s).get("danger", 0.0)) < 0.15:
+			continue
+		for h: String in MissionFlow.free_heroes(c, s):
+			if PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED:
+				DayPlanner.do_task(c, s, task, h)
+				return {"state": s, "error": "", "chapter_started": started}
+	if target != "":
+		var path := TravelRules.route(c, s, s.party_at, str(c.missions[target].get("location", "")))
+		if not path.is_empty() and FigureRules.move(c, s, str(path[0]))["ok"]:
+			s.flags["bot_idle"] = 0
+			return {"state": s, "error": "", "chapter_started": started}
+	# вода идёт — уйти на сухой соседний участок
+	if TideRules.threatened(s, s.party_at) or TideRules.flooded(s, s.party_at):
+		for n: String in FigureRules.targets(c, s):
+			if not TideRules.threatened(s, n) and MapRules.revealed(c, s, n) and FigureRules.move(c, s, n)["ok"]:
+				return {"state": s, "error": "", "chapter_started": started}
+	s.flags["bot_idle"] = int(s.flags.get("bot_idle", 0)) + 1
+	DayRules.end_day(c, s)   # переждать день
+	return {"state": s, "error": "", "chapter_started": started}
+
+
+## Кого бот отправит на событие ([] — не пойдёт): как в обычном шаге — сюжет всегда, остальное с хорошим прогнозом.
+static func _team(c: Content, s: RunState, mid: String, desperate: bool) -> Array:
+	var story := str(c.missions[mid]["type"]) == "story"
+	var push := desperate and GateRules.mission_ids(c, s).has(mid)
+	var free := MissionFlow.free_heroes(c, s).filter(func(h: String) -> bool: return not MissionFlow.excluded(c, mid, h) \
+		and (story or push or (not CampRules.in_bed(s, h) and PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED)))
+	if free.is_empty():
+		return []
+	var mx := int(c.missions[mid]["squad"]["max"])
+	var team: Array = []
+	for need: String in c.missions[mid].get("requires_heroes", []):
+		if free.has(need):
+			team.append(need)
+	for h: String in free:
+		if team.size() < mx and not team.has(h) and (story or TrustRules.refusal(c, s, team + [h]) == ""):
+			team.append(h)
+	if team.size() < MissionFlow.squad_min(c, s, mid):
+		return []
+	for need2: String in c.missions[mid].get("requires_heroes", []):
+		if not team.has(need2):
+			return []
+	var urgent := GateRules.mission_ids(c, s).has(mid)
+	if not story and int(MissionForecast.mission_forecast(c, s, mid, team)["value"]) < ((0 if desperate else 30) if urgent else 50):
+		return []
+	return team
 
 
 ## Ведёт ли в главу сюжет (у какой-нибудь миссии next_chapter = глава).

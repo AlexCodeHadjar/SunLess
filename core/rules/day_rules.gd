@@ -113,7 +113,7 @@ static func mission_reachable(content: Content, state: RunState, mid: String) ->
 static func shop_near(content: Content, state: RunState, sid: String) -> bool:
 	if not restricted(content, state) or not MapRules.config(content, state.chapter).get("places", {}).has(sid):
 		return true
-	return MapRules.neighbors(content, state, sid).has(state.party_at)
+	return state.party_at == sid or MapRules.neighbors(content, state, sid).has(state.party_at)
 
 
 ## Переход без миссии по маршруту (TravelRules.travel). "" — перешли, иначе причина. Записи — в out.
@@ -148,7 +148,7 @@ static func fatigue_cost(content: Content, state: RunState, cid: String) -> int:
 static func on_launch(content: Content, state: RunState, mid: String, heroes: Array) -> Array:
 	var out: Array = []
 	var lid := str(content.missions.get(mid, {}).get("location", ""))
-	if content.locations.has(lid):
+	if content.locations.has(lid) and not FigureRules.on(content, state):   # фигура: лагерь там, где она, — Натиск его не двигает
 		state.party_at = lid
 		TravelRules.visit(state, lid)
 	var from := int(cfg(content).get("tired_wear_from", 3))
@@ -219,6 +219,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 			out.append({"kind": "repair", "text": "Починили вещи: %d" % fixed})
 	TerrainRules.exposed_night(content, state, out)   # ночь в открытом пепле в бурю
 	state.camp["beds"] = []
+	state.flags.erase("event_done")
 	# 3. новый день: шаги и дела лагеря снова свободны
 	TravelRules.new_day(state)
 	DayPlanner.new_day(state)

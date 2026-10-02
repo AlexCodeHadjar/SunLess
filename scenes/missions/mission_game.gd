@@ -50,6 +50,11 @@ var _drag_pan := Vector2.ZERO   # сдвиг карты в этот момент
 var _dragging := false
 var _drag_armed := false
 var _relayout_in := -1.0        # окно сменило размер: через сколько секунд переложить карту
+var _figure: FigurePiece        # фигура главного героя (docs/18): где стоит — там лагерь
+var _figure_at := ""            # где фигура стоит на экране (перешла — анимация)
+var _cinema := false            # ночная сцена лагеря: камера наехала на фигуру
+var _night_after_event := false
+var _bottom_ui: Array = []      # тень, ряд карт, дневная панель — в сцене лагеря прячутся # событие проведено — после отчёта (и выбора добычи) наступит ночь
 
 
 func _ready() -> void:
@@ -114,6 +119,12 @@ func _process(delta: float) -> void:
 		move_child(_toast, get_child_count() - 1)
 		GameState.tutorial("memory")
 		return
+	if quiet and _night_after_event and not _cinema:
+		_night_after_event = false
+		var ev := GameState.figure_event_done()
+		if not ev.is_empty():
+			_night_cinematic(ev)
+			return
 	if GameState.state.game_over and quiet:
 		_show_end()
 	elif GameState.state.demo_complete and quiet:
@@ -154,6 +165,15 @@ func _build_map() -> void:
 	_pins_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pins_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pan_layer.add_child(_pins_layer)
+	if _sleeper != null:
+		_sleeper.figure_mode = FigureRules.on(ContentDB.data, GameState.state)
+		_figure = FigurePiece.make(_main_hero())
+		_pan_layer.add_child(_figure)
+		_figure.drag_started.connect(_on_figure_drag)
+		_figure.drag_moved.connect(_on_figure_hover)
+		_figure.dropped.connect(_on_figure_drop)
+		_figure.clicked.connect(_on_figure_click)
+		HintTargets.put("figure", [_figure])
 	var c := ContentDB.data
 	for sid: String in ShopRules.shops_of(c, GameState.state):
 		var icon := ShopIcon.new()
@@ -329,7 +349,9 @@ func _build_bottom() -> void:
 	shade.anchor_right = 1.0
 	shade.offset_top = -(TRAY_H + 60)
 	add_child(shade)
+	_bottom_ui.append(shade)
 	var panel := PanelContainer.new()
+	_bottom_ui.append(panel)
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.anchor_top = 1.0
@@ -381,6 +403,7 @@ func _build_day_panel() -> void:
 	box.custom_minimum_size = Vector2(460, 0)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
+	_bottom_ui.append(box)
 	_day_label = _on_map_label(UITheme.label("", "title", 21, Palette.TEXT))
 	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_day_label.custom_minimum_size.x = 460
@@ -426,6 +449,9 @@ func _on_map_click(at: Vector2) -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	if not DayRules.restricted(c, s):
+		return
+	if FigureRules.on(c, s):
+		_figure_click_place(_sleeper.pick(c, s, at))
 		return
 	var kn := MapRules.known(c, s)
 	var best := ""
@@ -579,8 +605,11 @@ func _update_day() -> void:
 	_day_label.tooltip_text = str(ph["hint"])
 	_day_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	HintTargets.put("day_label", [_day_label])
+	var fig := FigureRules.on(c, s)
+	_end_btn.text = "ПЕРЕЖДАТЬ ДЕНЬ ›" if fig else "ЗАКОНЧИТЬ ДЕНЬ ›"
+	_end_btn.tooltip_text = "Ничего не делать сегодня: ночь у фигуры, утром новый день" if fig else ""
 	var cp := DayRules.camp(c, s)
-	var where := str(c.locations.get(s.party_at, {}).get("name", "—"))
+	var where := str(c.locations.get(s.party_at, c.shops.get(s.party_at, {})).get("name", "—"))
 	var warn := ""
 	if TideRules.threatened(s, s.party_at):
 		warn = " · ≈ СЮДА ПРИДЁТ ВОДА"
@@ -600,6 +629,9 @@ func _update_day() -> void:
 	var left := DayPlanner.tasks_left(c, s)
 	var steps := TravelRules.steps_left(c, s)
 	var parts: Array = ["Сегодня: миссий рядом %d" % today.size(), "переходов без усталости %d из %d" % [steps, TravelRules.free_steps(c)]]
+	if fig:
+		var here_n := today.filter(func(m: String) -> bool: return FigureRules.reach(c, s, m) == 0).size()
+		parts = ["Сегодня: событий здесь %d, по соседству %d" % [here_n, today.size() - here_n], "одно действие: событие, шаг фигуры или ожидание"]
 	if not (opt["cut"] as Array).is_empty():
 		parts.append("за водой %d" % (opt["cut"] as Array).size())
 	var wait := MissionFlow.story_wait(c, s)   # сюжет ждёт закрытых Врат / зачищенных районов
@@ -626,6 +658,9 @@ func _on_end_day() -> void:
 	if ev.is_empty():
 		return
 	AudioManager.play("bell", -6.0, 0.5)
+	if _sleeper != null and _sleeper.figure_mode:
+		_night_cinematic(ev)
+		return
 	_show_night(ev)
 
 
@@ -638,7 +673,7 @@ func _show_night(ev: Array) -> void:
 	shade.color = Color(0.01, 0.012, 0.02, 0.0)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_night.add_child(shade)
-	create_tween().tween_property(shade, "color:a", 0.9, 0.6 if not Vfx.reduced() else 0.0)
+	create_tween().tween_property(shade, "color:a", 0.25 if _cinema else 0.9, 0.6 if not Vfx.reduced() else 0.0)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.045, 0.06, 0.97), Palette.LINE, 1, 12, 26))
 	panel.position = Vector2(560, 170)
@@ -647,6 +682,8 @@ func _show_night(ev: Array) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	panel.add_child(v)
+	if _cinema:   # сцена лагеря: окно справа, фигура у костра видна
+		panel.position = Vector2(_screen().x - 860, 120)
 	var ph := DayRules.phase(ContentDB.data, GameState.state)
 	v.add_child(UITheme.label("Ночь прошла · утро дня %d" % GameState.state.day, "title", 32, Palette.TEXT))
 	v.add_child(UITheme.label("%s · %s" % [ph["name"], ph["hint"]], "serif_italic", 19, Palette.SILVER))
@@ -689,6 +726,8 @@ func _show_night(ev: Array) -> void:
 	b.pressed.connect(func() -> void:
 		_night.queue_free()
 		_night = null
+		if _cinema:
+			_end_cinema()
 		_refresh()
 		# обучение: смена фазы недели, местные встречи
 		if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "phase"):
@@ -768,7 +807,7 @@ func _hint_target(name: String) -> Rect2:
 				"marker_onslaught":
 					ok = str(m.get("type", "")) == "onslaught"
 				"marker_far":
-					ok = TravelRules.distance(c, s, str(m.get("location", ""))) > 0 and str(m.get("type", "")) != "onslaught"
+					ok = FigureRules.reach(c, s, mid) != 0 if FigureRules.on(c, s) else 						(TravelRules.distance(c, s, str(m.get("location", ""))) > 0 and str(m.get("type", "")) != "onslaught")
 				"marker_breach":
 					ok = GateRules.mission_ids(c, s).has(mid)
 			var mk: Control = _markers[mid]
@@ -822,6 +861,7 @@ func _refresh() -> void:
 		_rebuild_markers()
 	_update_pins()
 	_update_tide()
+	_place_figure()
 
 
 ## Прилив: вода под местами, строка с отсчётом (TideRules).
@@ -1046,7 +1086,7 @@ func _rebuild_markers() -> void:
 func _add_move_buttons() -> void:
 	var c := ContentDB.data
 	var s := GameState.state
-	if _sleeper == null or not DayRules.restricted(c, s):
+	if _sleeper == null or not DayRules.restricted(c, s) or FigureRules.on(c, s):
 		return
 	for lid: String in MapRules.neighbors(c, s, s.party_at):
 		if not TravelRules.can_stop(c, s, lid) or not MapRules.revealed(c, s, lid):
@@ -1084,6 +1124,9 @@ func _update_pins() -> void:
 			badge = "НАТИСК · " + badge
 		# прилив: место под водой — ждать отлива; вода идёт — успеет ли отряд
 		var under := TideRules.mission_flooded(ContentDB.data, s, mid)
+		if FigureRules.on(ContentDB.data, s) and not arrived:
+			_figure_badge(mk, mid, badge, under)
+			continue
 		var far := not arrived and not DayRules.mission_reachable(ContentDB.data, s, mid)
 		var mloc := str(ContentDB.data.missions.get(mid, {}).get("location", ""))
 		var steps := TravelRules.distance(ContentDB.data, s, mloc) if DayRules.restricted(ContentDB.data, s) and str(ContentDB.data.missions.get(mid, {}).get("type", "")) != "onslaught" else 0
@@ -1157,6 +1200,17 @@ func _open_mission(mid: String) -> void:
 		_open_window()
 		_window.show_arrival(int(sq["id"]))
 		return
+	var c := ContentDB.data
+	if FigureRules.on(c, GameState.state) and not _cinema:
+		var r := FigureRules.reach(c, GameState.state, mid)
+		if r == 1:
+			_figure_jump(mid)
+			return
+		if r != 0:
+			_show_toast(FigureRules.why_not(c, GameState.state, str(c.missions[mid].get("location", ""))) if r < 0 else
+				"Далеко: %d %s пути — переносите фигуру по соседним участкам" % [r, UITheme.plural(r, ["день", "дня", "дней"])])
+			GameState.tutorial("figure_far")
+			return
 	_open_window()
 	_window.show_brief(mid)
 
@@ -1187,6 +1241,9 @@ func _on_hero_dropped(mid: String, cid: String) -> void:
 	for sq: Dictionary in GameState.state.squads:
 		if sq["mission"] == mid:
 			return
+	if FigureRules.on(ContentDB.data, GameState.state) and FigureRules.reach(ContentDB.data, GameState.state, mid) != 0:
+		_show_toast("Событие не здесь: сначала поставьте фигуру на его участок")
+		return
 	_open_window()
 	_window.show_brief(mid, cid)
 
@@ -1197,7 +1254,7 @@ func _open_window() -> void:
 	_window = MissionWindow.new()
 	_window.closed.connect(func() -> void:
 		_window = null
-		_refresh())
+		_after_event_window())
 	_window.watch_combat.connect(_watch_combat)
 	add_child(_window)
 	move_child(_toast, get_child_count() - 1)
@@ -1367,3 +1424,246 @@ func _show_end() -> void:
 	menu.custom_minimum_size = Vector2(360, 56)
 	menu.pressed.connect(_on_nav.bind("menu"))
 	v.add_child(menu)
+
+
+# --- фигура (docs/18) ----------------------------------------------------------------------------------------
+
+## Главный герой — его фигура на поле: Санни, без него — Нефис, Касси, первый живой.
+func _main_hero() -> String:
+	var hs := MissionFlow.heroes(ContentDB.data, GameState.state)
+	for cid: String in ["P01", "P02", "P03"]:
+		if hs.has(cid):
+			return cid
+	return str(hs[0]) if not hs.is_empty() else "P01"
+
+
+## Поставить фигуру на участок лагеря — слева от карт событий этого участка.
+func _place_figure() -> void:
+	if _figure == null:
+		return
+	var c := ContentDB.data
+	var s := GameState.state
+	_figure.visible = FigureRules.on(c, s) and not _cinema
+	_sleeper.figure_mode = FigureRules.on(c, s)
+	if not _figure.visible:
+		return
+	var foot := _place_point(s.party_at)
+	var left := foot.x - 40.0
+	for mid: String in _markers:
+		if str(c.missions.get(mid, {}).get("location", "")) == s.party_at:
+			left = minf(left, (_markers[mid] as Control).position.x - 8.0)
+	var at := Vector2(left - FigurePiece.W / 2.0, foot.y + 6.0)
+	_figure.stand_at(at, _figure_at != "" and _figure_at != s.party_at)
+	_figure_at = s.party_at
+
+
+func _on_figure_drag() -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	_close_travel()
+	_sleeper.drag_targets = FigureRules.targets(c, s)
+	var blocked := {}
+	for lid: String in FigureRules.neighbors(c, s):
+		if not _sleeper.drag_targets.has(lid):
+			blocked[lid] = FigureRules.why_not(c, s, lid)
+	_sleeper.drag_blocked = blocked
+	GameState.tutorial("figure_drag")
+
+
+func _on_figure_hover(at: Vector2) -> void:
+	var lid := _sleeper.pick(ContentDB.data, GameState.state, at)
+	_sleeper.drag_hover = lid if _sleeper.drag_targets.has(lid) or _sleeper.drag_blocked.has(lid) else ""
+
+
+func _on_figure_drop(at: Vector2) -> void:
+	var lid := _sleeper.pick(ContentDB.data, GameState.state, at)
+	var ok: bool = _sleeper.drag_targets.has(lid)
+	var why := str(_sleeper.drag_blocked.get(lid, ""))
+	_sleeper.drag_targets = []
+	_sleeper.drag_blocked = {}
+	_sleeper.drag_hover = ""
+	if ok:
+		_figure_move(lid)
+		return
+	_figure.return_home()
+	if why != "":
+		_show_toast(why)
+	elif lid != "" and lid != GameState.state.party_at:
+		_show_toast(FigureRules.why_not(ContentDB.data, GameState.state, lid))
+
+
+func _on_figure_click() -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	var cp := DayRules.camp(c, s)
+	_show_toast("Лагерь у фигуры: %s · ночью психика +%d · коек %d. Перенесите фигуру на соседний участок — 1 день" % [
+		str(c.locations.get(s.party_at, c.shops.get(s.party_at, {})).get("name", "")), int(cp.get("rest", 20)), int(cp.get("beds", 0))])
+
+
+## Щелчок по участку карты: соседний — окно «перенести фигуру»; дальний — почему нельзя.
+func _figure_click_place(lid: String) -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	if lid == "":
+		_close_travel()
+		return
+	if lid == s.party_at:
+		_on_figure_click()
+		return
+	var why := FigureRules.why_not(c, s, lid)
+	if why != "":
+		_show_toast(why)
+		return
+	_close_travel()
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.045, 0.06, 0.94), Palette.LINE, 1, 10, 16))
+	panel.custom_minimum_size = Vector2(380, 0)
+	add_child(panel)
+	_travel = panel
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	panel.add_child(v)
+	v.add_child(UITheme.label(str(c.locations.get(lid, c.shops.get(lid, {})).get("name", lid)), "title", 26, Palette.TEXT))
+	var cp := DayRules.camp_at(c, lid)
+	var line := CampWindow._camp_line(cp).strip_edges().trim_suffix(".")
+	var info := UITheme.label("Лагерь там: ночью психика +%d · коек %d%s" % [int(cp.get("rest", 20)), int(cp.get("beds", 0)),
+		(" · " + line.to_lower()) if line != "" else ""], "sans", 16, Palette.SILVER)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(info)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	var go := Button.new()
+	go.text = "ПЕРЕНЕСТИ ФИГУРУ — 1 ДЕНЬ ›"
+	go.add_theme_font_override("font", UITheme.font("caps"))
+	go.pressed.connect(func() -> void:
+		_close_travel()
+		_figure_move(lid))
+	row.add_child(go)
+	var no := Button.new()
+	no.text = "Отмена"
+	no.pressed.connect(_close_travel)
+	row.add_child(no)
+	panel.position = (_place_point(lid) + _pan_layer.position + Vector2(-190, 30)).clamp(Vector2(20, 100), _screen() - Vector2(420, 260))
+
+
+## Перенести фигуру на соседний участок: день прошёл — фигура прыгает, потом сцена лагеря.
+func _figure_move(lid: String) -> void:
+	var r := GameState.figure_move(lid)
+	if str(r["error"]) != "":
+		_figure.return_home()
+		_show_toast(str(r["error"]))
+		return
+	AudioManager.play("place", -4.0, 0.8)
+	_refresh()
+	await get_tree().create_timer(0.8 if not Vfx.reduced() else 0.0).timeout
+	_night_cinematic(r["events"])
+
+
+## Событие на соседнем участке: фигура сразу перескакивает (день), утром событие откроется само.
+func _figure_jump(mid: String) -> void:
+	var c := ContentDB.data
+	if FigureRules.gone_by_morning(c, GameState.state, mid):
+		_show_toast("Не успеть: «%s» уйдёт этой ночью" % c.missions[mid].get("title", mid))
+		return
+	var r := GameState.figure_jump(mid)
+	if str(r["error"]) != "":
+		_show_toast(str(r["error"]))
+		return
+	GameState.tutorial("figure_jump")
+	AudioManager.play("place", -4.0, 0.8)
+	_refresh()
+	await get_tree().create_timer(0.8 if not Vfx.reduced() else 0.0).timeout
+	_night_cinematic(r["events"])
+
+
+## Метка события в режиме фигуры: здесь — как обычно; рядом — «↷ 1 день»; дальше — «N дней пути», приглушена.
+func _figure_badge(mk: MissionMarker, mid: String, badge: String, under: bool) -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	var r := FigureRules.reach(c, s, mid)
+	var tint := Color(1, 1, 1, 1)
+	if under:
+		badge = "ПОД ВОДОЙ"
+		tint = Color(0.5, 0.64, 0.86, 0.8)
+	elif r == 1:
+		badge = "НЕ УСПЕТЬ" if FigureRules.gone_by_morning(c, s, mid) else "↷ 1 ДЕНЬ"
+	elif r >= 2:
+		badge = "%d %s ПУТИ" % [r, UITheme.plural(r, ["ДЕНЬ", "ДНЯ", "ДНЕЙ"])]
+		tint = Color(0.62, 0.62, 0.66, 0.85)
+	elif r < 0:
+		badge = "НЕТ ПРОХОДА"
+		tint = Color(0.62, 0.62, 0.66, 0.85)
+	if mk.modulate != tint:
+		mk.modulate = tint
+	if mk.card.badge != badge:
+		mk.card.badge = badge
+		mk.card.queue_redraw()
+
+
+## Окно события закрыто: удачное — карта на поле рвётся; событие проведено — после отчёта наступит ночь.
+func _after_event_window() -> void:
+	var outs := GameState.last_outcomes.duplicate()
+	GameState.last_outcomes.clear()
+	for mid: String in outs:
+		if str(outs[mid]) == "success" and _markers.has(mid) and is_instance_valid(_markers[mid]):
+			await _shatter(_markers[mid])
+	_refresh()
+	if FigureRules.on(ContentDB.data, GameState.state) and GameState.state.flags.has("event_done"):
+		_night_after_event = true
+
+
+## Карта события разрывается на части: снимок карты с экрана — на осколки, они разлетаются и гаснут.
+func _shatter(mk: Control) -> void:
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var vp := get_viewport()
+	var img := vp.get_texture().get_image()
+	var k := Vector2(img.get_size()) / vp.get_visible_rect().size
+	var gr := mk.get_global_rect()
+	var reg := Rect2i(Vector2i(gr.position * k), Vector2i(gr.size * k)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	if reg.size.x < 4 or reg.size.y < 4:
+		return
+	var piece := img.get_region(reg)
+	piece.resize(int(gr.size.x), int(gr.size.y))
+	mk.visible = false
+	Vfx.shatter(self, piece, gr)
+	AudioManager.play("break", -6.0, 1.1)
+	GameState.tutorial("shatter")
+	await get_tree().create_timer(0.5 if not Vfx.reduced() else 0.0).timeout
+
+
+## Ночь у фигуры: камера наезжает — фигура у костра на своём участке, поверх — итоги ночи.
+func _night_cinematic(ev: Array) -> void:
+	if _sleeper == null:
+		_show_night(ev)
+		return
+	_cinema = true
+	var c := ContentDB.data
+	var s := GameState.state
+	_close_travel()
+	if _figure != null:
+		_sleeper.camp_hero = _figure.hero
+		_figure.visible = false
+	create_tween().tween_property(_pan_layer, "modulate:a", 0.0, 0.3)
+	for n: CanvasItem in _bottom_ui:
+		create_tween().tween_property(n, "modulate:a", 0.0, 0.4)
+	var tw := _sleeper.camera_to(_sleeper.world_point(c, s, s.party_at) + Vector2(0, 40), 2.4, 1.2)
+	await tw.finished
+	GameState.tutorial("figure_camp")
+	_show_night(ev)
+
+
+## Утро: камера отъезжает, метки и фигура возвращаются; после прыжка — открыть событие.
+func _end_cinema() -> void:
+	var tw := _sleeper.camera_back(0.8)
+	create_tween().tween_property(_pan_layer, "modulate:a", 1.0, 0.5)
+	for n: CanvasItem in _bottom_ui:
+		create_tween().tween_property(n, "modulate:a", 1.0, 0.5)
+	await tw.finished
+	_cinema = false
+	_refresh()
+	var pm := FigureRules.pending(ContentDB.data, GameState.state)
+	GameState.state.flags.erase("figure_event")
+	if pm != "":
+		_open_mission(pm)

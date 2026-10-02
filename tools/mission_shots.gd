@@ -5,6 +5,7 @@ extends Node
 
 var out_dir := ""
 var from_ch4 := false   # --mshots-from=ch4: снять только Главу 4
+var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
 
@@ -16,6 +17,8 @@ func _ready() -> void:
 			from_ch4 = true
 		if a == "--mshots-from=timeline":
 			timeline = true
+		if a == "--mshots-from=figure":
+			figure_shots = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -73,6 +76,10 @@ func _run() -> void:
 		return
 	if timeline:
 		await _timeline()
+		get_tree().quit()
+		return
+	if figure_shots:
+		await _figure()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -688,3 +695,51 @@ func _map_only() -> void:
 		if ch is CanvasItem and ch != sl:
 			(ch as CanvasItem).visible = false
 	sl.set_pan(Vector2((sl.view.size.x - sl.rect.size.x) / 2.0, -float(sl.cfg.get("view_top", 0.08)) * sl.rect.size.y))
+
+
+# --- фигура (docs/18) ----------------------------------------------------------------------------------------
+
+func _figure() -> void:
+	var c := ContentDB.data
+	var s := MissionFlow.new_run(c, 77, "shore")
+	EffectApplier.add_card(c, s, "P02")
+	EffectApplier.add_card(c, s, "P03")
+	StoryRules.mark_seen(s, "shore")
+	GameState.state = s
+	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	await _wait(3.0)
+	await _shot("f01_field")
+	var game := get_tree().current_scene
+	var sl: SleeperMap = game.get("_sleeper")
+	# перетаскивание: соседние участки подсвечены, над одним — фигура
+	game.call("_on_figure_drag")
+	var targets: Array = sl.drag_targets
+	if not targets.is_empty():
+		sl.drag_hover = str(targets[0])
+		var fig: FigurePiece = game.get("_figure")
+		var p: Vector2 = sl.center(c, GameState.state, str(targets[0])) + sl.pan
+		fig.position = p - fig.get_parent().global_position - Vector2(FigurePiece.W / 2.0, FigurePiece.H * 0.85)
+	await _wait(0.6)
+	await _shot("f02_drag")
+	if not targets.is_empty():
+		game.call("_on_figure_drop", sl.center(c, GameState.state, str(targets[0])) + sl.pan)
+	await _wait(2.6)
+	await _shot("f03_camp_scene")
+	# утро: камера отъехала
+	for ch in game.get_children():
+		if ch is Control and ch == game.get("_night"):
+			pass
+	var nb: Control = game.get("_night")
+	if nb != null:
+		for b in nb.find_children("*", "Button", true, false):
+			(b as Button).pressed.emit()
+	await _wait(1.6)
+	await _shot("f04_morning")
+	# разрыв карты события
+	var markers: Dictionary = game.get("_markers")
+	for mid: String in markers:
+		game.call("_shatter", markers[mid])
+		break
+	await _wait(0.35)
+	await _shot("f05_shatter")
+	await _wait(1.2)

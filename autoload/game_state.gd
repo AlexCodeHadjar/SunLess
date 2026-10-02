@@ -6,6 +6,7 @@ signal mission_events(events: Array)
 
 var state: RunState
 var combat: CombatSession   # бой, который сейчас показывает экран «Столкновение» (просмотр автобоя)
+var last_outcomes: Dictionary = {}   # миссия -> исход последнего решённого события (окно карты рвёт карту удачного)
 var last_launch: Dictionary = {}   # последний выход: {squad, entries} — окно миссии сразу показывает прибытие
 var story_open := false     # идёт сюжетное окно: часы стоят, подсказки ждут
 
@@ -123,6 +124,38 @@ func move_party(lid: String) -> String:
 	return ""
 
 
+## Фигура (docs/18): переставить на соседний участок — день прошёл. {error, events} — события перехода и ночи.
+func figure_move(lid: String) -> Dictionary:
+	var r := FigureRules.move(content(), state, lid)
+	if not r["ok"]:
+		return {"error": r["error"], "events": []}
+	_after_day()
+	return {"error": "", "events": r["entries"]}
+
+
+## Фигура: щелчок по событию на соседнем участке — сразу прыжок (день), утром событие откроется само.
+func figure_jump(mission_id: String) -> Dictionary:
+	var r := FigureRules.jump(content(), state, mission_id)
+	if not r["ok"]:
+		return {"error": r["error"], "events": []}
+	_after_day()
+	return {"error": "", "events": r["entries"]}
+
+
+## Фигура: событие закончено — день тоже. Записи ночи ([] — день не кончился).
+func figure_event_done() -> Array:
+	var ev := FigureRules.end_after_event(content(), state)
+	if not ev.is_empty():
+		_after_day()
+	return ev
+
+
+func _after_day() -> void:
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+
+
 ## Дело лагеря (DayPlanner, docs/17 §6): "" — сделано; иначе причина.
 func do_task(task: String, cid: String) -> String:
 	var r := DayPlanner.do_task(content(), state, task, cid)
@@ -149,10 +182,13 @@ func launch_squad(mission_id: String, heroes: Array) -> String:
 
 ## Выбор на развилке (docs/16 §2): продолжить, сменить путь или отступить. Отчёт — как у resolve_squad.
 func resolve_fork(squad_id: int, option_id: String) -> Dictionary:
+	var mid := str(MissionFlow.squad(state, squad_id).get("mission", ""))
 	var r: Dictionary = MissionResolver.resume(content(), state, squad_id, option_id)
 	if not r["ok"]:
 		return {"error": r["error"]}
 	state = r["state"]
+	if not r.has("fork"):
+		last_outcomes[mid] = str(r["report"].get("outcome", ""))
 	SaveService.save_state(state)
 	missions_changed.emit()
 	EventBus.state_changed.emit()
@@ -161,10 +197,13 @@ func resolve_fork(squad_id: int, option_id: String) -> Dictionary:
 
 ## Выбор действия прибывшего отряда. Возвращает отчёт (или {"error": ...}).
 func resolve_squad(squad_id: int, action_id: String) -> Dictionary:
+	var mid := str(MissionFlow.squad(state, squad_id).get("mission", ""))
 	var r: Dictionary = MissionResolver.resolve(content(), state, squad_id, action_id)
 	if not r["ok"]:
 		return {"error": r["error"]}
 	state = r["state"]
+	if not r.has("fork"):
+		last_outcomes[mid] = str(r["report"].get("outcome", ""))
 	# связи тегов открываются при просмотре боя или при закрытии отчёта (MissionWindow)
 	SaveService.save_state(state)
 	missions_changed.emit()

@@ -263,3 +263,61 @@ static func blood_splash(parent: Node, at: Vector2, size_px: float, acid: bool =
 static func autofree(p: CPUParticles2D) -> void:
 	p.emitting = true
 	p.finished.connect(p.queue_free)
+
+
+## Карта рвётся на части (docs/18: удачное событие): изображение карты — на треугольные осколки, они разлетаются
+## от середины с вращением и гаснут; вспышка по краю разрыва.
+static func shatter(parent: Node, img: Image, rect: Rect2) -> void:
+	var tex := ImageTexture.create_from_image(img)
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var w := rect.size.x
+	var h := rect.size.y
+	var pts := PackedVector2Array([Vector2.ZERO, Vector2(w, 0), Vector2(w, h), Vector2(0, h)])
+	for i in 4:
+		pts.append(Vector2(rng.randf_range(0.15, 0.85) * w, 0.0))
+		pts.append(Vector2(rng.randf_range(0.15, 0.85) * w, h))
+	for i in 3:
+		pts.append(Vector2(0.0, rng.randf_range(0.15, 0.85) * h))
+		pts.append(Vector2(w, rng.randf_range(0.15, 0.85) * h))
+	for i in 9:
+		pts.append(Vector2(rng.randf_range(0.1, 0.9) * w, rng.randf_range(0.1, 0.9) * h))
+	var tris := Geometry2D.triangulate_delaunay(pts)
+	var center := Vector2(w, h) / 2.0
+	var k := Vector2(img.get_size()) / rect.size
+	for i in range(0, tris.size(), 3):
+		var a := pts[tris[i]]
+		var b := pts[tris[i + 1]]
+		var c := pts[tris[i + 2]]
+		var mid := (a + b + c) / 3.0
+		var shard := Polygon2D.new()
+		shard.texture = tex
+		shard.polygon = PackedVector2Array([a - mid, b - mid, c - mid])
+		shard.uv = PackedVector2Array([a * k, b * k, c * k])
+		shard.position = rect.position + mid
+		parent.add_child(shard)
+		var edge := Line2D.new()
+		edge.points = PackedVector2Array([a - mid, b - mid, c - mid, a - mid])
+		edge.width = 1.2
+		edge.default_color = Color(1.0, 0.85, 0.55, 0.8)
+		shard.add_child(edge)
+		var dir := (mid - center).normalized() if mid.distance_to(center) > 1.0 else Vector2.UP
+		var dist := rng.randf_range(70.0, 190.0)
+		var dur := 0.0 if reduced() else rng.randf_range(0.75, 1.05)
+		var tw := shard.create_tween().set_parallel(true)
+		tw.tween_property(shard, "position", shard.position + dir * dist + Vector2(0, rng.randf_range(30.0, 90.0)), dur) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(shard, "rotation", rng.randf_range(-2.2, 2.2), dur)
+		tw.tween_property(shard, "scale", Vector2(0.7, 0.7), dur)
+		tw.tween_property(shard, "modulate:a", 0.0, dur).set_delay(dur * 0.35)
+		tw.chain().tween_callback(shard.queue_free)
+	if not reduced():
+		var flash := ColorRect.new()
+		flash.color = Color(1.0, 0.9, 0.7, 0.55)
+		flash.position = rect.position
+		flash.size = rect.size
+		flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(flash)
+		var tf := flash.create_tween()
+		tf.tween_property(flash, "modulate:a", 0.0, 0.25)
+		tf.tween_callback(flash.queue_free)

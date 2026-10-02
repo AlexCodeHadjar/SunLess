@@ -4,8 +4,11 @@ extends TestCase
 ## и прогоны бота по Берегу: ни одного пустого утра, сюжет не стоит под водой дольше дня.
 
 
-func _shore(seed_value: int = 5) -> RunState:
-	return MissionFlow.new_run(content(), seed_value, "shore")
+func _shore(seed_value: int = 5, steps: bool = false) -> RunState:
+	var s := MissionFlow.new_run(content(), seed_value, "shore")
+	if steps:
+		s.flags["movement"] = "steps"   # старые шаги дня (docs/17) — в ветке фигуры (docs/18) их включают явно
+	return s
 
 
 func _shore_places(c: Content) -> Array:
@@ -45,7 +48,7 @@ func test_dry_spine() -> void:
 
 func test_route_and_steps() -> void:
 	var c := content()
-	var s := _shore()
+	var s := _shore(5, true)
 	s.party_at = "stone_isle"
 	var r := TravelRules.route(c, s, "stone_isle", "statue_hill")
 	check(r.size() >= 2 and r[r.size() - 1] == "statue_hill", "маршрут до Холма: %s" % str(r))
@@ -87,7 +90,7 @@ func test_route_to_open_missions_revealed() -> void:
 
 func test_launch_far_walks_route() -> void:
 	var c := content()
-	var s := _shore()
+	var s := _shore(5, true)
 	s.party_at = "stone_isle"
 	for mid: String in MissionFlow.open_missions(s):
 		s.missions[mid]["status"] = "done"
