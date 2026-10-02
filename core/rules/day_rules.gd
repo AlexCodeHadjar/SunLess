@@ -74,7 +74,8 @@ static func camp_at(content: Content, lid: String) -> Dictionary:
 
 
 static func camp(content: Content, state: RunState) -> Dictionary:
-	return GateRules.camp_mod(content, state, state.party_at, camp_at(content, state.party_at))
+	var c := GateRules.camp_mod(content, state, state.party_at, camp_at(content, state.party_at))
+	return ZoneRules.camp_mod(content, state, state.party_at, c)
 
 
 static func has_service(content: Content, state: RunState, service: String) -> bool:
@@ -185,6 +186,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 		return out
 	var rng := RandomNumberGenerator.new()
 	rng.seed = state.rng_seed + 104729 * state.day + 17
+	TerrainRules.tribute(content, state, out)   # дань за ночь в замке (Мрачный город); не заплатили — ночь у ворот
 	var ph := phase(content, state)
 	var c := camp(content, state)
 	var place := str(content.locations.get(state.party_at, {}).get("name", "лагерь"))
@@ -215,6 +217,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 				fixed += 1
 		if fixed > 0:
 			out.append({"kind": "repair", "text": "Починили вещи: %d" % fixed})
+	TerrainRules.exposed_night(content, state, out)   # ночь в открытом пепле в бурю
 	state.camp["beds"] = []
 	# 3. новый день: шаги и дела лагеря снова свободны
 	TravelRules.new_day(state)
@@ -231,6 +234,9 @@ static func end_day(content: Content, state: RunState) -> Array:
 		out.append_array(_flee(content, state, rng))
 	out.append_array(MissionFlow.expire_day(content, state))
 	out.append_array(GateRules.night(content, state, rng))   # прорывы и рой (Академия), Врата (Город)
+	out.append_array(TerrainRules.morning(content, state, rng, ph))   # буря, котловины и островки, обвалы
+	out.append_array(ZoneRules.night(content, state))   # территории растут, Очарование
+	out.append_array(MoverRules.night(content, state, rng))   # Демон, тень под водой, охотники, статуи
 	out.append_array(MissionFlow.spawn_day(content, state))
 	out.append_array(OnslaughtRules.tick(content, state))
 	# 4. утро: планировщик проверяет, что сегодня есть чем заняться (docs/17 §4)

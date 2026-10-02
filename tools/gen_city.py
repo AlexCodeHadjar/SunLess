@@ -400,9 +400,9 @@ if __name__ == "__main__":
 		{"id": "gate_rank3", "name": "Врата 3-го ранга", "tone": "bad", "roll": False, "text": "Восхождённые Врата: подкрепление у хранителя, сила как у босса.",
 			"enemy_power": 1.5, "extra_enemy": True, "threat": 2, "loot_mult": 2.0, "bonus_shards": 5},
 	])
-	for m in mods["list"]:   # море и лабиринт — не про город
+	for m in mods["list"]:   # море и лабиринт — не про город (вода у ног — только Берег)
 		if m["id"] in ("fog", "tidepools", "thunder", "armored"):
-			m["chapters"] = ["shore", "tree"]
+			m["chapters"] = ["shore"] if m["id"] == "tidepools" else ["shore", "tree"]
 	mods["list"] = upsert(mods["list"], [
 		{"id": "blackout", "name": "Темнота", "tone": "mixed", "chapters": [CH], "text": "Фонари погасли на весь квартал: в бою темно, зато в скрытности +1 Хитрость.",
 			"field_tags": ["Тьма"], "check": [{"tags": ["stealth"], "stat": "cunning", "value": 1}]},

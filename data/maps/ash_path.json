@@ -1,0 +1,615 @@
+{
+ "_doc": "Путь к Мрачному городу — глава «Древо Души» (tools/gen_chapter4.py, не править руками). places/paths как у Берега; path_sets — сети троп Пепельного моря (меняет буря storm_phase), emerge_groups — котловины после бури и островки на Рассвете, fragile — Мост над Бездной, risky — спуск у Края, water_paths — Чёрная вода (лодка, ночью), zones — гнев Владыки и Очарование, movers — Демон и тень гиганта (core/rules/terrain_rules.gd, zone_rules.gd, mover_rules.gd). Воды-шейдера нет (облики мест).",
+ "region": "ash_path",
+ "art": "res://art/map/ash_path/",
+ "base": "base.webp",
+ "fog": "fog_tile.webp",
+ "view_top": 0.06,
+ "foot": 0.28,
+ "zoom": 1.15,
+ "places": {
+  "shore_exit": {
+   "at": [
+    0.93,
+    0.55
+   ],
+   "size": 0.11,
+   "states": [
+    "dry"
+   ]
+  },
+  "ash_dunes": {
+   "at": [
+    0.8,
+    0.36
+   ],
+   "size": 0.16,
+   "states": [
+    "dry",
+    "dry_b",
+    "dry_c",
+    "storm"
+   ]
+  },
+  "ash_bones": {
+   "at": [
+    0.74,
+    0.66
+   ],
+   "size": 0.18,
+   "states": [
+    "dry",
+    "storm"
+   ]
+  },
+  "ash_lord": {
+   "at": [
+    0.63,
+    0.24
+   ],
+   "size": 0.2,
+   "states": [
+    "dry",
+    "wrath"
+   ]
+  },
+  "stone_hulk": {
+   "at": [
+    0.67,
+    0.5
+   ],
+   "size": 0.14,
+   "states": [
+    "dry",
+    "buried"
+   ]
+  },
+  "demon_trail": {
+   "at": [
+    0.56,
+    0.68
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "hunted"
+   ]
+  },
+  "death_beacon": {
+   "at": [
+    0.53,
+    0.4
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "lit"
+   ]
+  },
+  "abyss_bridge": {
+   "at": [
+    0.44,
+    0.3
+   ],
+   "size": 0.14,
+   "states": [
+    "dry",
+    "cracked",
+    "collapsed"
+   ]
+  },
+  "abyss_edge": {
+   "at": [
+    0.45,
+    0.66
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "storm"
+   ]
+  },
+  "lake_shore": {
+   "at": [
+    0.35,
+    0.52
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "charmed"
+   ]
+  },
+  "soul_tree": {
+   "at": [
+    0.24,
+    0.46
+   ],
+   "size": 0.2,
+   "states": [
+    "dry",
+    "night_glow",
+    "charmed"
+   ]
+  },
+  "tree_nest": {
+   "at": [
+    0.21,
+    0.26
+   ],
+   "size": 0.1,
+   "states": [
+    "dry",
+    "empty"
+   ]
+  },
+  "boat_cove": {
+   "at": [
+    0.33,
+    0.78
+   ],
+   "size": 0.13,
+   "states": [
+    "dry",
+    "boat_ready"
+   ]
+  },
+  "black_rocks": {
+   "at": [
+    0.17,
+    0.7
+   ],
+   "size": 0.12,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "deep_maw": {
+   "at": [
+    0.13,
+    0.36
+   ],
+   "size": 0.14,
+   "states": [
+    "dry",
+    "awake"
+   ]
+  },
+  "star_landing": {
+   "at": [
+    0.06,
+    0.56
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "caravan_wreck": {
+   "at": [
+    0.86,
+    0.5
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "giant_graveyard": {
+   "at": [
+    0.7,
+    0.36
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "glass_crater": {
+   "at": [
+    0.86,
+    0.76
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "ash_well": {
+   "at": [
+    0.76,
+    0.8
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "driftwood_isle": {
+   "at": [
+    0.28,
+    0.66
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "turtle_shell": {
+   "at": [
+    0.2,
+    0.57
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "sunken_idol": {
+   "at": [
+    0.3,
+    0.34
+   ],
+   "size": 0.12,
+   "states": [
+    "dry"
+   ]
+  },
+  "glowing_moss": {
+   "at": [
+    0.12,
+    0.82
+   ],
+   "size": 0.12,
+   "states": []
+  }
+ },
+ "paths": [
+  [
+   "stone_hulk",
+   "death_beacon"
+  ],
+  [
+   "stone_hulk",
+   "demon_trail"
+  ],
+  [
+   "death_beacon",
+   "ash_lord"
+  ],
+  [
+   "death_beacon",
+   "abyss_bridge"
+  ],
+  [
+   "abyss_bridge",
+   "lake_shore"
+  ],
+  [
+   "abyss_edge",
+   "lake_shore"
+  ],
+  [
+   "abyss_edge",
+   "boat_cove"
+  ],
+  [
+   "lake_shore",
+   "boat_cove"
+  ],
+  [
+   "lake_shore",
+   "soul_tree"
+  ],
+  [
+   "soul_tree",
+   "tree_nest"
+  ],
+  [
+   "demon_trail",
+   "abyss_edge"
+  ],
+  [
+   "ash_bones",
+   "demon_trail"
+  ]
+ ],
+ "sockets": [
+  [
+   0.86,
+   0.5
+  ],
+  [
+   0.7,
+   0.36
+  ],
+  [
+   0.86,
+   0.76
+  ],
+  [
+   0.76,
+   0.8
+  ],
+  [
+   0.28,
+   0.66
+  ],
+  [
+   0.2,
+   0.57
+  ],
+  [
+   0.3,
+   0.34
+  ],
+  [
+   0.12,
+   0.82
+  ]
+ ],
+ "variants": {
+  "ash_dunes": [
+   "dry",
+   "dry_b",
+   "dry_c"
+  ]
+ },
+ "path_sets": {
+  "storm_phase": "ash_storm",
+  "sets": [
+   [
+    [
+     "shore_exit",
+     "ash_dunes"
+    ],
+    [
+     "ash_dunes",
+     "stone_hulk"
+    ],
+    [
+     "shore_exit",
+     "ash_bones"
+    ],
+    [
+     "ash_dunes",
+     "ash_lord"
+    ]
+   ],
+   [
+    [
+     "shore_exit",
+     "ash_bones"
+    ],
+    [
+     "ash_bones",
+     "stone_hulk"
+    ],
+    [
+     "ash_dunes",
+     "ash_lord"
+    ],
+    [
+     "shore_exit",
+     "ash_dunes"
+    ]
+   ],
+   [
+    [
+     "shore_exit",
+     "ash_dunes"
+    ],
+    [
+     "ash_dunes",
+     "stone_hulk"
+    ],
+    [
+     "ash_bones",
+     "stone_hulk"
+    ],
+    [
+     "ash_bones",
+     "shore_exit"
+    ]
+   ]
+  ]
+ },
+ "exposed": [
+  "ash_dunes",
+  "ash_bones",
+  "demon_trail",
+  "shore_exit",
+  "caravan_wreck",
+  "giant_graveyard",
+  "glass_crater",
+  "ash_well"
+ ],
+ "emerge_groups": {
+  "ash": {
+   "sockets": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "phase": "dawn",
+   "day_in": 1,
+   "count": [
+    1,
+    2
+   ],
+   "sink_after": "ash_storm"
+  },
+  "lake": {
+   "sockets": [
+    4,
+    5,
+    6,
+    7
+   ],
+   "phase": "dawn",
+   "day_in": 1,
+   "count": [
+    1,
+    2
+   ],
+   "sink_after": "dawn"
+  }
+ },
+ "fragile": {
+  "abyss_bridge": {
+   "crossings": 4,
+   "storm": false,
+   "warn": "cracked"
+  }
+ },
+ "risky": [
+  {
+   "pair": [
+    "demon_trail",
+    "abyss_edge"
+   ],
+   "name": "Спуск у Края Бездны",
+   "req": {
+    "power": 7
+   },
+   "tags": [
+    "climb"
+   ]
+  }
+ ],
+ "water_paths": [
+  [
+   "boat_cove",
+   "black_rocks"
+  ],
+  [
+   "black_rocks",
+   "star_landing"
+  ],
+  [
+   "soul_tree",
+   "deep_maw"
+  ],
+  [
+   "deep_maw",
+   "star_landing"
+  ]
+ ],
+ "water_phases": [
+  "night",
+  "blood_moon"
+ ],
+ "phase_states": {
+  "soul_tree": {
+   "night": "night_glow",
+   "blood_moon": "night_glow"
+  },
+  "ash_lord": {
+   "night": "wrath",
+   "blood_moon": "wrath"
+  },
+  "ash_dunes": {
+   "ash_storm": "storm"
+  },
+  "ash_bones": {
+   "ash_storm": "storm"
+  },
+  "abyss_edge": {
+   "ash_storm": "storm"
+  },
+  "lake_shore": {
+   "night": "charmed"
+  }
+ },
+ "zones": {
+  "wrath": {
+   "name": "Гнев Владыки Пепла",
+   "center": "ash_lord",
+   "radius": {
+    "default": 0,
+    "night": 1,
+    "blood_moon": 1
+   },
+   "camp": {
+    "danger": 0.8
+   },
+   "pass_psyche": -4,
+   "color": [
+    1.0,
+    0.3,
+    0.2
+   ]
+  },
+  "charm": {
+   "name": "Очарование Древа",
+   "center": "soul_tree",
+   "radius": {
+    "default": 1,
+    "night": 2,
+    "blood_moon": 2
+   },
+   "camp": {
+    "rest": 50
+   },
+   "charm": true,
+   "color": [
+    1.0,
+    0.85,
+    0.4
+   ]
+  }
+ },
+ "movers": {
+  "demon": {
+   "name": "Демон Карапакса",
+   "start": "ash_bones",
+   "target": "camp",
+   "step": 1,
+   "enemy": "M05",
+   "hunt": {
+    "req": {
+     "power": 9
+    },
+    "tags": [
+     "combat"
+    ],
+    "psyche": -12,
+    "ok_psyche": -4,
+    "edge": true
+   },
+   "clash": {
+    "zone": "wrath",
+    "text": "Демон Карапакса сцепился с Владыкой Пепла — ранен и отступил"
+   }
+  },
+  "deep_shadow": {
+   "name": "Тень гиганта",
+   "start": "deep_maw",
+   "target": "patrol",
+   "patrol": [
+    "deep_maw",
+    "black_rocks",
+    "star_landing"
+   ],
+   "phases": [
+    "night",
+    "blood_moon"
+   ],
+   "active": true,
+   "enemy": "M12",
+   "hunt": {
+    "req": {
+     "cunning": 8
+    },
+    "tags": [
+     "stealth"
+    ],
+    "psyche": -8,
+    "ok_psyche": -2,
+    "edge": true
+   }
+  }
+ }
+}

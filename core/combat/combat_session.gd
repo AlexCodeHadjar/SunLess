@@ -84,6 +84,10 @@ static func create_for_mission(p_content: Content, state_in: RunState, key: Stri
 	for eid: String in spec.get("enemies", []):
 		if p_content.enemies.has(eid):
 			s.enemies.append(p_content.enemies[eid].duplicate(true))
+	# сила врагов этапа — ручка баланса миссии (боссы глав-черновиков): множитель к power врага
+	if spec.has("power"):
+		for e: Dictionary in s.enemies:
+			e["power"] = float(e.get("power", 1.0)) * float(spec["power"])
 	var fid := str(spec.get("field", ""))
 	s.field = p_content.fields.get(fid, {"id": "", "name": "Без особенностей", "tags": ["суша"], "effects": []})
 	s.kind = str(spec.get("kind", "normal"))

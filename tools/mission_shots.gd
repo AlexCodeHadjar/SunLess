@@ -4,12 +4,15 @@ extends Node
 ## прибытие → отчёт → вторая миссия с боем → просмотр боя → середина главы → конец главы → Академия.
 
 var out_dir := ""
+var from_ch4 := false   # --mshots-from=ch4: снять только Главу 4
 
 
 func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--mshots="):
 			out_dir = a.substr(9)
+		if a == "--mshots-from=ch4":
+			from_ch4 = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -61,6 +64,10 @@ func _dismiss_story() -> void:
 
 func _run() -> void:
 	SettingsService.values["roll_speed"] = 0.0
+	if from_ch4:
+		await _ch4(true)
+		get_tree().quit()
+		return
 	await _wait(0.6)
 	await _shot("m01_menu")
 	GameState.new_mission_run(4242)
@@ -474,4 +481,67 @@ func _run() -> void:
 	get_tree().current_scene.call("_open_mission", "CG3")
 	await _wait(0.8)
 	await _shot("m42_city_gate_brief")
+	await _ch4(false)
 	get_tree().quit()
+
+
+## Глава 4: Древо Души (буря, мост, Демон, гнев Владыки, Очарование, Чёрная вода) и Мрачный город (территории,
+## охотники, завалы, дань, сюжет по зачищенным районам).
+func _ch4(fresh: bool) -> void:
+	var c := ContentDB.data
+	var ts := AutoPlay.draft_start(c, "tree", 91)
+	StoryRules.mark_seen(ts, "tree")
+	GameState.state = ts
+	if fresh:
+		get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	else:
+		get_tree().reload_current_scene()
+	await _wait(2.5)
+	await _shot("m50_tree_map")
+	ts = GameState.state
+	for lid: String in MapRules.config(c, "tree").get("places", {}):
+		TravelRules.visit(ts, lid)
+	ts.day = 1
+	ts.party_at = "lake_shore"
+	MoverRules.command(c, ts, {"do": "spawn", "mover": "demon", "place": "demon_trail"})
+	ts.flags["movers"]["demon"]["from"] = "ash_bones"
+	ts.flags["boat"] = true
+	TerrainRules.command(c, ts, {"do": "set", "place": "abyss_bridge", "state": "cracked"})
+	GameState.missions_changed.emit()
+	await _wait(2.0)
+	await _shot("m51_tree_night")
+	ts.day = 5
+	ts.flags["path_set"] = 1
+	ts.party_at = "stone_hulk"
+	GameState.missions_changed.emit()
+	await _wait(4.5)
+	await _shot("m52_tree_storm")
+	var ds := AutoPlay.draft_start(c, "dark_city", 93)
+	StoryRules.mark_seen(ds, "dark_city")
+	GameState.state = ds
+	get_tree().reload_current_scene()
+	await _wait(2.5)
+	await _shot("m53_dark_map")
+	ds = GameState.state
+	for lid: String in MapRules.config(c, "dark_city").get("places", {}):
+		TravelRules.visit(ds, lid)
+	for mid: String in ["DS01", "DS02", "DS03", "DS04", "DS05", "DS06", "DS07"]:
+		ds.missions[mid] = {"status": "done"}
+	ZoneRules.command(c, ds, {"do": "clear", "zone": "statues", "days": 30})
+	for mid: String in ["DK01", "DK02", "DK03"]:
+		MissionFlow.open(c, ds, mid, true)
+	ds.day = 1
+	ZoneRules.night(c, ds)
+	ZoneRules.night(c, ds)
+	TerrainRules.command(c, ds, {"do": "collapse", "rubble": "R2"})
+	MoverRules.noise(ds, "hunters_guild")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	MoverRules.night(c, ds, rng)
+	ds.party_at = "sunny_lair"
+	GameState.missions_changed.emit()
+	await _wait(2.0)
+	await _shot("m54_dark_night")
+	get_tree().current_scene.call("_open_mission", "DK01")
+	await _wait(0.8)
+	await _shot("m55_dark_contract")

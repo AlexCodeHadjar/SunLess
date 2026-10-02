@@ -14,13 +14,6 @@
   "combat_field": "F_02"
  },
  {
-  "id": "forgotten_shore",
-  "name": "Забытый Берег",
-  "arc": "shore",
-  "arc_name": "Забытый Берег",
-  "combat_field": "F_08"
- },
- {
   "id": "real_city",
   "name": "Город людей",
   "arc": "city",
@@ -41,6 +34,56 @@
    "U14",
    "U01",
    "K07"
+  ]
+ },
+ {
+  "id": "forgotten_shore",
+  "name": "Забытый Берег",
+  "arc": "shore",
+  "arc_name": "Забытый Берег",
+  "combat_field": "F_08"
+ },
+ {
+  "id": "ash_path",
+  "name": "Путь к Мрачному городу",
+  "arc": "tree",
+  "arc_name": "Древо Души",
+  "combat_field": "F_18",
+  "start_heroes": [
+   "P01",
+   "P02",
+   "P03"
+  ],
+  "start_shards": 25,
+  "start_cards": [
+   "K04",
+   "K05",
+   "K06",
+   "U15",
+   "U14",
+   "U01"
+  ]
+ },
+ {
+  "id": "dark_city",
+  "name": "Мрачный город",
+  "arc": "dark_city",
+  "arc_name": "Мрачный город",
+  "combat_field": "F_06",
+  "start_heroes": [
+   "P01",
+   "P02",
+   "P03"
+  ],
+  "start_shards": 30,
+  "start_cards": [
+   "K04",
+   "K05",
+   "K06",
+   "K07",
+   "U15",
+   "U14",
+   "U01"
   ]
  }
 ]

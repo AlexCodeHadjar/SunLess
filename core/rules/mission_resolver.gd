@@ -254,6 +254,8 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 	var boss: Array = m.get("boss", {}).get("phases", [])
 	var phase := int(status.get("phase", 0))
 	var won_combat := Array(report["combats"]).any(func(c: Dictionary) -> bool: return c["outcome"] == "win")
+	if not Array(report["combats"]).is_empty():
+		MoverRules.noise(state, str(m.get("location", "")))   # бой слышно: ночные охотники придут на шум
 	var executor := _executor(state, heroes)
 	if report["outcome"] in ["success", "partial"] and not boss.is_empty() and won_combat and phase < boss.size() - 1:
 		# босс в несколько заходов: победа снимает фазу, миссия остаётся

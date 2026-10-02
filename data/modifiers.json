@@ -3,7 +3,8 @@
  "chapters": [
   "shore",
   "tree",
-  "city"
+  "city",
+  "dark_city"
  ],
  "types": [
   "side",
@@ -112,8 +113,7 @@
     }
    ],
    "chapters": [
-    "shore",
-    "tree"
+    "shore"
    ]
   },
   {

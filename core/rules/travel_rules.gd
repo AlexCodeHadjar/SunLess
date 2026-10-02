@@ -26,7 +26,7 @@ static func passable(content: Content, state: RunState, lid: String) -> bool:
 		return false
 	if not content.locations.has(lid) and not content.shops.has(lid):
 		return false
-	if GateRules.blocked(state, lid):
+	if GateRules.blocked(state, lid) or TerrainRules.blocked(content, state, lid):
 		return false
 	return not TideRules.flooded(state, lid)
 
@@ -69,7 +69,8 @@ static func route(content: Content, state: RunState, from: String, to: String, d
 				continue
 			if not content.locations.has(n) and not content.shops.has(n):
 				continue
-			if dry_only and (TideRules.flooded(state, n) or GateRules.blocked(state, n)):
+			if dry_only and (TideRules.flooded(state, n) or GateRules.blocked(state, n) or TerrainRules.blocked(content, state, n) \
+					or not TerrainRules.edge_ok(content, state, cur, n)):
 				continue
 			prev[n] = cur
 			queue.append(n)
@@ -115,10 +116,22 @@ static func why_not(content: Content, state: RunState, lid: String) -> String:
 		return "Место под водой — отлив через %s" % TideRules.left_text(state)
 	if GateRules.blocked(state, lid):
 		return "Забаррикадировано до конца тревоги"
+	if TerrainRules.blocked(content, state, lid):
+		return "Проход обрушен"
+	var zw := ZoneRules.why_not(content, state, lid)
+	if zw != "":
+		return zw
 	if route(content, state, state.party_at, lid).is_empty():
-		if not route(content, state, state.party_at, lid, false).is_empty():
+		var wet := route(content, state, state.party_at, lid, false)
+		if not wet.is_empty():
+			var prev := state.party_at
+			for p: String in wet:
+				var ew := TerrainRules.edge_why(content, state, prev, p)
+				if ew != "":
+					return ew
+				prev = p
 			if TideRules.phase(state) != "flood":
-				return "Проход перекрыт баррикадами — до конца тревоги"
+				return "Проход перекрыт — до конца тревоги"
 			return "Путь отрезан водой — отлив через %s" % TideRules.left_text(state)
 		return "Туда нет тропы"
 	return ""
@@ -136,6 +149,7 @@ static func travel(content: Content, state: RunState, lid: String, out: Array) -
 		for cid: String in MissionFlow.heroes(content, state):
 			out.append_array(PsycheRules.change(content, state, cid, cost, "марш-бросок", [], null, "mission", false))
 	state.flags["steps"] = steps_used(state) + path.size()
+	TerrainRules.on_travel(content, state, path, state.party_at, out)   # хрупкий мост, опасный спуск, зона гнева
 	for p: String in path:
 		visit(state, p)
 	var names: Array = path.map(func(p: String) -> String: return str(content.locations.get(p, content.shops.get(p, {})).get("name", p)))

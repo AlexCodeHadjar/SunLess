@@ -246,6 +246,356 @@
   }
  },
  {
+  "id": "admin",
+  "name": "Административный корпус",
+  "chapter": "academy",
+  "region": "academy",
+  "pos": [
+   0.35,
+   0.19
+  ],
+  "text": "Строгое здание с флагштоками. Отсюда управляют кампусом — и тревогой.",
+  "camp": {
+   "rest": 15,
+   "beds": 0,
+   "danger": 0.05,
+   "services": [
+    "equip"
+   ]
+  }
+ },
+ {
+  "id": "range",
+  "name": "Полигон",
+  "chapter": "academy",
+  "region": "academy",
+  "pos": [
+   0.2,
+   0.2
+  ],
+  "text": "Мишени, воронки, бетонные укрытия. Здесь учат стрелять — и здесь стена тоньше всего.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.15,
+   "services": [
+    "repair"
+   ]
+  }
+ },
+ {
+  "id": "lab",
+  "name": "Лаборатория Кошмаров",
+  "chapter": "academy",
+  "region": "academy",
+  "pos": [
+   0.83,
+   0.18
+  ],
+  "text": "Низкий бункер с клетками и антеннами. Здесь изучают тварей. Иногда твари изучают лабораторию.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  }
+ },
+ {
+  "id": "outskirts",
+  "name": "Окраины",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.12,
+   0.58
+  ],
+  "text": "Тесные коробки-многоэтажки, бельё между домами, самострой. Здесь вырос Санни. Их защищают последними.",
+  "camp": {
+   "rest": 10,
+   "beds": 1,
+   "danger": 0.25,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR01"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "industry",
+  "name": "Промзона",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.21,
+   0.215
+  ],
+  "text": "Цеха, трубы, цистерны. Мастерская — и пустыри, где трещины в воздухе появляются чаще всего.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": [
+    "repair"
+   ]
+  },
+  "random": {
+   "pool": [
+    "CR02"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "monorail",
+  "name": "Вокзал монорельса",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.39,
+   0.19
+  ],
+  "text": "Купол вокзала на эстакаде. В Тревогу его закрывают первым.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR06"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "gov_quarter",
+  "name": "Правительственный квартал",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.63,
+   0.14
+  ],
+  "text": "Башни из стекла и бетона за второй стеной. Здесь решают, кого спасать.",
+  "camp": {
+   "rest": 30,
+   "beds": 2,
+   "danger": 0.05,
+   "services": [
+    "equip"
+   ]
+  }
+ },
+ {
+  "id": "hospital",
+  "name": "Госпиталь",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.725,
+   0.39
+  ],
+  "text": "Большой корпус с площадкой на крыше. Лечат всех — пока хватает коек.",
+  "camp": {
+   "rest": 25,
+   "beds": 4,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR08"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "old_center",
+  "name": "Старый центр",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.475,
+   0.36
+  ],
+  "text": "Старая площадь с башней-часами и аркадами. Сердце города — и туда тянутся волны.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR03"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "metro_hub",
+  "name": "Узел подземки",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.57,
+   0.465
+  ],
+  "text": "Стеклянный павильон над спуском в подземку. Быстрые пути — и тёмные туннели.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.15,
+   "services": []
+  }
+ },
+ {
+  "id": "bunker",
+  "name": "Убежище",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.257,
+   0.425
+  ],
+  "text": "Бетонный купол бункера в сквере. Самая спокойная ночь в городе.",
+  "camp": {
+   "rest": 35,
+   "beds": 3,
+   "danger": 0.02,
+   "services": [
+    "equip",
+    "repair"
+   ]
+  }
+ },
+ {
+  "id": "market",
+  "name": "Рынок",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.375,
+   0.54
+  ],
+  "text": "Крытые ряды под латаными навесами. Слухи, сделки и толпа.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.12,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR04"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "bridges",
+  "name": "Мосты",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.54,
+   0.705
+  ],
+  "text": "Два моста через тёмную реку. Волна перейдёт реку только здесь.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  }
+ },
+ {
+  "id": "port",
+  "name": "Речной порт",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.585,
+   0.83
+  ],
+  "text": "Причалы, краны, контейнеры. За рекой — и за мостами.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR05"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "park",
+  "name": "Старый парк",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.8,
+   0.6
+  ],
+  "text": "Старые деревья, пруд и беседка. Тишина — пока не открылись Врата на бульваре.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "CR07"
+   ],
+   "every": 3
+  }
+ },
+ {
+  "id": "academy_link",
+  "name": "Дорога в Академию",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.89,
+   0.13
+  ],
+  "text": "Шоссе к воротам Академии и КПП. Отсюда в город приходят Пробуждённые.",
+  "camp": {
+   "rest": 20,
+   "beds": 1,
+   "danger": 0.05,
+   "services": [
+    "equip"
+   ]
+  }
+ },
+ {
+  "id": "wall",
+  "name": "Стена периметра",
+  "chapter": "city",
+  "region": "real_city",
+  "pos": [
+   0.075,
+   0.38
+  ],
+  "text": "Высокая бетонная стена с вышками. За ней — пустошь, где Врата открываются чаще всего.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  }
+ },
+ {
   "id": "stone_isle",
   "name": "Каменная платформа",
   "chapter": "shore",
@@ -724,118 +1074,15 @@
   }
  },
  {
-  "id": "admin",
-  "name": "Административный корпус",
-  "chapter": "academy",
-  "region": "academy",
+  "id": "shore_exit",
+  "name": "Выход с Берега",
+  "chapter": "tree",
+  "region": "ash_path",
   "pos": [
-   0.35,
-   0.19
+   0.93,
+   0.55
   ],
-  "text": "Строгое здание с флагштоками. Отсюда управляют кампусом — и тревогой.",
-  "camp": {
-   "rest": 15,
-   "beds": 0,
-   "danger": 0.05,
-   "services": [
-    "equip"
-   ]
-  }
- },
- {
-  "id": "range",
-  "name": "Полигон",
-  "chapter": "academy",
-  "region": "academy",
-  "pos": [
-   0.2,
-   0.2
-  ],
-  "text": "Мишени, воронки, бетонные укрытия. Здесь учат стрелять — и здесь стена тоньше всего.",
-  "camp": {
-   "rest": 5,
-   "beds": 0,
-   "danger": 0.15,
-   "services": [
-    "repair"
-   ]
-  }
- },
- {
-  "id": "lab",
-  "name": "Лаборатория Кошмаров",
-  "chapter": "academy",
-  "region": "academy",
-  "pos": [
-   0.83,
-   0.18
-  ],
-  "text": "Низкий бункер с клетками и антеннами. Здесь изучают тварей. Иногда твари изучают лабораторию.",
-  "camp": {
-   "rest": 5,
-   "beds": 0,
-   "danger": 0.2,
-   "services": []
-  }
- },
- {
-  "id": "outskirts",
-  "name": "Окраины",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.12,
-   0.58
-  ],
-  "text": "Тесные коробки-многоэтажки, бельё между домами, самострой. Здесь вырос Санни. Их защищают последними.",
-  "camp": {
-   "rest": 10,
-   "beds": 1,
-   "danger": 0.25,
-   "services": []
-  },
-  "random": {
-   "pool": [
-    "CR01"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "industry",
-  "name": "Промзона",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.21,
-   0.215
-  ],
-  "text": "Цеха, трубы, цистерны. Мастерская — и пустыри, где трещины в воздухе появляются чаще всего.",
-  "camp": {
-   "rest": 15,
-   "beds": 1,
-   "danger": 0.15,
-   "services": [
-    "repair"
-   ]
-  },
-  "random": {
-   "pool": [
-    "CR02"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "monorail",
-  "name": "Вокзал монорельса",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.39,
-   0.19
-  ],
-  "text": "Купол вокзала на эстакаде. В Тревогу его закрывают первым.",
+  "text": "Последние коралловые гребни переходят в серый пепел. Дальше — только пепел.",
   "camp": {
    "rest": 15,
    "beds": 1,
@@ -843,22 +1090,87 @@
    "services": []
   },
   "random": {
-   "pool": [
-    "CR06"
-   ],
-   "every": 3
+   "local": [
+    "TL01"
+   ]
   }
  },
  {
-  "id": "gov_quarter",
-  "name": "Правительственный квартал",
-  "chapter": "city",
-  "region": "real_city",
+  "id": "ash_dunes",
+  "name": "Пепельные дюны",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.8,
+   0.36
+  ],
+  "text": "Гребни пепла, как застывшие волны. После каждой бури — другие.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL02"
+   ]
+  }
+ },
+ {
+  "id": "ash_bones",
+  "name": "Кости в пепле",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.74,
+   0.66
+  ],
+  "text": "Исполинский череп наполовину в пепле. Внутри можно укрыться — если внутри никого.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL03"
+   ]
+  }
+ },
+ {
+  "id": "ash_lord",
+  "name": "Логово Владыки Пепла",
+  "chapter": "tree",
+  "region": "ash_path",
   "pos": [
    0.63,
-   0.14
+   0.24
   ],
-  "text": "Башни из стекла и бетона за второй стеной. Здесь решают, кого спасать.",
+  "text": "Огромная воронка пепла с тлеющим сердцем. Здесь не дерутся — здесь выживают.",
+  "camp": {
+   "rest": 0,
+   "beds": 0,
+   "danger": 0.6,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL04"
+   ]
+  }
+ },
+ {
+  "id": "stone_hulk",
+  "name": "Каменный остов",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.67,
+   0.5
+  ],
+  "text": "Окаменевший остов древнего существа. Лучшее укрытие в пепле.",
   "camp": {
    "rest": 30,
    "beds": 2,
@@ -866,211 +1178,827 @@
    "services": [
     "equip"
    ]
-  }
- },
- {
-  "id": "hospital",
-  "name": "Госпиталь",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.725,
-   0.39
-  ],
-  "text": "Большой корпус с площадкой на крыше. Лечат всех — пока хватает коек.",
-  "camp": {
-   "rest": 25,
-   "beds": 4,
-   "danger": 0.1,
-   "services": []
   },
   "random": {
-   "pool": [
-    "CR08"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "old_center",
-  "name": "Старый центр",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.475,
-   0.36
-  ],
-  "text": "Старая площадь с башней-часами и аркадами. Сердце города — и туда тянутся волны.",
-  "camp": {
-   "rest": 15,
-   "beds": 1,
-   "danger": 0.1,
-   "services": []
-  },
-  "random": {
-   "pool": [
-    "CR03"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "metro_hub",
-  "name": "Узел подземки",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.57,
-   0.465
-  ],
-  "text": "Стеклянный павильон над спуском в подземку. Быстрые пути — и тёмные туннели.",
-  "camp": {
-   "rest": 10,
-   "beds": 0,
-   "danger": 0.15,
-   "services": []
-  }
- },
- {
-  "id": "bunker",
-  "name": "Убежище",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.257,
-   0.425
-  ],
-  "text": "Бетонный купол бункера в сквере. Самая спокойная ночь в городе.",
-  "camp": {
-   "rest": 35,
-   "beds": 3,
-   "danger": 0.02,
-   "services": [
-    "equip",
-    "repair"
+   "local": [
+    "TL05"
    ]
   }
  },
  {
-  "id": "market",
-  "name": "Рынок",
-  "chapter": "city",
-  "region": "real_city",
+  "id": "demon_trail",
+  "name": "Тропа Демона",
+  "chapter": "tree",
+  "region": "ash_path",
   "pos": [
-   0.375,
-   0.54
+   0.56,
+   0.68
   ],
-  "text": "Крытые ряды под латаными навесами. Слухи, сделки и толпа.",
-  "camp": {
-   "rest": 15,
-   "beds": 1,
-   "danger": 0.12,
-   "services": []
-  },
-  "random": {
-   "pool": [
-    "CR04"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "bridges",
-  "name": "Мосты",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.54,
-   0.705
-  ],
-  "text": "Два моста через тёмную реку. Волна перейдёт реку только здесь.",
+  "text": "Рваные борозды и сломанные кости. Здесь прошёл кто-то очень большой.",
   "camp": {
    "rest": 5,
    "beds": 0,
-   "danger": 0.2,
-   "services": []
-  }
- },
- {
-  "id": "port",
-  "name": "Речной порт",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.585,
-   0.83
-  ],
-  "text": "Причалы, краны, контейнеры. За рекой — и за мостами.",
-  "camp": {
-   "rest": 15,
-   "beds": 1,
-   "danger": 0.15,
+   "danger": 0.3,
    "services": []
   },
   "random": {
-   "pool": [
-    "CR05"
-   ],
-   "every": 3
+   "local": [
+    "TL06"
+   ]
   }
  },
  {
-  "id": "park",
-  "name": "Старый парк",
-  "chapter": "city",
-  "region": "real_city",
+  "id": "death_beacon",
+  "name": "Маяк смерти",
+  "chapter": "tree",
+  "region": "ash_path",
   "pos": [
-   0.8,
-   0.6
+   0.53,
+   0.4
   ],
-  "text": "Старые деревья, пруд и беседка. Тишина — пока не открылись Врата на бульваре.",
-  "camp": {
-   "rest": 10,
-   "beds": 0,
-   "danger": 0.15,
-   "services": []
-  },
-  "random": {
-   "pool": [
-    "CR07"
-   ],
-   "every": 3
-  }
- },
- {
-  "id": "academy_link",
-  "name": "Дорога в Академию",
-  "chapter": "city",
-  "region": "real_city",
-  "pos": [
-   0.89,
-   0.13
-  ],
-  "text": "Шоссе к воротам Академии и КПП. Отсюда в город приходят Пробуждённые.",
+  "text": "Каменный столб на холме с кострищем наверху. Огонь здесь видно на весь пепел.",
   "camp": {
    "rest": 20,
    "beds": 1,
-   "danger": 0.05,
+   "danger": 0.1,
    "services": [
-    "equip"
+    "view"
+   ]
+  },
+  "random": {
+   "local": [
+    "TL07"
    ]
   }
  },
  {
-  "id": "wall",
-  "name": "Стена периметра",
-  "chapter": "city",
-  "region": "real_city",
+  "id": "abyss_bridge",
+  "name": "Мост над Бездной",
+  "chapter": "tree",
+  "region": "ash_path",
   "pos": [
-   0.075,
-   0.38
+   0.44,
+   0.3
   ],
-  "text": "Высокая бетонная стена с вышками. За ней — пустошь, где Врата открываются чаще всего.",
+  "text": "Каменный мост-хребет над чёрной трещиной. Держится — пока.",
   "camp": {
    "rest": 5,
    "beds": 0,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL08"
+   ]
+  }
+ },
+ {
+  "id": "abyss_edge",
+  "name": "Край Бездны",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.45,
+   0.66
+  ],
+  "text": "Обрыв со ступенями вниз и старыми верёвками.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
    "danger": 0.2,
    "services": []
+  },
+  "random": {
+   "local": [
+    "TL09"
+   ]
+  }
+ },
+ {
+  "id": "lake_shore",
+  "name": "Берег Чёрной воды",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.35,
+   0.52
+  ],
+  "text": "Плоский берег из чёрного стекла. Вода неподвижна — слишком неподвижна.",
+  "camp": {
+   "rest": 20,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL10"
+   ]
+  }
+ },
+ {
+  "id": "soul_tree",
+  "name": "Древо Души",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.24,
+   0.46
+  ],
+  "text": "Огромное светлое дерево на острове, золотые плоды. Здесь хорошо. Слишком хорошо.",
+  "camp": {
+   "rest": 20,
+   "beds": 2,
+   "danger": 0.0,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL11"
+   ]
+  }
+ },
+ {
+  "id": "tree_nest",
+  "name": "Гнездо над Древом",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.21,
+   0.26
+  ],
+  "text": "Гнездо в кроне и древнее яйцо. Попасть туда можно только с острова.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.3,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL12"
+   ]
+  }
+ },
+ {
+  "id": "boat_cove",
+  "name": "Лодочная заводь",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.33,
+   0.78
+  ],
+  "text": "Мелкая бухта с корягами — из них можно собрать лодку.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": [
+    "repair"
+   ]
+  },
+  "random": {
+   "local": [
+    "TL13"
+   ]
+  }
+ },
+ {
+  "id": "black_rocks",
+  "name": "Скалы в чёрной воде",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.17,
+   0.7
+  ],
+  "text": "Острые чёрные скалы из воды. Стоянка посреди озера.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL14"
+   ]
+  }
+ },
+ {
+  "id": "deep_maw",
+  "name": "Пасть недр",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.13,
+   0.36
+  ],
+  "text": "Круговая воронка в чёрной воде с зубцами. Под ней кто-то дышит.",
+  "camp": {
+   "rest": 0,
+   "beds": 0,
+   "danger": 0.6,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL15"
+   ]
+  }
+ },
+ {
+  "id": "star_landing",
+  "name": "Звёздный берег",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.06,
+   0.56
+  ],
+  "text": "Берег под звёздами. На горизонте — далёкие стены человеческого города.",
+  "camp": {
+   "rest": 25,
+   "beds": 2,
+   "danger": 0.05,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "TL16"
+   ]
+  }
+ },
+ {
+  "id": "caravan_wreck",
+  "name": "Остов каравана",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Засыпанный пеплом караван Спящих-путников. Кто-то не дошёл.",
+  "emerge": true,
+  "socket_group": "ash",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL17"
+   ],
+   "local": [
+    "TL17"
+   ]
+  }
+ },
+ {
+  "id": "giant_graveyard",
+  "name": "Кладбище гигантов",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Кости великанов торчат из пепла. Среди них — Воспоминания.",
+  "emerge": true,
+  "socket_group": "ash",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL18"
+   ],
+   "local": [
+    "TL18"
+   ]
+  }
+ },
+ {
+  "id": "glass_crater",
+  "name": "Стеклянный кратер",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Молния ударила в пепел — и он стал стеклом.",
+  "emerge": true,
+  "socket_group": "ash",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL19"
+   ],
+   "local": [
+    "TL19"
+   ]
+  }
+ },
+ {
+  "id": "ash_well",
+  "name": "Колодец пепла",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Спуск в глубину пепла. Внизу — тайник.",
+  "emerge": true,
+  "socket_group": "ash",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL20"
+   ],
+   "local": [
+    "TL20"
+   ]
+  }
+ },
+ {
+  "id": "driftwood_isle",
+  "name": "Коряжник",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Островок коряг посреди озера. Выступает на рассвете.",
+  "emerge": true,
+  "socket_group": "lake",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL21"
+   ],
+   "local": [
+    "TL21"
+   ]
+  }
+ },
+ {
+  "id": "turtle_shell",
+  "name": "Скорлупа черепахи",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Огромный панцирь — островок, пока вода низкая.",
+  "emerge": true,
+  "socket_group": "lake",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL22"
+   ],
+   "local": [
+    "TL22"
+   ]
+  }
+ },
+ {
+  "id": "sunken_idol",
+  "name": "Затонувший идол",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Каменная голова идола выходит из воды на рассвете.",
+  "emerge": true,
+  "socket_group": "lake",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL23"
+   ],
+   "local": [
+    "TL23"
+   ]
+  }
+ },
+ {
+  "id": "glowing_moss",
+  "name": "Светящийся мох",
+  "chapter": "tree",
+  "region": "ash_path",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "text": "Мох, светящийся в темноте, на плоском камне.",
+  "emerge": true,
+  "socket_group": "lake",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "TL24"
+   ],
+   "local": [
+    "TL24"
+   ]
+  }
+ },
+ {
+  "id": "bright_castle",
+  "name": "Светлый замок",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.5,
+   0.2
+  ],
+  "height": "high",
+  "text": "Белая крепость на холме — единственные тёплые огни города. Ночь здесь стоит дани.",
+  "camp": {
+   "rest": 40,
+   "beds": 3,
+   "danger": 0.0,
+   "services": [
+    "equip",
+    "repair",
+    "view"
+   ],
+   "tribute": 3
+  },
+  "random": {
+   "local": [
+    "DL01"
+   ]
+  }
+ },
+ {
+  "id": "castle_gate",
+  "name": "Ворота замка",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.5,
+   0.37
+  ],
+  "height": "high",
+  "text": "Массивные ворота с подъёмным мостом. Ночью закрыты.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL02"
+   ]
+  }
+ },
+ {
+  "id": "memory_market",
+  "name": "Рынок Воспоминаний",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.64,
+   0.33
+  ],
+  "height": "high",
+  "text": "Навесы у стены замка, лотки с оружием и Воспоминаниями.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL03"
+   ]
+  }
+ },
+ {
+  "id": "hunters_guild",
+  "name": "Гильдия охотников",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.36,
+   0.33
+  ],
+  "height": "high",
+  "text": "Длинный зал с трофеями на стенах. Здесь берут заказы на ужасов.",
+  "camp": {
+   "rest": 20,
+   "beds": 1,
+   "danger": 0.1,
+   "services": [
+    "repair"
+   ]
+  },
+  "random": {
+   "local": [
+    "DL04"
+   ]
+  }
+ },
+ {
+  "id": "statue_plaza",
+  "name": "Площадь статуй",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.32,
+   0.56
+  ],
+  "height": "high",
+  "text": "Круглая площадь с каменными статуями-воинами. Ночью они стоят не там, где днём.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.3,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL05"
+   ]
+  }
+ },
+ {
+  "id": "ruined_cathedral",
+  "name": "Разрушенный собор",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.63,
+   0.57
+  ],
+  "height": "high",
+  "text": "Собор без крыши, огромная роза-окно.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL06"
+   ]
+  }
+ },
+ {
+  "id": "graveyard_hope",
+  "name": "Кладбище надежд",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.81,
+   0.4
+  ],
+  "height": "high",
+  "text": "Холм с надгробиями и мечами Спящих.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL07"
+   ]
+  }
+ },
+ {
+  "id": "dark_well",
+  "name": "Тёмный колодец",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.21,
+   0.7
+  ],
+  "height": "mid",
+  "text": "Глубокий колодец в руинах двора, решётка.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.25,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL08"
+   ]
+  }
+ },
+ {
+  "id": "sunny_lair",
+  "name": "Логово в башне",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.78,
+   0.7
+  ],
+  "height": "high",
+  "text": "Полуразрушенная башня с тайным входом. Тихо — ночью особенно.",
+  "camp": {
+   "rest": 20,
+   "beds": 1,
+   "danger": 0.02,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL09"
+   ]
+  }
+ },
+ {
+  "id": "harbour",
+  "name": "Нижняя гавань",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.5,
+   0.84
+  ],
+  "height": "low",
+  "text": "Причалы, затонувшие лодки, склады.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL10"
+   ]
+  }
+ },
+ {
+  "id": "canals",
+  "name": "Каналы",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.34,
+   0.8
+  ],
+  "height": "low",
+  "text": "Каменные каналы с мостиками.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL11"
+   ]
+  }
+ },
+ {
+  "id": "catacombs",
+  "name": "Вход в катакомбы",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.64,
+   0.8
+  ],
+  "height": "low",
+  "text": "Лестница вниз под аркой с черепами.",
+  "camp": {
+   "rest": 5,
+   "beds": 0,
+   "danger": 0.3,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL12"
+   ]
+  }
+ },
+ {
+  "id": "east_gate",
+  "name": "Восточные ворота",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.93,
+   0.58
+  ],
+  "height": "high",
+  "text": "Пролом в городской стене. Отсюда приходят те, кто прошёл пепел.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL13"
+   ]
+  }
+ },
+ {
+  "id": "lighthouse",
+  "name": "Маяк на утёсе",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.9,
+   0.2
+  ],
+  "height": "high",
+  "text": "Башня маяка на скале над морем.",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.1,
+   "services": [
+    "view"
+   ]
+  },
+  "random": {
+   "local": [
+    "DL14"
+   ]
+  }
+ },
+ {
+  "id": "south_road",
+  "name": "Южный выход",
+  "chapter": "dark_city",
+  "region": "dark_city",
+  "pos": [
+   0.1,
+   0.45
+  ],
+  "height": "high",
+  "text": "Дорога на юг сквозь обрушенную арку.",
+  "camp": {
+   "rest": 10,
+   "beds": 0,
+   "danger": 0.2,
+   "services": []
+  },
+  "random": {
+   "local": [
+    "DL15"
+   ]
   }
  }
 ]

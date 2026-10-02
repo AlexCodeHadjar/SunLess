@@ -266,9 +266,15 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 		sizes[lid] = _sprite_size(content, state, lid)
 		names[lid] = str(content.locations.get(lid, content.shops.get(lid, {})).get("name", lid))
 	var paths: Array = []
-	for pair: Array in cfg.get("paths", []):
+	var water: Array = []
+	# тропы сейчас (MapRules.links): постоянные, сеть бури, водные (TerrainRules); заваленные — не рисуются
+	for pair: Array in MapRules.links(content, state):
+		if MapRules.is_emerging(content, str(pair[0])) or MapRules.is_emerging(content, str(pair[1])):
+			continue
 		if revealed.has(pair[0]) and revealed.has(pair[1]):
 			paths.append(pair)
+			if TerrainRules._is_water(content, state, str(pair[0]), str(pair[1])):
+				water.append(pair)
 	# появившиеся места связаны тропой с ближайшим открытым
 	for lid: String in MapRules.emerged(state):
 		if not revealed.has(lid):
@@ -292,7 +298,8 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 				near.append(n)
 	_info = {"revealed": revealed, "flooded": flooded, "warn": warn, "feet": feet, "centers": centers,
 		"sizes": sizes, "names": names, "paths": paths, "camp": state.party_at if revealed.has(state.party_at) else "", "near": near,
-		"threat": _threat_info(content, state, revealed), "alarm": GateRules.alarm(state)}
+		"threat": _threat_info(content, state, revealed), "alarm": GateRules.alarm(state), "water": water,
+		"boat": bool(state.flags.get("boat", false)), "terrain": _terrain_info(content, state, revealed)}
 	_ink.queue_redraw()
 
 
@@ -362,6 +369,48 @@ func _threat_info(content: Content, state: RunState, revealed: Array) -> Diction
 		sw.append({"from": from, "to": to, "size": _sprite_size(content, state, str(e.get("at", "")))})
 	return {"points": pts, "marks": marks, "swarms": sw, "strip": str(dec.get("swarm", "")), "roads": roads,
 		"label": "волна" if GateRules.kind(content, state) == "gate" else "рой"}
+
+
+## Глава 4: зоны (свечение по местам), подвижные угрозы (фишка и след), завалы на тропах.
+func _terrain_info(content: Content, state: RunState, revealed: Array) -> Dictionary:
+	var zones: Array = []
+	var zc := ZoneRules.cfg(content, state)
+	for zid: String in zc:
+		var z: Dictionary = zc[zid]
+		var col: Array = z.get("color", [1.0, 0.5, 0.3])
+		var at: Array = []
+		for lid: String in ZoneRules.places(content, state, zid):
+			if revealed.has(lid):
+				at.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid),
+					"center": lid == str(z.get("center", ""))})
+		if not at.is_empty():
+			zones.append({"places": at, "color": Color(float(col[0]), float(col[1]), float(col[2])), "name": str(z.get("name", zid)).to_lower()})
+	var movers: Array = []
+	var stack := {}   # сколько угроз уже стоит в месте — следующую рисуем ниже
+	for mid: String in MoverRules.movers(state):
+		if not MoverRules.active(state, mid):
+			continue
+		var m: Dictionary = MoverRules.movers(state)[mid]
+		var lid := str(m.get("at", ""))
+		var from := str(m.get("from", ""))
+		if not revealed.has(lid) and not revealed.has(from):
+			continue
+		movers.append({"at": center(content, state, lid) - view.position if revealed.has(lid) else Vector2.INF,
+			"from": center(content, state, from) - view.position if revealed.has(from) and from != lid else Vector2.INF,
+			"size": _sprite_size(content, state, lid) if revealed.has(lid) else 100.0,
+			"name": MoverRules.name_of(content, state, mid), "wounded": bool(m.get("wounded", false)), "slot": int(stack.get(lid, 0))})
+		stack[lid] = int(stack.get(lid, 0)) + 1
+	var rubble: Array = []
+	var rb: Dictionary = cfg.get("rubble", {})
+	var st: Dictionary = state.flags.get("rubble", {})
+	for rid: String in rb:
+		var pr: Array = rb[rid].get("pair", [])
+		if str(st.get(rid, "")) == "blocked" and pr.size() == 2 and revealed.has(pr[0]) and revealed.has(pr[1]):
+			var at2: Array = rb[rid].get("at", [0.5, 0.5])
+			rubble.append(to_screen(Vector2(float(at2[0]), float(at2[1]))) - view.position)
+	if zones.is_empty() and movers.is_empty() and rubble.is_empty():
+		return {}
+	return {"zones": zones, "movers": movers, "rubble": rubble}
 
 
 ## Сменить облик места наплывом ("" — место уходит с карты).
@@ -445,12 +494,13 @@ func _process(delta: float) -> void:
 	_shade.queue_redraw()
 	_over.queue_redraw()
 	_weather.queue_redraw()
-	if not Dictionary(_info.get("threat", {})).is_empty():
+	if not Dictionary(_info.get("threat", {})).is_empty() or not Dictionary(_info.get("terrain", {})).is_empty():
 		_threat.queue_redraw()
 
 
 ## Угрозы: пролом на стене, метки мест, рой и его след.
 func _draw_threat() -> void:
+	_draw_terrain()
 	var th: Dictionary = _info.get("threat", {})
 	if th.is_empty():
 		return
@@ -519,6 +569,61 @@ func _draw_threat() -> void:
 		_threat.draw_string(f, b + Vector2(-w / 2.0, 6.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1.0, 0.45, 0.4))
 
 
+## Глава 4: свечение зон под местами, завалы на тропах, фишки угроз со следом (TerrainRules, ZoneRules, MoverRules).
+func _draw_terrain() -> void:
+	var tr: Dictionary = _info.get("terrain", {})
+	if tr.is_empty():
+		return
+	var pulse := 0.5 + 0.5 * sin(_t * 2.2)
+	var f := UITheme.font("sans_bold")
+	for z: Dictionary in tr.get("zones", []):
+		var col: Color = z["color"]
+		for p: Dictionary in z["places"]:
+			var c := Vector2(p["at"])
+			var r := float(p["size"]) * 0.5
+			for k in 5:
+				var rr := r * (1.0 - k * 0.16) * (1.0 + 0.04 * pulse)
+				_threat.draw_circle(c, rr, Color(col.r, col.g, col.b, 0.05 + 0.02 * pulse))
+			_threat.draw_arc(c, r * (1.0 + 0.04 * pulse), 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.35 + 0.2 * pulse), 2.0, true)
+			if bool(p["center"]):
+				var t := str(z["name"])
+				var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+				var at := c + Vector2(-w / 2.0, -r - 6.0)
+				_threat.draw_string_outline(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
+				_threat.draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col.lightened(0.3))
+	for rp: Vector2 in tr.get("rubble", []):
+		for k in 5:
+			var off := Vector2(cos(k * 2.1) * 11.0, sin(k * 1.7) * 6.0)
+			_threat.draw_circle(rp + off, 9.0 - k, Color(0.25, 0.23, 0.22, 0.95))
+			_threat.draw_arc(rp + off, 9.0 - k, 0.0, TAU, 16, Color(0, 0, 0, 0.8), 1.5, true)
+		_threat.draw_line(rp + Vector2(-14, -14), rp + Vector2(14, 14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
+		_threat.draw_line(rp + Vector2(-14, 14), rp + Vector2(14, -14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
+	for m: Dictionary in tr.get("movers", []):
+		var at2 := Vector2(m["at"])
+		var fr := Vector2(m["from"])
+		var col2 := Color(1.0, 0.6, 0.2) if bool(m["wounded"]) else Color(0.95, 0.15, 0.12)
+		# след: пунктир от прошлого места
+		if fr != Vector2.INF and at2 != Vector2.INF:
+			for i in 12:
+				if i % 2 == 0:
+					_threat.draw_line(fr.lerp(at2, i / 12.0), fr.lerp(at2, (i + 1) / 12.0), Color(col2.r, col2.g, col2.b, 0.55), 4.0, true)
+		elif fr != Vector2.INF:
+			_threat.draw_circle(fr, 10.0, Color(col2.r, col2.g, col2.b, 0.35))   # место не видно — только следы
+		if at2 == Vector2.INF:
+			continue
+		var c2 := at2 + Vector2(float(m["size"]) * 0.3, -float(m["size"]) * 0.22 + 52.0 * int(m.get("slot", 0)))
+		var r2 := 15.0 + 2.0 * pulse
+		_threat.draw_circle(c2, r2 + 6.0, Color(col2.r, col2.g, col2.b, 0.18 + 0.15 * pulse))
+		_threat.draw_circle(c2, r2, Color(0.04, 0.02, 0.03, 0.92))
+		_threat.draw_arc(c2, r2, 0.0, TAU, 32, col2, 3.0, true)
+		_threat.draw_circle(c2 + Vector2(-5, -2), 2.6, col2)
+		_threat.draw_circle(c2 + Vector2(5, -2), 2.6, col2)
+		var t2 := str(m["name"]) + (" (ранен)" if bool(m["wounded"]) else "")
+		var w2 := f.get_string_size(t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		_threat.draw_string_outline(f, c2 + Vector2(-w2 / 2.0, r2 + 16.0), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
+		_threat.draw_string(f, c2 + Vector2(-w2 / 2.0, r2 + 16.0), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col2.lightened(0.35))
+
+
 func _draw_shade() -> void:
 	# тени облаков скользят по земле
 	for cl: Dictionary in _clouds:
@@ -541,6 +646,8 @@ func _draw_paths() -> void:
 		b -= dir * float(sizes[pair[1]]) * 0.3
 		var wet: bool = flooded.has(pair[0]) or flooded.has(pair[1])
 		var ink := Color(0.62, 0.78, 0.92, 0.45) if wet else Color(0.86, 0.84, 0.78, 0.55)
+		if Array(_info.get("water", [])).has(pair):
+			ink = Color(0.45, 0.7, 1.0, 0.75 if bool(_info.get("boat", false)) else 0.3)   # Чёрная вода: только на лодке
 		var mid := (a + b) / 2.0 + Vector2(-dir.y, dir.x) * a.distance_to(b) * 0.08
 		var pts: Array = []
 		for i in 25:

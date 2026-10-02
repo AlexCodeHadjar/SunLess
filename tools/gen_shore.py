@@ -454,7 +454,7 @@ A(mission("SH32", "spire_view", "Тень Багрового Шпиля",
 	 act("SH32_ridge", "Исследовать Костяной хребет", "Кости помнят больше, чем кажется.",
 		[chk("Хребет", {"cunning": 8, "will": 6}, ["knowledge", "climb"], "В костях — осколки душ древнего зверя.", "Кость крошится под ногой.")],
 		[shards(8)])],
-	field="F_25", known_tags=["Кость", "Высота"], hidden_tags=["Ментальное давление"], context=["survival", "climb"], end_chapter=True, from_event="E32"))
+	field="F_25", known_tags=["Кость", "Высота"], hidden_tags=["Ментальное давление"], context=["survival", "climb"], end_chapter=True, next_chapter="tree", from_event="E32"))
 
 # побочные: руины Легиона и миссия-выбор
 A(mission("SS01", "legion_ruins", "Обломки Легиона",

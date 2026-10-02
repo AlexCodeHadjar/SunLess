@@ -38,6 +38,51 @@ static func take(content: Content, state: RunState, event: String) -> Dictionary
 
 
 ## События, которые можно понять по состоянию (проверяются при обновлении карты).
+## Глава 4 (TerrainRules, ZoneRules, MoverRules): подсказка — когда механика впервые видна игроку на карте.
+static func _terrain_events(content: Content, state: RunState) -> Array:
+	var out: Array = []
+	var cfg := MapRules.config(content, state.chapter)
+	if cfg.is_empty():
+		return out
+	var kn := MapRules.known(content, state)
+	for mid: String in MoverRules.movers(state):
+		if MoverRules.active(state, mid):
+			match str(MoverRules.cfg(content, state).get(mid, {}).get("target", "")):
+				"camp":
+					out.append("mover")
+				"noise":
+					out.append("hunters")
+	var zc := ZoneRules.cfg(content, state)
+	for zid: String in zc:
+		var z: Dictionary = zc[zid]
+		if ZoneRules.radius(content, state, zid) < 0 or not kn.has(str(z.get("center", ""))):
+			continue
+		if bool(z.get("charm", false)):
+			out.append("zone_charm")
+		elif int(z.get("pass_psyche", 0)) != 0:
+			out.append("zone_wrath")
+		elif int(z.get("grow", 0)) > 0:
+			out.append("territory")
+	var storm := str(cfg.get("path_sets", {}).get("storm_phase", ""))
+	if storm != "" and str(DayRules.phase(content, state).get("id", "")) == storm:
+		out.append("ash_storm")
+	for lid: String in cfg.get("fragile", {}):
+		if kn.has(lid):
+			out.append("fragile")
+	for pr: Array in cfg.get("water_paths", []):
+		if kn.has(str(pr[0])) or kn.has(str(pr[1])):
+			out.append("water")
+			break
+	for lid: String in kn:
+		if int(DayRules.camp_at(content, lid).get("tribute", 0)) > 0:
+			out.append("tribute")
+			break
+	if not cfg.get("rubble", {}).is_empty() and (not Dictionary(state.flags.get("rubble", {})).is_empty() \
+			or str(DayRules.phase(content, state).get("id", "")) == str(cfg.get("rubble_phase", "storm"))):
+		out.append("rubble")
+	return out
+
+
 static func state_events(content: Content, state: RunState) -> Array:
 	var out: Array = []
 	if state.chapter == "academy":
@@ -82,6 +127,7 @@ static func state_events(content: Content, state: RunState) -> Array:
 				out.append("repair")
 		if GateRules.panic(state) >= 25:
 			out.append("panic")
+	out.append_array(_terrain_events(content, state))
 	# дни, переходы, лагерь-стоянка (docs/16 §12, docs/17)
 	out.append("day")
 	if DayRules.restricted(content, state):

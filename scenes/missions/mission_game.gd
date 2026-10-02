@@ -336,6 +336,7 @@ func _build_bottom() -> void:
 	panel.anchor_bottom = 1.0
 	panel.anchor_right = 1.0
 	panel.offset_top = -TRAY_H
+	panel.offset_right = -500   # ряд карт кончается у дневной панели (она справа, шириной 460); больше карт — прокрутка
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
@@ -601,6 +602,9 @@ func _update_day() -> void:
 	var parts: Array = ["Сегодня: миссий рядом %d" % today.size(), "переходов без усталости %d из %d" % [steps, TravelRules.free_steps(c)]]
 	if not (opt["cut"] as Array).is_empty():
 		parts.append("за водой %d" % (opt["cut"] as Array).size())
+	var wait := MissionFlow.story_wait(c, s)   # сюжет ждёт закрытых Врат / зачищенных районов
+	if wait != "":
+		parts.append(wait.to_lower())
 	var free := MissionFlow.free_heroes(c, s)
 	if free.is_empty() and s.squads.is_empty():
 		_plan_label.text = "Все герои выдохлись — пора в лагерь: «Закончить день»"
@@ -666,6 +670,12 @@ func _show_night(ev: Array) -> void:
 				col = Palette.STAT_UP
 			"repair":
 				col = Palette.STAT_UP
+			"mover":
+				col = Palette.STAT_UP if bool(e.get("ok", false)) else Color(1.0, 0.45, 0.35)
+			"zone":
+				col = Color(1.0, 0.78, 0.45)
+			"terrain":
+				col = Palette.SILVER
 		var l := UITheme.label("• " + t, "sans", 18, col)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 740
@@ -1105,8 +1115,10 @@ func _on_events(events: Array) -> void:
 				_show_toast("%s — щёлкните по карте миссии" % e["text"])
 			"rested", "expired", "move", "task", "planner", "repair":
 				_show_toast(str(e["text"]))
-			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave", "gate_close":
+			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave", "gate_close", "mover":
 				AudioManager.play("bell", -3.0, 0.6)
+				_show_toast(str(e["text"]))
+			"zone", "terrain":
 				_show_toast(str(e["text"]))
 			"onslaught":
 				AudioManager.play("bell", -2.0, 0.7)

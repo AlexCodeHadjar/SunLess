@@ -75,6 +75,10 @@ static func place_state(content: Content, state: RunState, lid: String, sky: Str
 	var gs: String = GateRules.visible_state(state, lid, have)
 	if gs != "":
 		return gs
+	# местность (TerrainRules): обрушенный мост, облик по фазе недели
+	var ts := TerrainRules.state_of(content, state, lid, have)
+	if ts != "":
+		return ts
 	var mark: Dictionary = Dictionary(state.tide.get("marks", {})).get(lid, {})
 	if not mark.is_empty() and have.has(str(mark.get("state", ""))):
 		return str(mark["state"])
@@ -133,8 +137,11 @@ static func emerge(content: Content, state: RunState, lid: String, rng: RandomNu
 	for other: String in em:
 		taken[int(em[other])] = true
 	var free: Array = []
+	# у места своя группа площадок (котловины пепла, островки Чёрной воды — TerrainRules.emerge_groups)
+	var group := str(content.locations.get(lid, {}).get("socket_group", ""))
+	var allowed: Array = cfg.get("emerge_groups", {}).get(group, {}).get("sockets", []) if group != "" else []
 	for i in sk.size():
-		if not taken.has(i):
+		if not taken.has(i) and (allowed.is_empty() or allowed.has(i)):
 			free.append(i)
 	if free.is_empty():
 		return []
@@ -210,8 +217,10 @@ static func low_tide(content: Content, state: RunState, rng: RandomNumberGenerat
 static func links(content: Content, state: RunState) -> Array:
 	var cfg := config(content, state.chapter)
 	var out: Array = []
-	for pair: Array in cfg.get("paths", []):
-		if present(content, state, str(pair[0])) and present(content, state, str(pair[1])):
+	# постоянные тропы + сеть бури и водные тропы (TerrainRules); заваленные обвалом — закрыты
+	for pair: Array in Array(cfg.get("paths", [])) + TerrainRules.extra_paths(content, state):
+		if present(content, state, str(pair[0])) and present(content, state, str(pair[1])) \
+				and TerrainRules.path_open(content, state, str(pair[0]), str(pair[1])):
 			out.append([str(pair[0]), str(pair[1])])
 	for lid: String in emerged(state):
 		var a := anchor(content, state, lid)

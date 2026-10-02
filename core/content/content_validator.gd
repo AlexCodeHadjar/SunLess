@@ -4,7 +4,7 @@ extends RefCounted
 
 const KNOWN_CMDS := ["add_card", "remove_card", "add_ability", "edge", "recover", "psyche",
 	"set_flag", "clear_flag", "adjust_resource", "add_temp", "add_perm", "set_stage", "add_codex",
-	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide", "map_mark", "emerge", "threat"]
+	"remove_temporaries", "text", "reset_wear", "adjust_trust", "tide", "map_mark", "emerge", "threat", "mover", "zone", "terrain"]
 const KNOWN_CONDITIONS := ["in_collection", "not_owned", "executor_is", "has_flag", "not_flag", "owned_count",
 	"attached", "executor_on_edge"]
 const STATS := ["power", "will", "cunning"]
@@ -95,6 +95,8 @@ static func _validate_maps(c: Content, errors: Array[String]) -> void:
 
 ## Карта без тупиков (docs/17 §2): все постоянные места связаны тропами; высоты и лавки связаны между собой
 ## без низин и средних мест — в любой прилив от любой высоты можно дойти до любой другой.
+## Местность Главы 4 (TerrainRules): при каждой сети троп бури, без хрупкого моста и без троп под завалами все
+## сухие места по-прежнему связаны; места только за Чёрной водой — связаны хотя бы водными тропами.
 static func dry_spine_errors(c: Content) -> Array[String]:
 	var out: Array[String] = []
 	for region: String in c.maps:
@@ -110,22 +112,33 @@ static func dry_spine_errors(c: Content) -> Array[String]:
 				all.append(lid)
 				if str(c.locations[lid].get("height", "")) == "high":
 					dry.append(lid)
-		for pair: Array in [[all, "все места"], [dry, "высоты и лавки (в прилив)"]]:
-			var nodes: Array = pair[0]
-			if nodes.size() < 2:
-				continue
-			var seen := {nodes[0]: true}
-			var queue: Array = [nodes[0]]
-			while not queue.is_empty():
-				var cur: String = queue.pop_front()
-				for e: Array in m.get("paths", []):
-					for k in 2:
-						if str(e[k]) == cur and nodes.has(str(e[1 - k])) and not seen.has(str(e[1 - k])):
-							seen[str(e[1 - k])] = true
-							queue.append(str(e[1 - k]))
-			for lid: String in nodes:
-				if not seen.has(lid):
-					out.append("maps/%s: тупик — %s: место %s не связано тропами с %s" % [region, pair[1], lid, nodes[0]])
+		var sets: Array = m.get("path_sets", {}).get("sets", [])
+		var union: Array = []
+		for st: Array in sets:
+			union.append_array(st)
+		var water: Array = m.get("water_paths", [])
+		var under_rubble: Array = []
+		for rid: String in m.get("rubble", {}):
+			under_rubble.append(m["rubble"][rid].get("pair", []))
+		var fragile: Array = Dictionary(m.get("fragile", {})).keys()
+		# все места вообще достижимы (с лодкой, при любой сети)
+		_spine_check(all, Array(m.get("paths", [])) + union + water, [], "все места", region, out)
+		# сухие места (есть хоть одна сухая тропа): связаны при каждой сети бури, без хрупкого моста и завалов
+		var land: Array = all.filter(func(lid: String) -> bool:
+			for e: Array in Array(m.get("paths", [])) + union:
+				if e.has(lid):
+					return true
+			return false)
+		var solid: Array = land.filter(func(lid: String) -> bool: return not fragile.has(lid))
+		for i in maxi(1, sets.size()):
+			var edges: Array = Array(m.get("paths", [])) + (Array(sets[i]) if not sets.is_empty() else [])
+			var what := "сухие места" + (" (сеть бури %d)" % i if not sets.is_empty() else "")
+			_spine_check(land, edges, [], what, region, out)
+			if not fragile.is_empty() or not under_rubble.is_empty():
+				_spine_check(solid, edges, under_rubble, what + " без хрупких проходов и завалов", region, out)
+		if not m.has("height"):
+			continue   # прилив по высотам — только на картах с водой (Берег)
+		_spine_check(dry, Array(m.get("paths", [])), [], "высоты и лавки (в прилив)", region, out)
 		# у каждой высоты не меньше двух троп (docs/17 §15, как маяки FTL): одна тропа — тупик, если её отрежет вода
 		for lid: String in dry:
 			var deg := 0
@@ -135,6 +148,25 @@ static func dry_spine_errors(c: Content) -> Array[String]:
 			if deg < 2 and not c.shops.has(lid):
 				out.append("maps/%s: тупик — у высоты %s одна тропа (нужно не меньше двух)" % [region, lid])
 	return out
+
+
+static func _spine_check(nodes: Array, edges: Array, skip: Array, what: String, region: String, out: Array[String]) -> void:
+	if nodes.size() < 2:
+		return
+	var seen := {nodes[0]: true}
+	var queue: Array = [nodes[0]]
+	while not queue.is_empty():
+		var cur: String = queue.pop_front()
+		for e: Array in edges:
+			if skip.any(func(sk: Array) -> bool: return sk.size() == 2 and sk.has(str(e[0])) and sk.has(str(e[1]))):
+				continue
+			for k in 2:
+				if str(e[k]) == cur and nodes.has(str(e[1 - k])) and not seen.has(str(e[1 - k])):
+					seen[str(e[1 - k])] = true
+					queue.append(str(e[1 - k]))
+	for lid: String in nodes:
+		if not seen.has(lid):
+			out.append("maps/%s: тупик — %s: место %s не связано тропами с %s" % [region, what, lid, nodes[0]])
 
 
 ## Угрозы-точки карты (GateRules): точки на карте, места и миссии существуют, у мест есть миссии роя.

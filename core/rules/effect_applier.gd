@@ -85,6 +85,12 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 		"map_mark":
 			# след на карте-плане (MapRules): разорено / после шторма — на N выполненных миссий
 			return MapRules.mark(content, state, str(e["place"]), str(e.get("state", "ravaged")), int(e.get("missions", 3)))
+		"mover":
+			return MoverRules.command(content, state, e)
+		"zone":
+			return ZoneRules.command(content, state, e)
+		"terrain":
+			return TerrainRules.command(content, state, e)
 		"threat":
 			# прорывы и Врата (GateRules): закрыть, отложить, отбить рой, баррикада, потушить, оборона
 			return GateRules.command(content, state, e)

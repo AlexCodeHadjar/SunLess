@@ -28,6 +28,9 @@ static func new_run(content: Content, seed_value: int, chapter: String = "nightm
 ## Открывает стартовые миссии главы и заводит таймеры случайных миссий её локаций.
 static func open_chapter(content: Content, state: RunState, chapter: String) -> Array:
 	state.chapter = chapter
+	TerrainRules.reset(state)
+	ZoneRules.reset(state)
+	MoverRules.reset(content, state)
 	DeckRules.ensure(content, state, chapter)   # колода событий главы (docs/16 §11.4)
 	var out: Array = []
 	for mid: String in _sorted(content.missions):
@@ -365,13 +368,9 @@ static func after_completion(content: Content, state: RunState) -> Array:
 		var need := int(m.get("unlock", {}).get("after_missions", 0))
 		if need > 0 and n >= need and not state.missions.has(mid) and chapter_of(content, mid) == state.chapter:
 			out.append_array(open(content, state, mid))
-		# «после всех»: миссия открывается, когда выполнены все перечисленные
-		var all: Array = m.get("unlock", {}).get("after_all", [])
-		# «после N закрытых Врат» (Город, GateRules) — ещё и это условие
-		var gates_need := int(m.get("unlock", {}).get("gates_closed", 0))
-		if not all.is_empty() and not state.missions.has(mid) and chapter_of(content, mid) == state.chapter \
-				and int(state.flags.get("gates_closed", 0)) >= gates_need \
-				and all.all(func(x: String) -> bool: return str(state.missions.get(x, {}).get("status", "")) == "done"):
+		# «после всех»: миссия открывается, когда выполнены все перечисленные (и закрыто Врат / зачищено районов)
+		if not state.missions.has(mid) and chapter_of(content, mid) == state.chapter and _after_all_done(state, m) \
+				and _unlock_short(state, m) == "":
 			out.append_array(open(content, state, mid))
 	for lid: String in _sorted(content.locations):
 		var loc: Dictionary = content.locations[lid]
@@ -379,6 +378,38 @@ static func after_completion(content: Content, state: RunState) -> Array:
 		if every_n > 0 and str(loc.get("chapter", "")) == state.chapter and n % every_n == 0:
 			out.append_array(spawn_random(content, state, lid))
 	return out
+
+
+static func _after_all_done(state: RunState, m: Dictionary) -> bool:
+	var all: Array = m.get("unlock", {}).get("after_all", [])
+	return not all.is_empty() and all.all(func(x: String) -> bool: return str(state.missions.get(x, {}).get("status", "")) == "done")
+
+
+## Чего не хватает миссии с unlock.after_all ("" — хватает): закрытых Врат (Город, GateRules), зачищенных районов
+## (Мрачный город, ZoneRules) — для строки «сюжет ждёт».
+static func _unlock_short(state: RunState, m: Dictionary) -> String:
+	var u: Dictionary = m.get("unlock", {})
+	var g := int(u.get("gates_closed", 0))
+	var gh := int(state.flags.get("gates_closed", 0))
+	if gh < g:
+		return "закрыть Врата: %d из %d" % [gh, g]
+	var z := int(u.get("zones_cleared", 0))
+	var zh := ZoneRules.cleared_total(state)
+	if zh < z:
+		return "зачистить районы: %d из %d" % [zh, z]
+	return ""
+
+
+## Чего ждёт сюжет главы ("" — ничего не ждёт): следующая сюжетная миссия готова, но не хватает Врат или районов.
+static func story_wait(content: Content, state: RunState) -> String:
+	for mid: String in _sorted(content.missions):
+		var m: Dictionary = content.missions[mid]
+		if state.missions.has(mid) or chapter_of(content, mid) != state.chapter or not _after_all_done(state, m):
+			continue
+		var w := _unlock_short(state, m)
+		if w != "":
+			return "Сюжет ждёт — " + w
+	return ""
 
 
 # --- действия после прибытия -------------------------------------------------------------

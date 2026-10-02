@@ -238,13 +238,14 @@ func test_forecast_is_honest() -> void:
 func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 	var s := MissionFlow.new_run(c, seed_value)
 	var steps := 0
-	var done := {"attempts": 0, "nightmare": false, "academy": false}
+	var done := {"attempts": 0, "nightmare": false, "academy": false, "shore": false}
 	var on_report := func(mid: String, rep: Dictionary) -> void:
 		done["attempts"] += 1
 		_count(stats, mid, rep)
 	while steps < 12000 and not s.game_over:
 		steps += 1
 		var prev := s.chapter
+		var day_before := s.day
 		var r := AutoPlay.step(c, s, on_report)
 		s = r["state"]
 		if str(r["error"]) != "":
@@ -255,6 +256,10 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 			done["nightmare"] = true
 			if prev == "academy":
 				done["academy"] = true
+			if prev == "shore":
+				done["shore"] = true   # дальше — Глава 4: прогон баланса демо заканчивается на Береге
+				done["shore_days"] = day_before
+				break
 	var grown := {"vet": 0, "evo": 0, "mut": 0}
 	for cid: String in s.characters:
 		for tag: String in s.characters[cid].get("tag_xp", {}):
@@ -265,8 +270,8 @@ func _bot(c: Content, seed_value: int, stats: Dictionary) -> Dictionary:
 		return {"stuck": true, "error": "12000 шагов: глава %s, открыто %s, отряды %s, герои %s" % [s.chapter, MissionFlow.open_missions(s),
 			s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]]), MissionFlow.heroes(c, s)]}
 	var academy_done: bool = done["academy"]
-	return {"stuck": false, "over": s.game_over, "attempts": done["attempts"], "clock": s.day, "grown": grown, "academy_done": academy_done,
-		"shore_done": s.demo_complete and s.chapter == "shore",
+	return {"stuck": false, "over": s.game_over, "attempts": done["attempts"], "clock": int(done.get("shore_days", s.day)), "grown": grown, "academy_done": academy_done,
+		"shore_done": bool(done["shore"]) or (s.demo_complete and s.chapter == "shore"),
 		"nightmare_done": done["nightmare"], "story_done": academy_done or (s.demo_complete and s.chapter == "academy"),
 		"heroes": MissionFlow.heroes(c, s).size()}
 

@@ -1,0 +1,2875 @@
+[
+ {
+  "id": "DS01",
+  "location": "east_gate",
+  "type": "story",
+  "title": "Восточные ворота",
+  "briefing": "(черновик) Мрачный город. Руины кольцом вокруг холма, на холме — белый замок с тёплыми окнами. Санни решает войти один и посмотреть.",
+  "arrival": "Пролом в стене. Тишина руин, которую нарушает только ветер.",
+  "rumors": [
+   {
+    "text": "Руины [кишат ужасами]",
+    "tag": "Тьма"
+   },
+   {
+    "text": "В замке [люди]",
+    "tag": "Толпа"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Тьма"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "stealth"
+  ],
+  "actions": [
+   {
+    "id": "DS01_in",
+    "label": "Войти в город",
+    "text": "Тихо, тенью.",
+    "stages": [
+     {
+      "name": "Вход",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Никто не заметил.",
+      "fail": "Что-то шевельнулось в руинах."
+     }
+    ],
+    "on_success": [],
+    "story": true
+   },
+   {
+    "id": "DS01_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "start": true,
+  "requires_heroes": [
+   "P01"
+  ],
+  "next": [
+   "DS02"
+  ]
+ },
+ {
+  "id": "DS02",
+  "location": "sunny_lair",
+  "type": "story",
+  "title": "Логово в башне",
+  "briefing": "(черновик) Полуразрушенная башня с тайным входом — идеальное логово для того, кто не хочет платить дань и не хочет, чтобы его нашли.",
+  "arrival": "Пыль, паутина, узкая лестница наверх.",
+  "rumors": [
+   {
+    "text": "Башня [тайная]",
+    "tag": "Скрытность"
+   },
+   {
+    "text": "Внутри [кто-то был]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "stealth",
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "DS02_lair",
+    "label": "Устроить логово",
+    "text": "Спрятать вход и обжиться.",
+    "stages": [
+     {
+      "name": "Логово",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Логово готово — дёшево и тихо.",
+      "fail": "Вход слишком заметен."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "map_mark",
+      "place": "sunny_lair",
+      "state": "hidden",
+      "missions": 999
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS02_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "next": [
+   "DS03"
+  ]
+ },
+ {
+  "id": "DS03",
+  "location": "statue_plaza",
+  "type": "story",
+  "title": "Каменная Святая",
+  "briefing": "(черновик) На Площади статуй одна статуя не похожа на другие. Каменная Святая — хозяйка площади. Победить её — значит освободить район.",
+  "arrival": "Статуи стоят полукругом. Одна из них повернула голову.",
+  "rumors": [
+   {
+    "text": "Святая [двигается]",
+    "tag": "Конструкт"
+   },
+   {
+    "text": "Камень [не берёт сталь]",
+    "tag": "Камень"
+   }
+  ],
+  "threat": 4,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M17"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Конструкт",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DS03_fight",
+    "label": "Бой на площади",
+    "text": "Каждый заход — трещина в камне.",
+    "stages": [
+     {
+      "name": "Святая",
+      "combat": {
+       "enemies": [
+        "M17"
+       ],
+       "field": "F_06",
+       "power": 0.6
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Каменная Святая рассыпается. Площадь затихает.",
+      "fail": "Святая отбрасывает вас."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "statues",
+      "days": 30
+     },
+     {
+      "cmd": "map_mark",
+      "place": "statue_plaza",
+      "state": "cleared",
+      "missions": 30
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 8
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS03_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M17",
+  "memory": "boss",
+  "boss": {
+   "phases": [
+    {
+     "field": "F_06",
+     "text": "Святая отступила за статуи — и вернётся."
+    },
+    {
+     "field": "F_06",
+     "text": "Последний заход."
+    }
+   ]
+  },
+  "next": [
+   "DS04"
+  ]
+ },
+ {
+  "id": "DS04",
+  "location": "castle_gate",
+  "type": "story",
+  "title": "Светлый замок",
+  "briefing": "(черновик) Ворота замка. Здесь живут сотни Спящих под защитой Гунлауга — за дань. Нефис и Касси уже внутри.",
+  "arrival": "Подъёмный мост, стража, очередь у ворот.",
+  "rumors": [
+   {
+    "text": "Стража [берёт дань]",
+    "tag": "Толпа"
+   },
+   {
+    "text": "Внутри [свои законы]",
+    "tag": "Ложь"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_24",
+  "known_tags": [
+   "Толпа",
+   "Свет"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "social"
+  ],
+  "actions": [
+   {
+    "id": "DS04_enter",
+    "label": "Войти в замок",
+    "text": "Заплатить и войти.",
+    "stages": [
+     {
+      "name": "Ворота",
+      "req": {
+       "will": 5
+      },
+      "tags": [
+       "social"
+      ],
+      "ok": "Стража пропускает. Замок живёт по своим законам.",
+      "fail": "Стража не верит."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": -2
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS04_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "next": [
+   "DS05"
+  ]
+ },
+ {
+  "id": "DS05",
+  "location": "bright_castle",
+  "type": "story",
+  "title": "Законы Гунлауга",
+  "briefing": "(черновик) Гунлауг держит замок железной рукой. Дань, лейтенанты, право сильного. Чтобы здесь жить, надо понять, как здесь всё устроено.",
+  "arrival": "Тёплые огни, сытые лица — и страх в каждом взгляде.",
+  "rumors": [
+   {
+    "text": "Лейтенанты [следят]",
+    "tag": "Страх"
+   },
+   {
+    "text": "Дань [каждую ночь]",
+    "tag": "Толпа"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_24",
+  "known_tags": [
+   "Толпа"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "social",
+   "lie"
+  ],
+  "actions": [
+   {
+    "id": "DS05_learn",
+    "label": "Узнать законы",
+    "text": "Слушать и молчать.",
+    "stages": [
+     {
+      "name": "Законы",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "social"
+      ],
+      "ok": "Теперь ясно, кто здесь кто.",
+      "fail": "Лишний вопрос — лишний взгляд."
+     }
+    ],
+    "on_success": [],
+    "story": true
+   },
+   {
+    "id": "DS05_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "next": [
+   "DS06"
+  ]
+ },
+ {
+  "id": "DS06",
+  "location": "memory_market",
+  "type": "story",
+  "title": "Рынок Воспоминаний",
+  "briefing": "(черновик) У стены замка торгуют Воспоминаниями и оружием. Здесь можно купить всё — и продать всё, что принёс из руин.",
+  "arrival": "Навесы, крики торговцев, блеск стали.",
+  "rumors": [
+   {
+    "text": "Торговцы [хитрят]",
+    "tag": "Ложь"
+   },
+   {
+    "text": "Товар [из руин]",
+    "tag": "Подручные предметы"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_24",
+  "known_tags": [
+   "Толпа"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "social"
+  ],
+  "actions": [
+   {
+    "id": "DS06_trade",
+    "label": "Торговать",
+    "text": "Продать добычу из руин.",
+    "stages": [
+     {
+      "name": "Торг",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "social",
+       "lie"
+      ],
+      "ok": "Сделка удалась.",
+      "fail": "Обманули."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS06_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "next": [
+   "DS07"
+  ]
+ },
+ {
+  "id": "DS07",
+  "location": "hunters_guild",
+  "type": "story",
+  "title": "Гильдия охотников",
+  "briefing": "(черновик) Гильдия берёт заказы на ужасов руин. Ночью великие охотники — Кровавый Изверг, Пожиратель Трупов — выходят на шум.",
+  "arrival": "Трофеи на стенах: когти, черепа, клочья паутины.",
+  "rumors": [
+   {
+    "text": "Охотники [идут на шум]",
+    "tag": "Шум"
+   },
+   {
+    "text": "Заказы [платят]",
+    "tag": "Толпа"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_06",
+  "known_tags": [
+   "Шум"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "social"
+  ],
+  "actions": [
+   {
+    "id": "DS07_contract",
+    "label": "Взять заказ",
+    "text": "Записаться в охотники.",
+    "stages": [
+     {
+      "name": "Заказ",
+      "req": {
+       "will": 6
+      },
+      "tags": [
+       "social"
+      ],
+      "ok": "Заказ ваш: зачистить два района руин — тогда Гильдия скажет, где логово Чёрного Рыцаря.",
+      "fail": "Новичкам не доверяют."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS07_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "next": [
+   "DK01",
+   "DK02",
+   "DK03"
+  ]
+ },
+ {
+  "id": "DK01",
+  "location": "dark_well",
+  "type": "side",
+  "title": "Заказ: железные пауки",
+  "briefing": "(черновик) Пауки из колодца плетут сети уже по соседним дворам. Гильдия платит за каждую порванную сеть.",
+  "arrival": "Гильдия ждёт трофей.",
+  "rumors": [
+   {
+    "text": "Пауки [в сетях]",
+    "tag": "Сети"
+   },
+   {
+    "text": "Огонь [жжёт паутину]",
+    "tag": "Огонь"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M18"
+  ],
+  "field": "F_21",
+  "known_tags": [
+   "Сети"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DK01_fight",
+    "label": "Выгнать хозяина",
+    "text": "Бой на его земле.",
+    "stages": [
+     {
+      "name": "Хозяин района",
+      "combat": {
+       "enemies": [
+        "M18"
+       ],
+       "field": "F_21",
+       "power": 0.45
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хозяин района повержен.",
+      "fail": "Хозяин держит район."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 12
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "DK01_alt",
+    "label": "Выжечь сети",
+    "text": "Факелы в колодец — и бежать.",
+    "stages": [
+     {
+      "name": "Выжечь сети",
+      "req": {
+       "cunning": 7
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "Район затих.",
+      "fail": "Хозяева заметили вас."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 8
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DK01_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M18"
+ },
+ {
+  "id": "DK02",
+  "location": "graveyard_hope",
+  "type": "side",
+  "title": "Заказ: плотоядные цветы",
+  "briefing": "(черновик) Цветы с Кладбища надежд ползут к рынку. Гильдия просит выполоть их с корнем.",
+  "arrival": "Гильдия ждёт трофей.",
+  "rumors": [
+   {
+    "text": "Цветы [ползут]",
+    "tag": "Растение"
+   },
+   {
+    "text": "Корни [глубоко]",
+    "tag": "Захват"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M08"
+  ],
+  "field": "F_19",
+  "known_tags": [
+   "Растение"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DK02_fight",
+    "label": "Выгнать хозяина",
+    "text": "Бой на его земле.",
+    "stages": [
+     {
+      "name": "Хозяин района",
+      "combat": {
+       "enemies": [
+        "M08"
+       ],
+       "field": "F_19",
+       "power": 0.85
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хозяин района повержен.",
+      "fail": "Хозяин держит район."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 12
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "DK02_alt",
+    "label": "Выполоть корни",
+    "text": "Днём, пока цветы спят.",
+    "stages": [
+     {
+      "name": "Выполоть корни",
+      "req": {
+       "power": 7
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Район затих.",
+      "fail": "Хозяева заметили вас."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 8
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DK02_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M08"
+ },
+ {
+  "id": "DK03",
+  "location": "catacombs",
+  "type": "side",
+  "title": "Заказ: пожиратели",
+  "briefing": "(черновик) Пожиратели выходят из катакомб к гавани. Гильдия хочет, чтобы ход завалили — или пожирателей стало меньше.",
+  "arrival": "Гильдия ждёт трофей.",
+  "rumors": [
+   {
+    "text": "Пожиратели [у входа]",
+    "tag": "Кость"
+   },
+   {
+    "text": "Ход [можно завалить]",
+    "tag": "Камень"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M28"
+  ],
+  "field": "F_21",
+  "known_tags": [
+   "Кость"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DK03_fight",
+    "label": "Выгнать хозяина",
+    "text": "Бой на его земле.",
+    "stages": [
+     {
+      "name": "Хозяин района",
+      "combat": {
+       "enemies": [
+        "M28"
+       ],
+       "field": "F_21",
+       "power": 0.45
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хозяин района повержен.",
+      "fail": "Хозяин держит район."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 12
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "DK03_alt",
+    "label": "Завалить ход",
+    "text": "Камни с арки — вниз.",
+    "stages": [
+     {
+      "name": "Завалить ход",
+      "req": {
+       "power": 7,
+       "cunning": 5
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "Район затих.",
+      "fail": "Хозяева заметили вас."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 8
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DK03_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M28"
+ },
+ {
+  "id": "DS08",
+  "location": "ruined_cathedral",
+  "type": "story",
+  "title": "Разрушенный собор",
+  "briefing": "(черновик) В соборе без крыши живёт Чёрный Рыцарь. Пока он там — путь в южные руины закрыт.",
+  "arrival": "Роза-окно, лунный свет, шаги в доспехах.",
+  "rumors": [
+   {
+    "text": "Рыцарь [в доспехах]",
+    "tag": "Сталь"
+   },
+   {
+    "text": "Собор [трещит]",
+    "tag": "Камень"
+   }
+  ],
+  "threat": 4,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M25"
+  ],
+  "field": "F_07",
+  "known_tags": [
+   "Сталь",
+   "Тьма"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DS08_fight",
+    "label": "Бой в соборе",
+    "text": "Против Чёрного Рыцаря.",
+    "stages": [
+     {
+      "name": "Рыцарь",
+      "combat": {
+       "enemies": [
+        "M25"
+       ],
+       "field": "F_07",
+       "power": 0.4
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Чёрный Рыцарь падает на колени.",
+      "fail": "Рыцарь неуязвим."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "map_mark",
+      "place": "ruined_cathedral",
+      "state": "cleared",
+      "missions": 30
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 8
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS08_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M25",
+  "memory": "boss",
+  "unlock": {
+   "zones_cleared": 3,
+   "after_all": [
+    "DS07"
+   ]
+  },
+  "boss": {
+   "phases": [
+    {
+     "field": "F_07",
+     "text": "Рыцарь отступил в тень нефа."
+    },
+    {
+     "field": "F_07",
+     "text": "Последний заход."
+    }
+   ]
+  },
+  "next": [
+   "DS09"
+  ]
+ },
+ {
+  "id": "DS09",
+  "location": "graveyard_hope",
+  "type": "story",
+  "title": "Кладбище надежд",
+  "briefing": "(черновик) На холме — мечи Спящих над могилами. Каждый, кто пришёл в город и не вернулся, оставил здесь меч.",
+  "arrival": "Ветер звенит мечами.",
+  "rumors": [
+   {
+    "text": "Мечи [помнят хозяев]",
+    "tag": "Сталь"
+   },
+   {
+    "text": "Цветы [плотоядные]",
+    "tag": "Растение"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M08"
+  ],
+  "field": "F_19",
+  "known_tags": [
+   "Кость",
+   "Растение"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat",
+   "ritual"
+  ],
+  "actions": [
+   {
+    "id": "DS09_honor",
+    "label": "Почтить павших",
+    "text": "И отогнать цветы от могил.",
+    "stages": [
+     {
+      "name": "Цветы",
+      "combat": {
+       "enemies": [
+        "M08"
+       ],
+       "field": "F_19",
+       "power": 0.85
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Могилы чисты.",
+      "fail": "Цветы оплетают ноги."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "flowers",
+      "days": 20
+     },
+     {
+      "cmd": "map_mark",
+      "place": "graveyard_hope",
+      "state": "fresh_graves",
+      "missions": 30
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS09_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M08",
+  "next": [
+   "DS10"
+  ]
+ },
+ {
+  "id": "DS10",
+  "location": "bright_castle",
+  "type": "story",
+  "title": "Право вызова",
+  "briefing": "(черновик) Право вызова: любой может бросить вызов лейтенанту Гунлауга. Победитель получает его место. Нефис решает драться.",
+  "arrival": "Круг во дворе замка. Толпа молчит.",
+  "rumors": [
+   {
+    "text": "Лейтенант [сильнее]",
+    "tag": "Дуэль"
+   },
+   {
+    "text": "Толпа [смотрит]",
+    "tag": "Толпа"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M25"
+  ],
+  "field": "F_24",
+  "known_tags": [
+   "Дуэль",
+   "Толпа"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat",
+   "duel"
+  ],
+  "actions": [
+   {
+    "id": "DS10_duel",
+    "label": "Принять вызов",
+    "text": "Бой в круге.",
+    "stages": [
+     {
+      "name": "Вызов",
+      "combat": {
+       "enemies": [
+        "M25"
+       ],
+       "field": "F_24",
+       "power": 0.4
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Лейтенант повержен. Замок замолкает.",
+      "fail": "Лейтенант сильнее."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS10_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M25",
+  "next": [
+   "DS11"
+  ]
+ },
+ {
+  "id": "DS11",
+  "location": "dark_well",
+  "type": "story",
+  "title": "Тёмный колодец",
+  "briefing": "(черновик) Под решёткой колодца — ход в нижние руины. Железные пауки плетут там сети.",
+  "arrival": "Решётка, ржавчина, тонкие нити паутины в лунном свете.",
+  "rumors": [
+   {
+    "text": "Пауки [в сетях]",
+    "tag": "Сети"
+   },
+   {
+    "text": "Внизу [ход]",
+    "tag": "Тьма"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M18"
+  ],
+  "field": "F_21",
+  "known_tags": [
+   "Сети",
+   "Железо"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat",
+   "climb"
+  ],
+  "actions": [
+   {
+    "id": "DS11_open",
+    "label": "Открыть колодец",
+    "text": "Спуститься и расчистить сети.",
+    "stages": [
+     {
+      "name": "Пауки",
+      "combat": {
+       "enemies": [
+        "M18"
+       ],
+       "field": "F_21",
+       "power": 0.45
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Сети порваны. Ход открыт.",
+      "fail": "Сети держат."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "spiders",
+      "days": 30
+     },
+     {
+      "cmd": "map_mark",
+      "place": "dark_well",
+      "state": "opened",
+      "missions": 999
+     },
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS11_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M18",
+  "next": [
+   "DS12"
+  ]
+ },
+ {
+  "id": "DS12",
+  "location": "catacombs",
+  "type": "story",
+  "title": "Вход в катакомбы",
+  "briefing": "(черновик) Арка с черепами и лестница вниз. Катакомбы ведут под город — и, говорят, к выходу из Царства Снов. Финал главы.",
+  "arrival": "Холод снизу. Черепа в нишах смотрят пустыми глазницами.",
+  "rumors": [
+   {
+    "text": "Внизу [пожиратели]",
+    "tag": "Кость"
+   },
+   {
+    "text": "Лестница [в темноту]",
+    "tag": "Тьма"
+   }
+  ],
+  "threat": 3,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M28"
+  ],
+  "field": "F_21",
+  "known_tags": [
+   "Кость",
+   "Тьма"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DS12_descend",
+    "label": "Спуститься",
+    "text": "Пробиться через пожирателей.",
+    "stages": [
+     {
+      "name": "Катакомбы",
+      "combat": {
+       "enemies": [
+        "M28"
+       ],
+       "field": "F_21",
+       "power": 0.45
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Путь вниз свободен.",
+      "fail": "Пожиратели теснят."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "map_mark",
+      "place": "catacombs",
+      "state": "opened",
+      "missions": 999
+     },
+     {
+      "cmd": "zone",
+      "do": "clear",
+      "zone": "eaters",
+      "days": 30
+     }
+    ],
+    "story": true
+   },
+   {
+    "id": "DS12_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M28",
+  "end_chapter": true,
+  "next_chapter": "city"
+ },
+ {
+  "id": "DL01",
+  "location": "bright_castle",
+  "type": "random",
+  "title": "Руины у Светлый замок",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL01_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL01_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL01_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL02",
+  "location": "castle_gate",
+  "type": "random",
+  "title": "Руины у Ворота замка",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL02_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL02_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL02_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL03",
+  "location": "memory_market",
+  "type": "random",
+  "title": "Руины у Рынок Воспоминаний",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL03_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL03_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL03_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL04",
+  "location": "hunters_guild",
+  "type": "random",
+  "title": "Руины у Гильдия охотников",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL04_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL04_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL04_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL05",
+  "location": "statue_plaza",
+  "type": "random",
+  "title": "Руины у Площадь статуй",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL05_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL05_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL05_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL06",
+  "location": "ruined_cathedral",
+  "type": "random",
+  "title": "Руины у Разрушенный собор",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL06_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL06_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL06_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL07",
+  "location": "graveyard_hope",
+  "type": "random",
+  "title": "Руины у Кладбище надежд",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL07_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL07_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL07_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL08",
+  "location": "dark_well",
+  "type": "random",
+  "title": "Руины у Тёмный колодец",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL08_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL08_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL08_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL09",
+  "location": "sunny_lair",
+  "type": "random",
+  "title": "Руины у Логово в башне",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL09_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL09_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL09_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL10",
+  "location": "harbour",
+  "type": "random",
+  "title": "Руины у Нижняя гавань",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL10_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL10_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL10_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL11",
+  "location": "canals",
+  "type": "random",
+  "title": "Руины у Каналы",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL11_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL11_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL11_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL12",
+  "location": "catacombs",
+  "type": "random",
+  "title": "Руины у Вход в катакомбы",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL12_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL12_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL12_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL13",
+  "location": "east_gate",
+  "type": "random",
+  "title": "Руины у Восточные ворота",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL13_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL13_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL13_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL14",
+  "location": "lighthouse",
+  "type": "random",
+  "title": "Руины у Маяк на утёсе",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL14_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL14_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL14_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ },
+ {
+  "id": "DL15",
+  "location": "south_road",
+  "type": "random",
+  "title": "Руины у Южный выход",
+  "briefing": "В руинах — тайник прежних хозяев города. И нынешние хозяева где-то рядом.",
+  "arrival": "Обломки колонн, следы когтей.",
+  "rumors": [
+   {
+    "text": "Тайник [где-то здесь]",
+    "tag": "Укрытия"
+   },
+   {
+    "text": "Хозяева [рядом]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M27"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Укрытия",
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival",
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "DL15_search",
+    "label": "Обыскать руины",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Поиск",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Находка ваша.",
+      "fail": "Ничего.",
+      "partial": "Немного нашли."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     }
+    ]
+   },
+   {
+    "id": "DL15_fight",
+    "label": "Выгнать тварь",
+    "text": "Бой у места.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M27"
+       ],
+       "field": "F_06"
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь ушла.",
+      "fail": "Тварь держит место."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     }
+    ]
+   },
+   {
+    "id": "DL15_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M27",
+  "expires": 2,
+  "xp_mult": 1.5,
+  "local": true
+ }
+]
