@@ -1,21 +1,24 @@
 class_name WanderToken
 extends Control
 ## Бродячий босс на карте-плане (WanderRules, docs/22): фишка-диорама на месте, где он стоит.
-## Анимация — как просил владелец: кадры art/map/wanderers/<босс>_1…_4 (.webp/.png) сменяют друг друга через
-## прозрачность (кадр держится HOLD секунд, следующий проступает за FADE). Ушёл на новое место — фишка плавно идёт
-## туда (покачиваясь). Картинок нет — рисуется тёмный силуэт с горящими глазами и тенью.
+## Кадры — 4 ракурса (просьба владельца 03.10): art/map/wanderers/<босс>_1…_4 (.webp/.png) — босс смотрит
+## 1 — вниз-влево, 2 — вниз-вправо, 3 — вверх-вправо, 4 — вверх-влево (камера та же, тварь повёрнута на своей
+## подставке). Смена ракурса — через прозрачность (FADE). Идёт на новое место — поворачивается по направлению пути и
+## плавно идёт, покачиваясь; стоит — изредка оглядывается (соседний ракурс). Картинок нет — тёмный силуэт с глазами.
 
-const HOLD := 1.5
 const FADE := 0.8
+const LOOK := Vector2(5.0, 9.0)   # стоит: оглядывается раз в столько секунд
 const EYES := {"W1": Color(1.0, 0.35, 0.25), "W2": Color(1.0, 0.6, 0.2), "W3": Color(0.7, 0.85, 1.0), "W4": Color(0.6, 1.0, 0.95)}
 
 var wid := ""
-var frames: Array = []
-var _a: TextureRect
-var _b: TextureRect
-var _i := 0
+var frames: Array = []      # ракурсы 1–4 (может быть меньше — тогда что есть)
+var _a: TextureRect         # текущий ракурс
+var _b: TextureRect         # следующий — проступает поверх
+var _face := 0              # индекс текущего ракурса
 var _t := 0.0
-var _walk := 0.0      # 0..1 — идёт к новому месту (покачивание)
+var _look_in := 6.0
+var _walk := 0.0            # 0..1 — идёт к новому месту (покачивание)
+var _rng := RandomNumberGenerator.new()
 
 
 static func make(boss: String, side: float) -> WanderToken:
@@ -40,6 +43,8 @@ static func _art(key: String) -> Texture2D:
 
 
 func _ready() -> void:
+	_rng.randomize()
+	_look_in = _rng.randf_range(LOOK.x, LOOK.y)
 	if frames.is_empty():
 		return
 	for k in 2:
@@ -57,8 +62,33 @@ func _ready() -> void:
 			_b.modulate.a = 0.0
 
 
-## Перейти на новое место: идёт по прямой, покачиваясь (в мировых координатах слоя).
+## Ракурс по направлению на экране: вниз-влево 0, вниз-вправо 1, вверх-вправо 2, вверх-влево 3.
+static func face_for(dir: Vector2) -> int:
+	if dir.y >= 0.0:
+		return 0 if dir.x < 0.0 else 1
+	return 2 if dir.x >= 0.0 else 3
+
+
+## Повернуться к ракурсу i — новый кадр проступает через прозрачность.
+func turn_to(i: int) -> void:
+	if frames.is_empty():
+		return
+	i = clampi(i, 0, frames.size() - 1)
+	if i == _face:
+		return
+	_face = i
+	_b.texture = frames[i]
+	_b.modulate.a = 0.0
+	var tw := create_tween()
+	tw.tween_property(_b, "modulate:a", 1.0, 0.0 if Vfx.reduced() else FADE)
+	tw.tween_callback(func() -> void:
+		_a.texture = frames[i]
+		_b.modulate.a = 0.0)
+
+
+## Перейти на новое место: повернуться по пути и идти по прямой, покачиваясь (в мировых координатах слоя).
 func walk_to(p: Vector2) -> void:
+	turn_to(face_for(p - position))
 	var tw := create_tween()
 	_walk = 1.0
 	set_meta("walking", true)
@@ -66,24 +96,21 @@ func walk_to(p: Vector2) -> void:
 	tw.tween_callback(func() -> void:
 		_walk = 0.0
 		rotation = 0.0
-		remove_meta("walking"))
+		remove_meta("walking")
+		_look_in = _rng.randf_range(LOOK.x, LOOK.y))
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	if _walk > 0.0:
 		rotation = sin(_t * 9.0) * 0.06
-	if frames.size() > 1 and not Vfx.reduced():
-		var cycle := HOLD + FADE
-		var ph := fmod(_t, cycle)
-		var n := int(_t / cycle)
-		if n != _i:   # новый цикл: верхний кадр стал нижним, следующий проступает сверху
-			_i = n
-			_a.texture = _b.texture if _b.modulate.a > 0.5 else _a.texture
-			_b.texture = frames[(n + 1) % frames.size()]
-			_b.modulate.a = 0.0
-		if ph > HOLD:
-			_b.modulate.a = (ph - HOLD) / FADE
+	elif frames.size() > 1 and not Vfx.reduced():
+		_look_in -= delta
+		if _look_in <= 0.0:   # стоит: оглядывается на соседний ракурс, чаще — лицом к зрителю
+			_look_in = _rng.randf_range(LOOK.x, LOOK.y)
+			var front := [0, 1].filter(func(k: int) -> bool: return k < frames.size() and k != _face)
+			var next: int = front[0] if not front.is_empty() and _rng.randf() < 0.75 else (_face + 1) % frames.size()
+			turn_to(next)
 	if frames.is_empty():
 		queue_redraw()
 
