@@ -12,6 +12,9 @@ extends Control
 
 const WATER_SHADER := preload("res://scenes/map/sleeper_water.gdshader")
 const FOG_SHADER := preload("res://scenes/map/sleeper_fog.gdshader")
+const GLOW_SHADER := preload("res://scenes/map/sleeper_glow.gdshader")
+const SILVER := Color(0.82, 0.88, 1.0)
+const GOLDEN := Color(1.0, 0.8, 0.42)
 const FADE := 0.9
 const REVEAL_R := 0.17           # радиус открытого круга — доля высоты основы
 const LEVEL_SPEED := 18.0        # сколько единиц высоты вода проходит за секунду
@@ -54,13 +57,23 @@ var _clouds: Array = []
 var _rng := RandomNumberGenerator.new()
 # фигура (docs/18): лагерь рисует не костёр-точка, а сцена у фигуры; при перетаскивании — подсветка участков
 var figure_mode := false
-var drag_targets: Array = []     # куда фигуру можно поставить
-var drag_blocked := {}           # соседние участки, куда нельзя: место -> причина
-var drag_hover := ""             # участок под фигурой
-var camp_scene := 0.0            # 0..1 — ночная сцена лагеря (наезд камеры): фигура у костра, вокруг темно
-var camp_hero := "P01"
-var _cam_tw: Tween
-var _camp_nodes: Array = []      # картинки сцены лагеря (фигура отряда, костёр) — узлы на слое мира
+# подсветка участков при перетаскивании фигуры: участок загорается светом вверх (серебро — можно, золото — под
+# фигурой, тёмно-красный — нельзя); меняются — карта сама перекрашивает участки (_apply_highlight)
+var drag_targets: Array = []:     # куда фигуру можно поставить
+	set(v):
+		drag_targets = v
+		_apply_highlight()
+var drag_blocked := {}:           # соседние участки, куда нельзя: место -> причина
+	set(v):
+		drag_blocked = v
+		_apply_highlight()
+var drag_hover := "":             # участок под фигурой
+	set(v):
+		if v != drag_hover:
+			drag_hover = v
+			_apply_highlight()
+var _glow: Control               # столбы света и искры над подсвеченными участками (сложение цветов)
+var _mats := {}                  # silver | gold | block -> ShaderMaterial
 
 
 static func make(config: Dictionary, area: Rect2) -> SleeperMap:
@@ -99,6 +112,11 @@ func _ready() -> void:
 	_ink = _layer(_world)
 	_ink.draw.connect(_draw_paths)
 	_sprites_layer = _layer(_world)
+	_glow = _layer(_world)
+	var add := CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_glow.material = add
+	_glow.draw.connect(_draw_glow)
 	_threat = _layer(_world)
 	_threat.draw.connect(_draw_threat)
 	_shade = _layer(_world)
@@ -442,6 +460,8 @@ func _show_place(content: Content, state: RunState, lid: String, st: String) -> 
 		tr.pivot_offset = tr.size / 2.0
 		_sprites_layer.add_child(tr)
 		_sprites[lid] = tr
+		if drag_targets.has(lid) or drag_blocked.has(lid):
+			_apply_highlight.call_deferred()
 		if not first and not Vfx.reduced():
 			tr.modulate.a = 0.0
 			create_tween().tween_property(tr, "modulate:a", 1.0, FADE)
@@ -504,6 +524,8 @@ func _process(delta: float) -> void:
 		_flash = maxf(0.0, _flash - delta * 2.6)
 	_shade.queue_redraw()
 	_over.queue_redraw()
+	if not drag_targets.is_empty() or not drag_blocked.is_empty():
+		_glow.queue_redraw()
 	_weather.queue_redraw()
 	if not Dictionary(_info.get("threat", {})).is_empty() or not Dictionary(_info.get("terrain", {})).is_empty():
 		_threat.queue_redraw()
@@ -713,7 +735,7 @@ func _draw_over() -> void:
 		_over.draw_string(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.8, 0.5))
 	# подписи открытых мест (в сцене лагеря — без подписей: камера близко)
 	var f := UITheme.font("title")
-	var feet: Dictionary = _info.get("feet", {}) if camp_scene < 0.3 else {}
+	var feet: Dictionary = _info.get("feet", {})
 	var names: Dictionary = _info.get("names", {})
 	for lid: String in feet:
 		var fp: Vector2 = feet[lid]
@@ -728,64 +750,17 @@ func _draw_over() -> void:
 
 ## Фигура: кольца участков при перетаскивании; ночью — фигура у костра на своём участке (наезд камеры).
 func _draw_figure_marks(centers: Dictionary, sizes: Dictionary) -> void:
-	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
-	for lid: String in drag_targets:
-		if not centers.has(lid):
-			continue
-		var c: Vector2 = centers[lid]
-		var r := float(sizes.get(lid, 100.0)) * 0.46
-		var hot := lid == drag_hover
-		_ellipse_ring(c, r * (1.06 if hot else 1.0), Color(1.0, 0.82, 0.45, (0.9 if hot else 0.45 + 0.25 * pulse)), 5.0 if hot else 3.0)
-		if hot:
-			_ellipse_fill(c, r, Color(1.0, 0.8, 0.4, 0.12))
 	for lid: String in drag_blocked:
 		if not centers.has(lid):
 			continue
 		var c2: Vector2 = centers[lid]
 		var r2 := float(sizes.get(lid, 100.0)) * 0.46
-		_ellipse_ring(c2, r2, Color(1.0, 0.3, 0.25, 0.75 if lid == drag_hover else 0.35), 3.0)
 		if lid == drag_hover:
 			var f := UITheme.font("sans_bold")
 			var t := str(drag_blocked[lid])
 			var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 			_over.draw_string_outline(f, c2 + Vector2(-w / 2.0, -r2 * 0.6 - 10.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 6, Color(0, 0, 0, 0.9))
 			_over.draw_string(f, c2 + Vector2(-w / 2.0, -r2 * 0.6 - 10.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.55, 0.5))
-	var at := str(_info.get("figure", ""))
-	if camp_scene <= 0.0 or at == "" or not centers.has(at):
-		return
-	# сцена лагеря: костёр справа от фигуры, фигура — у огня
-	var sz := float(sizes.get(at, 200.0))
-	var base: Vector2 = centers[at] + Vector2(-sz * 0.08, sz * 0.12)
-	var fire := base + Vector2(sz * 0.14, 4.0)
-	var a := camp_scene
-	var fl := 0.85 + 0.15 * sin(_t * 9.0) * sin(_t * 5.3)
-	for k in 5:
-		_over.draw_circle(fire, (90.0 - k * 14.0) * fl, Color(1.0, 0.55, 0.2, 0.05 * a))
-	var fart: Texture2D = null   # картинка костра (docs/18 §11), пока нет — рисуем сами
-	for ext: String in ["webp", "png"]:
-		if fart == null and ResourceLoader.exists("res://art/map/figure/campfire.%s" % ext):
-			fart = load("res://art/map/figure/campfire.%s" % ext)
-	if fart != null or not _camp_nodes.is_empty():
-		pass   # костёр — картинкой (camp_show)
-	else:
-		# кольцо камней, угли, языки пламени
-		for i in 9:
-			var ang := TAU * i / 9.0
-			_over.draw_circle(fire + Vector2(cos(ang) * 19.0, sin(ang) * 8.0 + 5.0), 4.8, Color(0.25, 0.24, 0.25, a))
-		_over.draw_circle(fire + Vector2(0, 5), 12.0, Color(1.0, 0.45, 0.12, 0.8 * a))
-		for j in 4:
-			var hgt := (26.0 + 10.0 * sin(_t * (7.0 + j) + j)) * fl
-			var x := (j - 1.5) * 6.0
-			_over.draw_colored_polygon(PackedVector2Array([fire + Vector2(x - 6, 5), fire + Vector2(x + 6, 5), fire + Vector2(x + sin(_t * 6.0 + j) * 3.0, 5 - hgt)]),
-				Color(1.0, 0.55 + 0.1 * j, 0.18, 0.85 * a))
-	var fw := FigurePiece.W * 0.62
-	var fh := FigurePiece.H * 0.62
-	_over.draw_circle(base + Vector2(0, -2), fw * 0.45, Color(0, 0, 0, 0.35 * a))
-	if a > 0.25 and _camp_nodes.is_empty():   # нарисованная фигура — если картинок нет
-		FigurePiece.paint(_over, Rect2(base - Vector2(fw / 2.0, fh), Vector2(fw, fh)), FigurePiece.art(camp_hero),
-			FigurePiece.ACCENT.get(camp_hero, Color.WHITE), 0.0, _t)
-	# тёплый отсвет огня на фигуре
-	_over.draw_circle(fire + Vector2(-10, -10), 26.0 * fl, Color(1.0, 0.6, 0.25, 0.08 * a))
 
 
 func _ellipse_ring(c: Vector2, r: float, col: Color, width: float) -> void:
@@ -802,6 +777,78 @@ func _ellipse_fill(c: Vector2, r: float, col: Color) -> void:
 		var ang := TAU * i / 48.0
 		pts.append(c + Vector2(cos(ang) * r, sin(ang) * r * 0.6))
 	_over.draw_colored_polygon(pts, col)
+
+
+## Участки при перетаскивании фигуры: картинке участка — шейдер света (sleeper_glow), остальным — без него.
+func _apply_highlight() -> void:
+	if _mats.is_empty():
+		for key: String in ["silver", "gold", "block"]:
+			var m := ShaderMaterial.new()
+			m.shader = GLOW_SHADER
+			m.set_shader_parameter("glow", {"silver": SILVER, "gold": GOLDEN, "block": Color(0.9, 0.25, 0.2)}[key])
+			m.set_shader_parameter("amount", {"silver": 0.6, "gold": 1.0, "block": 0.35}[key])
+			m.set_shader_parameter("dim", 0.45 if key == "block" else 0.0)
+			_mats[key] = m
+	for lid: String in _sprites:
+		var tr: TextureRect = _sprites[lid]
+		if not is_instance_valid(tr):
+			continue
+		var key2 := ""
+		if drag_targets.has(lid):
+			key2 = "gold" if lid == drag_hover else "silver"
+		elif drag_blocked.has(lid):
+			key2 = "block"
+		tr.material = _mats[key2] if key2 != "" else null
+	if _glow != null:
+		_glow.queue_redraw()
+
+
+## Свет вверх над участками, куда можно поставить фигуру: мягкое пятно, столбы света и поднимающиеся искры.
+func _draw_glow() -> void:
+	if drag_targets.is_empty() or _content == null:
+		return
+	for lid: String in drag_targets:
+		if not _sprites.has(lid):
+			continue
+		var hot := lid == drag_hover
+		var col := GOLDEN if hot else SILVER
+		var k := 1.0 if hot else 0.55
+		var c := center(_content, _state, lid) - view.position
+		var sz := _sprite_size(_content, _state, lid)
+		var ground := c + Vector2(0.0, sz * 0.12)
+		# пятно света на земле
+		for i in 6:
+			var rr := sz * (0.42 - i * 0.06)
+			var pts := PackedVector2Array()
+			for j in 32:
+				var a := TAU * j / 32.0
+				pts.append(ground + Vector2(cos(a) * rr, sin(a) * rr * 0.5))
+			_glow.draw_colored_polygon(pts, Color(col.r, col.g, col.b, 0.05 * k))
+		# общее сияние над участком: широкий мягкий столб
+		var aw := sz * 0.36
+		var ah := sz * (0.95 if hot else 0.75)
+		var aa := 0.1 * k
+		_glow.draw_polygon(PackedVector2Array([ground + Vector2(-aw, 0), ground + Vector2(aw, 0), ground + Vector2(aw * 0.55, -ah), ground + Vector2(-aw * 0.55, -ah)]),
+			PackedColorArray([Color(col.r, col.g, col.b, aa), Color(col.r, col.g, col.b, aa), Color(col.r, col.g, col.b, 0.0), Color(col.r, col.g, col.b, 0.0)]))
+		# тонкие лучи вверх: ядро и мягкий край
+		for i in 12:
+			var fx := (float(i) / 11.0 - 0.5) * sz * 0.6 + sin(i * 2.3) * sz * 0.025
+			var w := sz * (0.012 + 0.012 * (0.5 + 0.5 * sin(i * 1.7)))
+			var h := sz * (0.45 + 0.4 * (0.5 + 0.5 * sin(i * 3.1))) * (1.15 if hot else 1.0)
+			var fl := 0.55 + 0.45 * sin(_t * (1.6 + i * 0.31) + i)
+			var base := ground + Vector2(fx, -absf(fx) * 0.15)
+			for layer in 2:
+				var ww := w * (3.0 if layer == 0 else 1.0)
+				var a0 := (0.08 if layer == 0 else 0.3) * k * fl
+				_glow.draw_polygon(PackedVector2Array([base + Vector2(-ww, 0), base + Vector2(ww, 0), base + Vector2(ww * 0.2, -h), base + Vector2(-ww * 0.2, -h)]),
+					PackedColorArray([Color(col.r, col.g, col.b, a0), Color(col.r, col.g, col.b, a0), Color(col.r, col.g, col.b, 0.0), Color(col.r, col.g, col.b, 0.0)]))
+		# искры поднимаются
+		for i in 14:
+			var span := sz * 0.9
+			var y := fmod(_t * (28.0 + i * 3.0) + i * 47.0, span)
+			var x := sin(i * 1.9 + _t * 0.8) * sz * 0.3
+			var p := ground + Vector2(x, -y)
+			_glow.draw_circle(p, 2.2 + (i % 3) * 0.8, Color(col.r, col.g, col.b, (1.0 - y / span) * k))
 
 
 ## Участок под точкой окна (только открытые места и лавки; "" — нет).
@@ -821,87 +868,9 @@ func pick(content: Content, state: RunState, at: Vector2) -> String:
 	return best
 
 
-## Сцена лагеря картинками: фигура отряда (или героя) у костра на участке фигуры — узлы на слое мира, проявляются.
-func camp_show(content: Content, state: RunState, hero_key: String) -> void:
-	camp_hide()
-	var lid := state.party_at
-	if not cfg.get("places", {}).has(lid):
-		return
-	var sz := _sprite_size(content, state, lid)
-	var base := center(content, state, lid) - view.position + Vector2(-sz * 0.08, sz * 0.12)
-	var fire := base + Vector2(sz * 0.14, 4.0)
-	var ftex := FigurePiece.art("campfire")
-	var htex := FigurePiece.art(hero_key)
-	if ftex != null:
-		var fs := Vector2(ftex.get_width(), ftex.get_height()) * (78.0 / float(ftex.get_width()))
-		_camp_nodes.append(_camp_sprite(ftex, Rect2(fire - Vector2(fs.x / 2.0, fs.y * 0.7), fs)))
-	if htex != null:
-		var box := Vector2(FigurePiece.W * 0.75, FigurePiece.H * 0.62)
-		var k := minf(box.x / float(htex.get_width()), box.y / float(htex.get_height()))
-		var hs := Vector2(htex.get_width(), htex.get_height()) * k
-		_camp_nodes.append(_camp_sprite(htex, Rect2(base - Vector2(hs.x / 2.0, hs.y), hs)))
-
-
-func camp_hide() -> void:
-	for n: Node in _camp_nodes:
-		if is_instance_valid(n):
-			n.queue_free()
-	_camp_nodes.clear()
-
-
-func _camp_sprite(tex: Texture2D, r: Rect2) -> TextureRect:
-	var tr := TextureRect.new()
-	tr.texture = tex
-	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_SCALE
-	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tr.position = r.position
-	tr.size = r.size
-	tr.modulate.a = 0.0
-	_over.add_child(tr)
-	create_tween().tween_property(tr, "modulate:a", 1.0, 0.0 if Vfx.reduced() else 0.9).set_delay(0.0 if Vfx.reduced() else 0.4)
-	return tr
-
-
-## Камера: точка карты (координаты слоя мира) — в центр окна, увеличение k. Возвращает твин.
-func camera_to(world_p: Vector2, k: float, dur: float) -> Tween:
-	if _cam_tw != null and _cam_tw.is_valid():
-		_cam_tw.kill()
-	_cam_tw = create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	var target := Vector2(view.size.x * 0.33, view.size.y * 0.52) - world_p * k   # левее середины: справа — окно ночи
-	var d := 0.0 if Vfx.reduced() else dur
-	_cam_tw.tween_property(_world, "scale", Vector2(k, k), d)
-	_cam_tw.tween_property(_world, "position", target, d)
-	_cam_tw.tween_property(self, "camp_scene", 1.0, d)
-	return _cam_tw
-
-
-## Камера обратно: обычный масштаб, прежний сдвиг.
-func camera_back(dur: float) -> Tween:
-	if _cam_tw != null and _cam_tw.is_valid():
-		_cam_tw.kill()
-	_cam_tw = create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	var d := 0.0 if Vfx.reduced() else dur
-	_cam_tw.tween_property(_world, "scale", Vector2.ONE, d)
-	_cam_tw.tween_property(_world, "position", pan, d)
-	_cam_tw.tween_property(self, "camp_scene", 0.0, d)
-	return _cam_tw
-
-
-## Точка участка в координатах слоя мира (для камеры).
-func world_point(content: Content, state: RunState, lid: String) -> Vector2:
-	return center(content, state, lid) - view.position
-
-
 ## Небо поверх окна (не сдвигается с картой): кровавая луна пульсирует, шторм — дождь и молнии.
 func _draw_weather() -> void:
 	var full := Rect2(Vector2.ZERO, view.size)
-	# ночная сцена лагеря: вокруг костра темно (виньетка)
-	if camp_scene > 0.0:
-		var cc := view.size / 2.0
-		for k in 8:
-			var rr := view.size.x * (0.9 - k * 0.07)
-			_weather.draw_arc(cc, rr, 0.0, TAU, 64, Color(0.0, 0.0, 0.02, 0.09 * camp_scene), view.size.x * 0.12, false)
 	if sky == "blood_moon":
 		var beat := 0.5 + 0.5 * sin(_t * 1.6)
 		_weather.draw_rect(full, Color(0.5, 0.04, 0.06, 0.06 + 0.05 * beat))

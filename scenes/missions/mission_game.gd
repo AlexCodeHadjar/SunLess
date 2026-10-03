@@ -52,10 +52,10 @@ var _drag_armed := false
 var _relayout_in := -1.0        # окно сменило размер: через сколько секунд переложить карту
 var _figure: FigurePiece        # фигура главного героя (docs/18): где стоит — там лагерь
 var _figure_at := ""            # где фигура стоит на экране (перешла — анимация)
-var _cinema := false            # ночная сцена лагеря: камера наехала на фигуру
-var _night_after_event := false
-var _bottom_ui: Array = []
-var _note: Control              # карточка итогов ночи после перехода фигуры      # тень, ряд карт, дневная панель — в сцене лагеря прячутся # событие проведено — после отчёта (и выбора добычи) наступит ночь
+var _cinema := false            # ночь у фигуры: окно ночи открыто, у фигуры горит костёр
+var _night_after_event := false # событие проведено — после отчёта (и выбора добычи) наступит ночь
+var _note: Control              # карточка итогов ночи после перехода фигуры
+var _fire: TextureRect          # костёр лагеря у фигуры ночью
 
 
 func _ready() -> void:
@@ -350,9 +350,7 @@ func _build_bottom() -> void:
 	shade.anchor_right = 1.0
 	shade.offset_top = -(TRAY_H + 60)
 	add_child(shade)
-	_bottom_ui.append(shade)
 	var panel := PanelContainer.new()
-	_bottom_ui.append(panel)
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.anchor_top = 1.0
@@ -404,7 +402,6 @@ func _build_day_panel() -> void:
 	box.custom_minimum_size = Vector2(460, 0)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
-	_bottom_ui.append(box)
 	_day_label = _on_map_label(UITheme.label("", "title", 21, Palette.TEXT))
 	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_day_label.custom_minimum_size.x = 460
@@ -684,7 +681,7 @@ func _show_night(ev: Array) -> void:
 	shade.color = Color(0.01, 0.012, 0.02, 0.0)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_night.add_child(shade)
-	create_tween().tween_property(shade, "color:a", 0.25 if _cinema else 0.9, 0.6 if not Vfx.reduced() else 0.0)
+	create_tween().tween_property(shade, "color:a", 0.45 if _cinema else 0.9, 0.6 if not Vfx.reduced() else 0.0)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.045, 0.06, 0.97), Palette.LINE, 1, 12, 26))
 	panel.position = Vector2(560, 170)
@@ -757,7 +754,9 @@ func _fit_night_panel(panel: Control) -> void:
 	panel.reset_size()
 	var scr := _screen()
 	var sz := panel.get_combined_minimum_size()
-	var x := scr.x - sz.x - 40.0 if _cinema else (scr.x - sz.x) / 2.0
+	var x := (scr.x - sz.x) / 2.0
+	if _cinema and _figure != null:   # окно — с той стороны, где фигура с костром его не закрывает
+		x = 40.0 if _figure.get_global_rect().get_center().x > scr.x / 2.0 else scr.x - sz.x - 40.0
 	var y := 110.0 if _cinema else maxf(90.0, (scr.y - sz.y) / 2.0 - 60.0)
 	panel.position = Vector2(clampf(x, 20.0, maxf(20.0, scr.x - sz.x - 20.0)), clampf(y, 20.0, maxf(20.0, scr.y - sz.y - 20.0)))
 
@@ -1529,7 +1528,7 @@ func _place_figure() -> void:
 		return
 	var c := ContentDB.data
 	var s := GameState.state
-	_figure.visible = FigureRules.on(c, s) and not _cinema
+	_figure.visible = FigureRules.on(c, s)
 	_sleeper.figure_mode = FigureRules.on(c, s)
 	if not _figure.visible:
 		return
@@ -1722,39 +1721,47 @@ func _shatter(mk: Control) -> void:
 	await get_tree().create_timer(0.5 if not Vfx.reduced() else 0.0).timeout
 
 
-## Ночь у фигуры: камера наезжает — фигура у костра на своём участке, поверх — итоги ночи.
+## Ночь у фигуры (решение владельца 03.10: без приближения камеры): рядом с фигурой на поле разгорается костёр —
+## это лагерь; итоги ночи — окном с той стороны, где фигура его не закрывает.
 func _night_cinematic(ev: Array) -> void:
-	if _sleeper == null:
-		_show_night(ev)
-		return
 	_cinema = true
-	var c := ContentDB.data
-	var s := GameState.state
 	_close_travel()
 	if is_instance_valid(_note):
 		_note.queue_free()
-	if _figure != null:
-		# у костра — весь отряд, если в нём больше одного героя (картинка party), иначе — фигура героя
-		var many := MissionFlow.heroes(c, s).size() >= 2 and FigurePiece.art("party") != null
-		_sleeper.camp_hero = "party" if many else _figure.hero
-		_sleeper.camp_show(c, s, _sleeper.camp_hero)
-		_figure.visible = false
-	create_tween().tween_property(_pan_layer, "modulate:a", 0.0, 0.3)
-	for n: CanvasItem in _bottom_ui:
-		create_tween().tween_property(n, "modulate:a", 0.0, 0.4)
-	var tw := _sleeper.camera_to(_sleeper.world_point(c, s, s.party_at) + Vector2(0, 40), 2.4, 1.2)
-	await tw.finished
+	_camp_fire(true)
 	GameState.tutorial("figure_camp")
 	_show_night(ev)
 
 
-## Утро: камера отъезжает, метки и фигура возвращаются; после прыжка — открыть событие.
+## Утро: костёр гаснет.
 func _end_cinema() -> void:
-	var tw := _sleeper.camera_back(0.8)
-	_sleeper.camp_hide()
-	create_tween().tween_property(_pan_layer, "modulate:a", 1.0, 0.5)
-	for n: CanvasItem in _bottom_ui:
-		create_tween().tween_property(n, "modulate:a", 1.0, 0.5)
-	await tw.finished
+	_camp_fire(false)
 	_cinema = false
 	_refresh()
+
+
+## Костёр лагеря у фигуры на поле (картинка campfire); гаснет утром.
+func _camp_fire(on: bool) -> void:
+	if is_instance_valid(_fire):
+		var old: TextureRect = _fire
+		_fire = null
+		var tw := old.create_tween()
+		tw.tween_property(old, "modulate:a", 0.0, 0.4)
+		tw.tween_callback(old.queue_free)
+	if not on or _figure == null or not _figure.visible:
+		return
+	var tex := FigurePiece.art("campfire")
+	if tex == null:
+		return
+	var fr := TextureRect.new()
+	fr.texture = tex
+	fr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fr.stretch_mode = TextureRect.STRETCH_SCALE
+	fr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fr.size = Vector2(tex.get_width(), tex.get_height()) * (84.0 / float(tex.get_width()))
+	fr.position = _figure.position + Vector2(-fr.size.x * 0.55, FigurePiece.H - fr.size.y * 0.8)   # слева: справа — карты событий
+	fr.modulate.a = 0.0
+	_pan_layer.add_child(fr)
+	_pan_layer.move_child(fr, _figure.get_index())
+	_fire = fr
+	fr.create_tween().tween_property(fr, "modulate:a", 1.0, 0.6 if not Vfx.reduced() else 0.0)
