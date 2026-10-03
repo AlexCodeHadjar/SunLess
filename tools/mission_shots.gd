@@ -850,6 +850,22 @@ func _bosses() -> void:
 					break
 			await _wait(1.0)
 		await _shot("b_%s_1" % chapter)
+		if chapter == "shore":   # фишка крупно: ракурс меняется через прозрачность
+			var sl: SleeperMap = game.get("_sleeper")
+			var wd: Dictionary = sl.get("_wanderers")
+			for wid: String in wd:
+				var tk: WanderToken = wd[wid]["token"]
+				for f in 4:
+					tk.turn_to(f)
+					await _wait(1.0)
+					await _shot("b_shore_turn_%d" % (f + 1))
+	# карты боссов и наград в планшете
+	for id: String in ["MW1", "LW1", "MW4", "LW4"]:
+		var insp := CardInspector.open_for(get_tree().current_scene, id)
+		await _wait(0.7)
+		await _shot("b_inspect_" + id)
+		insp.queue_free()
+		await _wait(0.2)
 
 
 # --- мысли героев вживую: с подсказками, обычные сроки (проверка 03.10) ---------------------------------------------

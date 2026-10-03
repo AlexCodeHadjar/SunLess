@@ -54,6 +54,7 @@ func _ready() -> void:
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.set_anchors_preset(Control.PRESET_FULL_RECT)
 		tr.texture = frames[0]
+		tr.modulate = Color(1.18, 1.14, 1.2)   # на ночной карте тварь чуть светлее — не сливается
 		add_child(tr)
 		if k == 0:
 			_a = tr
@@ -111,12 +112,17 @@ func _process(delta: float) -> void:
 			var front := [0, 1].filter(func(k: int) -> bool: return k < frames.size() and k != _face)
 			var next: int = front[0] if not front.is_empty() and _rng.randf() < 0.75 else (_face + 1) % frames.size()
 			turn_to(next)
-	if frames.is_empty():
-		queue_redraw()
+	queue_redraw()   # ореол дышит; без картинок — силуэт
 
 
 func _draw() -> void:
 	if not frames.is_empty():
+		# под фишкой — мягкий фиолетовый ореол (цвет бродячих боссов): видно на любой карте
+		var g := 0.75 + 0.25 * sin(_t * 1.7)
+		draw_set_transform(size / 2.0 + Vector2(0, size.y * 0.16), 0.0, Vector2(1.0, 0.45))
+		for k in 4:
+			draw_circle(Vector2.ZERO, size.x * (0.46 - k * 0.07), Color(0.62, 0.42, 1.0, 0.07 * g))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var c := size / 2.0
 	var r := size.x * 0.3

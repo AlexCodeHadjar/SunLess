@@ -207,7 +207,7 @@ if __name__ == "__main__":
 			ov["enemies"].setdefault(e["id"], e)
 	for b in BOSSES:
 		ent = dict(b["enemy"])
-		ent["art"] = "res://art/cards/%s.png" % ent["id"]
+		ent["art"] = "res://art/cards/%s.webp" % ent["id"]
 		idx = next((i for i, e in enumerate(enemies) if e["id"] == ent["id"]), None)
 		if idx is None:
 			enemies.append(ent)

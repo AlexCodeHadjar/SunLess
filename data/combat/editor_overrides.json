@@ -67,7 +67,7 @@
     "Регенерация",
     "Соль моря"
    ],
-   "art": "res://art/cards/MW1.png"
+   "art": "res://art/cards/MW1.webp"
   },
   "MW2": {
    "id": "MW2",
@@ -86,7 +86,7 @@
     "Подземный",
     "Древний"
    ],
-   "art": "res://art/cards/MW2.png"
+   "art": "res://art/cards/MW2.webp"
   },
   "MW3": {
    "id": "MW3",
@@ -105,7 +105,7 @@
     "Одиночка",
     "Разумный"
    ],
-   "art": "res://art/cards/MW3.png"
+   "art": "res://art/cards/MW3.webp"
   },
   "MW4": {
    "id": "MW4",
@@ -124,7 +124,7 @@
     "Кошмарное существо",
     "Гигант"
    ],
-   "art": "res://art/cards/MW4.png"
+   "art": "res://art/cards/MW4.webp"
   }
  }
 }
