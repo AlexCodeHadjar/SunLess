@@ -18,7 +18,8 @@ func test_config() -> void:
 	check(MapRules.has_map(c, "shore"), "у Берега есть карта-план")
 	check(not MapRules.has_map(c, "nightmare"), "у Кошмара — прежняя панорама")
 	var cfg := MapRules.config(c, "shore")
-	eq(Array(cfg.get("sockets", [])).size(), 6, "шесть площадок ила:")
+	eq(Array(cfg.get("ebb_sockets", [])).size(), 6, "шесть площадок ила для мест отлива:")
+	eq(Array(cfg.get("sockets", [])).size(), 14, "всего площадок — с площадками событий S7–S14:")
 	for lid: String in c.locations:
 		if str(c.locations[lid].get("chapter", "")) == "shore":
 			check(cfg["places"].has(lid), "у места %s есть точка на карте" % lid)
@@ -58,7 +59,7 @@ func test_ebb_on_map() -> void:
 	DayRules.end_day(c, s)                    # день 2 — ночь: вода пришла
 	eq(TideRules.phase(s), "flood", "вода пришла:")
 	eq(MapRules.place_state(c, s, "coral_maze"), "flooded", "лабиринт под водой:")
-	eq(MapRules.place_state(c, s, "high_ground"), "dry", "высота сухая:")
+	check(MapRules.place_state(c, s, "high_ground") in ["dry", "beacon"], "высота сухая (лагерь там — горит сигнальный огонь): %s" % MapRules.place_state(c, s, "high_ground"))
 	eq(str(s.missions["RS16"]["status"]), "expired", "встречу поля раковин смыло:")
 	var before := TideRules.pos(c, s, "coral_maze")
 	var ev := DayRules.end_day(c, s)          # день 3 — рассвет: вода сошла, большой отлив

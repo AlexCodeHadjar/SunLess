@@ -82,6 +82,10 @@ static func place_state(content: Content, state: RunState, lid: String, sky: Str
 	var mark: Dictionary = Dictionary(state.tide.get("marks", {})).get(lid, {})
 	if not mark.is_empty() and have.has(str(mark.get("state", ""))):
 		return str(mark["state"])
+	# события карты (MapEventRules): фаза недели, неделя, лагерь здесь
+	var es := MapEventRules.state_of(content, state, lid, have)
+	if es != "":
+		return es
 	if int(Dictionary(state.tide.get("silt", {})).get(lid, 0)) > 0 and have.has("silt"):
 		return "silt"
 	if sky == "storm" and have.has("storm"):
@@ -139,7 +143,9 @@ static func emerge(content: Content, state: RunState, lid: String, rng: RandomNu
 	var free: Array = []
 	# у места своя группа площадок (котловины пепла, островки Чёрной воды — TerrainRules.emerge_groups)
 	var group := str(content.locations.get(lid, {}).get("socket_group", ""))
-	var allowed: Array = Array(cfg.get("emerge_groups", {}).get(group, {}).get("sockets", [])).map(func(x: Variant) -> int: return int(x)) 		if group != "" else []   # номера из JSON — дробные: [0.0].has(0) == false
+	# места отлива (без своей группы) — только на площадках ила (ebb_sockets); площадки в море и на скалах — для событий
+	var src: Array = cfg.get("emerge_groups", {}).get(group, {}).get("sockets", []) if group != "" else cfg.get("ebb_sockets", [])
+	var allowed: Array = src.map(func(x: Variant) -> int: return int(x))   # номера из JSON — дробные: [0.0].has(0) == false
 	for i in sk.size():
 		if not taken.has(i) and (allowed.is_empty() or allowed.has(i)):
 			free.append(i)

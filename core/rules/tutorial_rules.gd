@@ -63,6 +63,12 @@ static func _terrain_events(content: Content, state: RunState) -> Array:
 			out.append("zone_wrath")
 		elif int(z.get("grow", 0)) > 0:
 			out.append("territory")
+	# следы событий на карте и места событий Берега (MapEventRules, комплект событий)
+	if not MapEventRules.decals(content, state).is_empty():
+		out.append("traces")
+	if state.chapter == "shore" and MapRules.emerged(state).keys().any(func(l: String) -> bool:
+			return str(content.locations.get(l, {}).get("socket_group", "")) != ""):
+		out.append("event_place")
 	var storm := str(cfg.get("path_sets", {}).get("storm_phase", ""))
 	if storm != "" and str(DayRules.phase(content, state).get("id", "")) == storm:
 		out.append("ash_storm")

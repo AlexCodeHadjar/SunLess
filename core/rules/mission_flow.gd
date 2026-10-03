@@ -31,6 +31,7 @@ static func open_chapter(content: Content, state: RunState, chapter: String) -> 
 	TerrainRules.reset(state)
 	ZoneRules.reset(state)
 	MoverRules.reset(content, state)
+	MapEventRules.reset(state)
 	DeckRules.ensure(content, state, chapter)   # колода событий главы (docs/16 §11.4)
 	var out: Array = []
 	for mid: String in _sorted(content.missions):

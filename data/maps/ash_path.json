@@ -262,7 +262,9 @@
     0.82
    ],
    "size": 0.12,
-   "states": []
+   "states": [
+    "dry"
+   ]
   }
  },
  "paths": [
@@ -415,6 +417,24 @@
    ]
   ]
  },
+ "storm_band": {
+  "tex": "decal_ash_storm_band",
+  "phase": [
+   "ash_storm"
+  ]
+ },
+ "place_decals": [
+  {
+   "decal": "decal_beacon_fire",
+   "place": "death_beacon",
+   "lure": "demon"
+  },
+  {
+   "decal": "decal_boat",
+   "place": "boat_cove",
+   "flag": "boat"
+  }
+ ],
  "exposed": [
   "ash_dunes",
   "ash_bones",
@@ -540,7 +560,8 @@
     1.0,
     0.3,
     0.2
-   ]
+   ],
+   "decal": "decal_zone_wrath"
   },
   "charm": {
    "name": "Очарование Древа",
@@ -558,7 +579,8 @@
     1.0,
     0.85,
     0.4
-   ]
+   ],
+   "decal": "decal_zone_charm"
   }
  },
  "movers": {
@@ -568,6 +590,8 @@
    "target": "camp",
    "step": 1,
    "enemy": "M05",
+   "token": "decal_token_demon",
+   "tracks": "decal_tracks_demon",
    "hunt": {
     "req": {
      "power": 9
@@ -593,6 +617,7 @@
     "black_rocks",
     "star_landing"
    ],
+   "token": "decal_deep_shadow",
    "phases": [
     "night",
     "blood_moon"

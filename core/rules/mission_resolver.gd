@@ -328,6 +328,8 @@ static func _finish(content: Content, state: RunState, m: Dictionary, sq: Dictio
 		if not state.is_alive(cid) and not report["deaths"].has(cid):
 			report["deaths"].append(cid)
 
+	# следы на карте-плане: брошенное снаряжение, павшие и могилы (MapEventRules)
+	entries.append_array(MapEventRules.after_mission(content, state, mid, report, rng))
 	state.squads = state.squads.filter(func(s: Dictionary) -> bool: return int(s["id"]) != squad_id)
 	state.flags["event_done"] = mid   # фигура (docs/18): событие проведено — после него ночь
 	state.log.append({"clock": state.clock, "mission": mid, "action": str(run["action"]), "outcome": report["outcome"], "heroes": heroes})

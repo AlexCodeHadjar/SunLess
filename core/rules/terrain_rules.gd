@@ -177,7 +177,7 @@ static func morning(content: Content, state: RunState, rng: RandomNumberGenerato
 		var eg: Dictionary = c["emerge_groups"][g]
 		if str(eg.get("sink_after", "")) == str(yesterday.get("id", "")) and ph != str(yesterday.get("id", "")):
 			out.append_array(_sink_group(content, state, g))
-		if ph == str(eg.get("phase", "")) and int(today.get("day_in", 1)) == int(eg.get("day_in", 1)):
+		if ph == str(eg.get("phase", "")) and int(today.get("day_in", 1)) == int(eg.get("day_in", 1)) and state.day >= int(eg.get("from_day", 0)):
 			var r: Array = eg.get("count", [1, 2])
 			out.append_array(_emerge_group(content, state, g, rng.randi_range(int(r[0]), int(r[1])), rng))
 	# обвалы: в шторм — один случайный завал
@@ -267,7 +267,14 @@ static func _sink_group(content: Content, state: RunState, g: String) -> Array:
 	state.tide["emerged"] = em
 	if gone.is_empty():
 		return []
-	return [{"kind": "terrain", "text": "Скрылись: %s" % ", ".join(gone)}]
+	var out: Array = [{"kind": "terrain", "text": "Скрылись: %s" % ", ".join(gone)}]
+	# встречи ушедшего места уходят вместе с ним — открытое событие не висит в тумане
+	for mid: String in MissionFlow.open_missions(state):
+		var loc := str(content.missions.get(mid, {}).get("location", ""))
+		if not em.has(loc) and str(content.locations.get(loc, {}).get("socket_group", "")) == g:
+			state.missions[mid]["status"] = "expired"
+			out.append({"kind": "expired", "card": mid, "text": "Ушло вместе с местом: %s" % content.missions[mid].get("title", mid)})
+	return out
 
 
 ## {cmd: terrain, do: collapse|clear|repair|set, place?, rubble?, state?}

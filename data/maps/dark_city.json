@@ -343,6 +343,20 @@
  },
  "rubble_phase": "storm",
  "tribute_fallback": "castle_gate",
+ "rubble_tex": {
+  "blocked": "rubble_square_rubble",
+  "open": "rubble_square_breach"
+ },
+ "place_decals": [
+  {
+   "decal": "decal_patrol_castle",
+   "place": "castle_gate",
+   "phase": [
+    "night",
+    "blood_moon"
+   ]
+  }
+ ],
  "phase_states": {
   "castle_gate": {
    "night": "closed_night",
@@ -373,7 +387,8 @@
     0.7,
     0.75,
     0.8
-   ]
+   ],
+   "mark": "decal_territory_mark_statue_head"
   },
   "spiders": {
    "name": "Паутина железных пауков",
@@ -391,7 +406,9 @@
     0.6,
     0.6,
     0.7
-   ]
+   ],
+   "mark": "decal_territory_mark_webs",
+   "spread": "decal_web_spread"
   },
   "flowers": {
    "name": "Плотоядные цветы",
@@ -409,7 +426,8 @@
     0.85,
     0.2,
     0.35
-   ]
+   ],
+   "mark": "decal_territory_mark_carnivorous_flowers"
   },
   "eaters": {
    "name": "Логово пожирателей",
@@ -427,7 +445,8 @@
     0.5,
     0.3,
     0.25
-   ]
+   ],
+   "mark": "decal_territory_mark_bones"
   }
  },
  "movers": {
@@ -439,6 +458,15 @@
     "south_road",
     "statue_plaza",
     "dark_well"
+   ],
+   "token": "decal_token_hunter",
+   "nest": [
+    0.15,
+    0.6
+   ],
+   "nest_tex": [
+    "hunter_nest_active",
+    "hunter_nest_empty"
    ],
    "phases": [
     "night",
@@ -467,6 +495,15 @@
     "harbour",
     "sunny_lair"
    ],
+   "token": "decal_token_hunter",
+   "nest": [
+    0.86,
+    0.8
+   ],
+   "nest_tex": [
+    "hunter_nest_active",
+    "hunter_nest_empty"
+   ],
    "phases": [
     "night",
     "blood_moon"
@@ -494,6 +531,7 @@
     "hunters_guild",
     "south_road"
    ],
+   "token": "decal_token_statue",
    "phases": [
     "night"
    ],

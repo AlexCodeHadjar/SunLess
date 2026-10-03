@@ -5,6 +5,8 @@ extends Node
 
 var out_dir := ""
 var from_ch4 := false   # --mshots-from=ch4: снять только Главу 4
+var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
+var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
@@ -19,6 +21,10 @@ func _ready() -> void:
 			timeline = true
 		if a == "--mshots-from=figure":
 			figure_shots = true
+		if a == "--mshots-from=events":
+			events_shots = true
+		if a == "--mshots-from=labels":
+			labels_shots = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -80,6 +86,14 @@ func _run() -> void:
 		return
 	if figure_shots:
 		await _figure()
+		get_tree().quit()
+		return
+	if events_shots:
+		await _events()
+		get_tree().quit()
+		return
+	if labels_shots:
+		await _labels()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -754,3 +768,105 @@ func _figure() -> void:
 			break
 	await _wait(1.6)
 	await _shot("f06_jump_brief")
+
+
+# --- места и следы событий (комплекты событий Берега и Главы 4) ------------------------------------------------------
+
+func _open_map(st: RunState, chapter: String, first: bool) -> void:
+	StoryRules.mark_seen(st, chapter)
+	GameState.state = st
+	if first:
+		get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	else:
+		get_tree().reload_current_scene()
+	await _wait(3.0)
+
+
+func _reveal_all(c: Content, st: RunState, chapter: String) -> void:
+	for lid: String in MapRules.config(c, chapter).get("places", {}):
+		TravelRules.visit(st, lid)
+
+
+func _events() -> void:
+	var c := ContentDB.data
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	# Берег: Кровавая луна второй недели — алтарь, красный Шпиль, дымка, отсвет; места и следы событий
+	var s := MissionFlow.new_run(c, 41, "shore")
+	EffectApplier.add_card(c, s, "P02")
+	EffectApplier.add_card(c, s, "P03")
+	_reveal_all(c, s, "shore")
+	s.day = 13
+	s.party_at = "statue_hill"
+	for lid: String in ["strangers_camp", "whale_carcass", "legion_well", "sleeping_golem", "messenger_nest", "centipede_lair", "fallen_star"]:
+		MapRules.emerge(c, s, lid, rng)
+	MapRules.mark(c, s, "legion_ruins", "banner", 999)
+	MissionFlow.open(c, s, "RS02", true)
+	s.missions["RS02"]["mods"] = ["fog"]
+	MissionFlow.open(c, s, "RS09", true)
+	s.missions["RS09"]["mods"] = ["cursed"]
+	MapEventRules.after_mission(c, s, "RS10", {"outcome": "failure", "deaths": ["P03"]}, rng)
+	MapEventRules.night_attack(c, s)
+	await _open_map(s, "shore", true)
+	_map_only()
+	await _wait(0.6)
+	await _shot("e01_shore_events")
+	# ночь у лагеря: нападение — лагерь в тревоге
+	await _open_map(s, "shore", false)
+	get_tree().current_scene.call("_night_cinematic", [{"kind": "night_ordeal", "ok": false, "text": "На лагерь напали ночью — не все целы"}])
+	await _wait(1.5)
+	await _shot("e02_shore_camp_alarm")
+	# Пепельный путь: Демон со следами, гнев Владыки, Очарование, огонь Маяка, лодка, пепельная буря
+	var t := AutoPlay.draft_start(c, "tree", 7)
+	_reveal_all(c, t, "tree")
+	t.day = 5
+	MoverRules.command(c, t, {"do": "spawn", "mover": "demon", "place": "demon_trail"})
+	t.flags["movers"]["demon"]["from"] = "ash_bones"
+	MoverRules.command(c, t, {"do": "lure", "mover": "demon", "place": "death_beacon", "days": 3})
+	t.flags["boat"] = true
+	await _open_map(t, "tree", false)
+	_map_only()
+	await _wait(0.6)
+	await _shot("e03_ash_path")
+	t.day = 1
+	await _open_map(t, "tree", false)
+	_map_only()
+	await _wait(0.6)
+	await _shot("e04_ash_path_night")
+	# Мрачный город: охотники, статуи, территории и паутина, завал и пролом, логова, дозор у ворот
+	var d := AutoPlay.draft_start(c, "dark_city", 9)
+	_reveal_all(c, d, "dark_city")
+	d.day = 1
+	ZoneRules.night(c, d)
+	ZoneRules.night(c, d)
+	TerrainRules.command(c, d, {"do": "collapse", "rubble": "R2"})
+	TerrainRules.command(c, d, {"do": "clear", "rubble": "R5"})
+	MoverRules.noise(d, "hunters_guild")
+	MoverRules.night(c, d, rng)
+	await _open_map(d, "dark_city", false)
+	_map_only()
+	await _wait(0.6)
+	await _shot("e05_dark_city")
+
+
+## Подписи мест: один и тот же вид карты в каждом стиле SleeperMap.label_style (Берег ночью, Мрачный город, светлые дюны).
+func _labels() -> void:
+	var c := ContentDB.data
+	var setups: Array = [["shore", 1], ["dark_city", 3], ["tree", 3]]
+	var first := true
+	for su: Array in setups:
+		var chapter: String = su[0]
+		var st := MapStory.start(c, chapter, 21)
+		_reveal_all(c, st, chapter)
+		st.day = int(su[1])
+		await _open_map(st, chapter, first)
+		first = false
+		_map_only()
+		var sl: SleeperMap = get_tree().current_scene.get("_sleeper")
+		if sl == null:
+			print("[labels] нет карты: сцена ", get_tree().current_scene, " глава ", GameState.state.chapter, " лагерь ", GameState.state.party_at)
+			continue
+		for style: String in ["silver", "white", "ice", "shadow", "gold", "caps", "frost"]:
+			sl.label_style = style
+			await _wait(0.3)
+			await _shot("lbl_%s_%s" % [chapter, style])

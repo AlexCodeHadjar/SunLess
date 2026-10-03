@@ -49,6 +49,8 @@ var _tex := {}            # путь -> Texture2D
 var _level := 55.0
 var _level_to := 55.0
 var _reveal := {}         # место -> 0..1 (проявление тушью)
+var _fog_pairs: Array = []  # открытые соседи [a, b] — туман между ними рассеян (коридор)
+var _fog_tris: Array = []   # тройки открытых соседей — туман из середины треугольника тоже уходит
 var _info := {}           # что рисовать поверх: {revealed, flooded, warn, names}
 var _t := 0.0
 var _flash := 0.0
@@ -56,6 +58,7 @@ var _next_flash := 5.0
 var _clouds: Array = []
 var _rng := RandomNumberGenerator.new()
 # фигура (docs/18): лагерь рисует не костёр-точка, а сцена у фигуры; при перетаскивании — подсветка участков
+var label_style := "white"      # подписи мест: silver | white | ice | shadow | gold | caps | frost
 var figure_mode := false
 # подсветка участков при перетаскивании фигуры: участок загорается светом вверх (серебро — можно, золото — под
 # фигурой, тёмно-красный — нельзя); меняются — карта сама перекрашивает участки (_apply_highlight)
@@ -323,12 +326,14 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 		for n: String in MapRules.neighbors(content, state, state.party_at):
 			if revealed.has(n) and content.locations.has(n) and not flooded.has(n):
 				near.append(n)
+	_fog_links(content, state, revealed, centers)
 	_info = {"revealed": revealed, "flooded": flooded, "warn": warn, "feet": feet, "centers": centers,
 		"sizes": sizes, "names": names, "paths": paths, "near": near,
 		"camp": state.party_at if revealed.has(state.party_at) and not figure_mode else "",
 		"figure": state.party_at if figure_mode else "",
 		"threat": _threat_info(content, state, revealed), "alarm": GateRules.alarm(state), "water": water,
-		"boat": bool(state.flags.get("boat", false)), "terrain": _terrain_info(content, state, revealed)}
+		"boat": bool(state.flags.get("boat", false)), "terrain": _terrain_info(content, state, revealed),
+		"decals": _decal_info(content, state, revealed), "air": _air_info(content, state)}
 	_ink.queue_redraw()
 
 
@@ -407,15 +412,23 @@ func _terrain_info(content: Content, state: RunState, revealed: Array) -> Dictio
 	for zid: String in zc:
 		var z: Dictionary = zc[zid]
 		var col: Array = z.get("color", [1.0, 0.5, 0.3])
+		var lids := ZoneRules.places(content, state, zid)
 		var at: Array = []
-		for lid: String in ZoneRules.places(content, state, zid):
+		for lid: String in lids:
 			if revealed.has(lid):
 				at.append({"at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid),
 					"center": lid == str(z.get("center", ""))})
+		var spread: Array = []   # паутина по тропам внутри территории
+		if str(z.get("spread", "")) != "":
+			for pair: Array in MapRules.links(content, state):
+				if lids.has(pair[0]) and lids.has(pair[1]) and revealed.has(pair[0]) and revealed.has(pair[1]):
+					spread.append([center(content, state, str(pair[0])) - view.position, center(content, state, str(pair[1])) - view.position])
 		if not at.is_empty():
-			zones.append({"places": at, "color": Color(float(col[0]), float(col[1]), float(col[2])), "name": str(z.get("name", zid)).to_lower()})
+			zones.append({"places": at, "color": Color(float(col[0]), float(col[1]), float(col[2])), "name": str(z.get("name", zid)).to_lower(),
+				"decal": str(z.get("decal", "")), "mark": str(z.get("mark", "")), "spread_tex": str(z.get("spread", "")), "spread": spread})
 	var movers: Array = []
 	var stack := {}   # сколько угроз уже стоит в месте — следующую рисуем ниже
+	var mc := MoverRules.cfg(content, state)
 	for mid: String in MoverRules.movers(state):
 		if not MoverRules.active(state, mid):
 			continue
@@ -427,19 +440,101 @@ func _terrain_info(content: Content, state: RunState, revealed: Array) -> Dictio
 		movers.append({"at": center(content, state, lid) - view.position if revealed.has(lid) else Vector2.INF,
 			"from": center(content, state, from) - view.position if revealed.has(from) and from != lid else Vector2.INF,
 			"size": _sprite_size(content, state, lid) if revealed.has(lid) else 100.0,
-			"name": MoverRules.name_of(content, state, mid), "wounded": bool(m.get("wounded", false)), "slot": int(stack.get(lid, 0))})
+			"name": MoverRules.name_of(content, state, mid), "wounded": bool(m.get("wounded", false)), "slot": int(stack.get(lid, 0)),
+			"token": str(mc.get(mid, {}).get("token", "")), "tracks": str(mc.get(mid, {}).get("tracks", ""))})
 		stack[lid] = int(stack.get(lid, 0)) + 1
+	# логова великих охотников: живо логово, пока охотник жив
+	var nests: Array = []
+	for mid2: String in mc:
+		var d: Dictionary = mc[mid2]
+		if not d.has("nest") or not revealed.has(str(d.get("start", ""))):
+			continue
+		var na: Array = d["nest"]
+		var alive := MoverRules.active(state, mid2) or not MoverRules.movers(state).has(mid2)
+		nests.append({"at": to_screen(Vector2(float(na[0]), float(na[1]))) - view.position,
+			"tex": str(d.get("nest_tex", ["", ""])[0 if alive else 1])})
 	var rubble: Array = []
 	var rb: Dictionary = cfg.get("rubble", {})
+	var rtex: Dictionary = cfg.get("rubble_tex", {})
 	var st: Dictionary = state.flags.get("rubble", {})
 	for rid: String in rb:
 		var pr: Array = rb[rid].get("pair", [])
-		if str(st.get(rid, "")) == "blocked" and pr.size() == 2 and revealed.has(pr[0]) and revealed.has(pr[1]):
+		var rs := str(st.get(rid, ""))
+		if rs != "" and pr.size() == 2 and revealed.has(pr[0]) and revealed.has(pr[1]):
 			var at2: Array = rb[rid].get("at", [0.5, 0.5])
-			rubble.append(to_screen(Vector2(float(at2[0]), float(at2[1]))) - view.position)
-	if zones.is_empty() and movers.is_empty() and rubble.is_empty():
+			rubble.append({"at": to_screen(Vector2(float(at2[0]), float(at2[1]))) - view.position, "state": rs, "tex": str(rtex.get(rs, ""))})
+	if zones.is_empty() and movers.is_empty() and rubble.is_empty() and nests.is_empty():
 		return {}
-	return {"zones": zones, "movers": movers, "rubble": rubble}
+	return {"zones": zones, "movers": movers, "rubble": rubble, "nests": nests}
+
+
+## Туман между открытыми местами (просьба владельца 03.10): соседи по тропе или места рядом (зазор меньше полутора
+## кругов) — коридор без тумана; три открытых соседа — и середина треугольника открыта. Открытое сливается в одну область.
+func _fog_links(content: Content, state: RunState, revealed: Array, centers: Dictionary) -> void:
+	var pairs := {}
+	for pr: Array in MapRules.links(content, state):
+		if revealed.has(pr[0]) and revealed.has(pr[1]):
+			pairs[_pair_key(str(pr[0]), str(pr[1]))] = [str(pr[0]), str(pr[1])]
+	var uv := {}
+	for lid: String in revealed:
+		uv[lid] = ((centers[lid] as Vector2) + view.position - rect.position) / rect.size
+	for i in revealed.size():
+		for j in range(i + 1, revealed.size()):
+			var a: String = revealed[i]
+			var b: String = revealed[j]
+			var pa: Vector2 = uv[a]
+			var pb: Vector2 = uv[b]
+			if Vector2((pa.x - pb.x) * _aspect, pa.y - pb.y).length() < REVEAL_R * 3.0:
+				pairs[_pair_key(a, b)] = [a, b]
+	_fog_pairs = pairs.values()
+	var nb := {}
+	for pr2: Array in _fog_pairs:
+		for k in 2:
+			if not nb.has(pr2[k]):
+				nb[pr2[k]] = []
+			(nb[pr2[k]] as Array).append(pr2[1 - k])
+	var tris: Array = []
+	for pr3: Array in _fog_pairs:
+		var x: String = pr3[0] if str(pr3[0]) < str(pr3[1]) else pr3[1]
+		var y: String = pr3[1] if str(pr3[0]) < str(pr3[1]) else pr3[0]
+		for z: String in nb.get(x, []):
+			if z > y and (nb.get(y, []) as Array).has(z):
+				tris.append([x, y, z])
+	_fog_tris = tris
+
+
+static func _pair_key(a: String, b: String) -> String:
+	return a + "|" + b if a < b else b + "|" + a
+
+
+## Атмосфера карты: дымка (Кровавая луна на Берегу), отсвет Шпиля с северо-запада, полосы пепельной бури.
+func _air_info(content: Content, state: RunState) -> Dictionary:
+	var out := {}
+	for key: String in ["haze", "edge_glow", "storm_band"]:
+		var d: Dictionary = cfg.get(key, {})
+		if not d.is_empty() and MapEventRules._when(content, state, d):
+			out[key] = str(d.get("tex", d.get("decal", "")))
+	return out
+
+
+## Следы событий (MapEventRules): метки у открытых мест, полосы на тропах; «дым вдалеке» виден и сквозь туман.
+func _decal_info(content: Content, state: RunState, revealed: Array) -> Array:
+	var out: Array = []
+	var slots := {}
+	for d: Dictionary in MapEventRules.decals(content, state):
+		var tex := str(d["decal"])
+		if d.has("path"):
+			var pr: Array = d["path"]
+			if revealed.has(pr[0]) and revealed.has(pr[1]):
+				out.append({"tex": tex, "a": center(content, state, str(pr[0])) - view.position, "b": center(content, state, str(pr[1])) - view.position})
+			continue
+		var lid := str(d.get("place", ""))
+		if not revealed.has(lid) and not bool(d.get("fog", false)):
+			continue
+		out.append({"tex": tex, "at": center(content, state, lid) - view.position, "size": _sprite_size(content, state, lid),
+			"slot": int(slots.get(lid, 0))})
+		slots[lid] = int(slots.get(lid, 0)) + 1
+	return out
 
 
 ## Сменить облик места наплывом ("" — место уходит с карты).
@@ -502,15 +597,41 @@ func _process(delta: float) -> void:
 		(_water.material as ShaderMaterial).set_shader_parameter("level", _level)
 	var holes := PackedVector4Array()
 	var revealed: Array = _info.get("revealed", [])
+	var uv := {}
 	for lid: String in revealed:
 		_reveal[lid] = minf(1.0, float(_reveal.get(lid, 1.0)) + delta / 1.8)
 		var a := ((_info["centers"][lid] as Vector2) - rect.position) / rect.size
-		holes.append(Vector4(a.x, a.y, REVEAL_R, ease(float(_reveal[lid]), 0.5)))
-		if holes.size() >= 40:
-			break
+		uv[lid] = a
+		if holes.size() < 40:
+			holes.append(Vector4(a.x, a.y, REVEAL_R, ease(float(_reveal[lid]), 0.5)))
+	# середины треугольников из открытых соседей — туда тоже свет
+	for tri: Array in _fog_tris:
+		if holes.size() >= 48 or not (uv.has(tri[0]) and uv.has(tri[1]) and uv.has(tri[2])):
+			continue
+		var c: Vector2 = (uv[tri[0]] + uv[tri[1]] + uv[tri[2]]) / 3.0
+		var rr := 0.0
+		var rv := 1.0
+		for v: String in tri:
+			var pv: Vector2 = uv[v]
+			rr = maxf(rr, Vector2((pv.x - c.x) * _aspect, pv.y - c.y).length())
+			rv = minf(rv, float(_reveal.get(v, 1.0)))
+		holes.append(Vector4(c.x, c.y, minf(rr * 0.85, REVEAL_R * 2.5), ease(rv, 0.5)))
+	# коридоры между открытыми соседями
+	var segs := PackedVector4Array()
+	var sw := PackedVector2Array()
+	for pr: Array in _fog_pairs:
+		if segs.size() >= 64 or not (uv.has(pr[0]) and uv.has(pr[1])):
+			continue
+		var p0: Vector2 = uv[pr[0]]
+		var p1: Vector2 = uv[pr[1]]
+		segs.append(Vector4(p0.x, p0.y, p1.x, p1.y))
+		sw.append(Vector2(REVEAL_R * 0.75, ease(minf(float(_reveal.get(pr[0], 1.0)), float(_reveal.get(pr[1], 1.0))), 0.5)))
 	var fm := _fog.material as ShaderMaterial
 	fm.set_shader_parameter("holes", holes)
 	fm.set_shader_parameter("hole_count", holes.size())
+	fm.set_shader_parameter("segs", segs)
+	fm.set_shader_parameter("seg_w", sw)
+	fm.set_shader_parameter("seg_count", segs.size())
 	if not Vfx.reduced():
 		for cl: Dictionary in _clouds:
 			cl["pos"] += Vector2(cl["speed"] * delta, cl["speed"] * 0.25 * delta)
@@ -527,7 +648,8 @@ func _process(delta: float) -> void:
 	if not drag_targets.is_empty() or not drag_blocked.is_empty():
 		_glow.queue_redraw()
 	_weather.queue_redraw()
-	if not Dictionary(_info.get("threat", {})).is_empty() or not Dictionary(_info.get("terrain", {})).is_empty():
+	if not Dictionary(_info.get("threat", {})).is_empty() or not Dictionary(_info.get("terrain", {})).is_empty() \
+			or not (_info.get("decals", []) as Array).is_empty():
 		_threat.queue_redraw()
 
 
@@ -604,6 +726,7 @@ func _draw_threat() -> void:
 
 ## Глава 4: свечение зон под местами, завалы на тропах, фишки угроз со следом (TerrainRules, ZoneRules, MoverRules).
 func _draw_terrain() -> void:
+	_draw_decals()
 	var tr: Dictionary = _info.get("terrain", {})
 	if tr.is_empty():
 		return
@@ -611,50 +734,116 @@ func _draw_terrain() -> void:
 	var f := UITheme.font("sans_bold")
 	for z: Dictionary in tr.get("zones", []):
 		var col: Color = z["color"]
+		var zt := _load(str(z.get("decal", "")))
+		var st := _load(str(z.get("spread_tex", "")))
+		for sp: Array in z.get("spread", []):
+			if st != null:
+				_strip(st, Vector2(sp[0]), Vector2(sp[1]), Color(1, 1, 1, 0.9))
 		for p: Dictionary in z["places"]:
 			var c := Vector2(p["at"])
 			var r := float(p["size"]) * 0.5
-			for k in 5:
-				var rr := r * (1.0 - k * 0.16) * (1.0 + 0.04 * pulse)
-				_threat.draw_circle(c, rr, Color(col.r, col.g, col.b, 0.05 + 0.02 * pulse))
-			_threat.draw_arc(c, r * (1.0 + 0.04 * pulse), 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.35 + 0.2 * pulse), 2.0, true)
+			if zt != null:   # свечение зоны картинкой: кольцо гнева, сияние Очарования
+				var zs := float(p["size"]) * (1.1 + 0.04 * pulse)
+				_threat.draw_texture_rect(zt, Rect2(c - Vector2(zs, zs * 0.62) / 2.0, Vector2(zs, zs * 0.62)), false, Color(1, 1, 1, 0.7 + 0.25 * pulse))
+			elif str(z.get("mark", "")) != "":   # территория хозяина: тонкая граница, остальное скажет метка
+				_threat.draw_arc(c, r * 0.95, 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.22 + 0.1 * pulse), 1.5, true)
+			else:
+				for k in 5:
+					var rr := r * (1.0 - k * 0.16) * (1.0 + 0.04 * pulse)
+					_threat.draw_circle(c, rr, Color(col.r, col.g, col.b, 0.05 + 0.02 * pulse))
+				_threat.draw_arc(c, r * (1.0 + 0.04 * pulse), 0.0, TAU, 48, Color(col.r, col.g, col.b, 0.35 + 0.2 * pulse), 2.0, true)
+			var mt := _load(str(z.get("mark", "")))
+			if mt != null:   # метка хозяина района: голова статуи, паутина, кости, цветы
+				var ms := float(p["size"]) * (0.34 if bool(p["center"]) else 0.22)
+				_threat.draw_texture_rect(mt, Rect2(c + Vector2(-float(p["size"]) * 0.3, float(p["size"]) * 0.02) - Vector2(ms, ms) / 2.0, Vector2(ms, ms)), false)
 			if bool(p["center"]):
 				var t := str(z["name"])
 				var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 				var at := c + Vector2(-w / 2.0, -r - 6.0)
 				_threat.draw_string_outline(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
 				_threat.draw_string(f, at, t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col.lightened(0.3))
-	for rp: Vector2 in tr.get("rubble", []):
-		for k in 5:
-			var off := Vector2(cos(k * 2.1) * 11.0, sin(k * 1.7) * 6.0)
-			_threat.draw_circle(rp + off, 9.0 - k, Color(0.25, 0.23, 0.22, 0.95))
-			_threat.draw_arc(rp + off, 9.0 - k, 0.0, TAU, 16, Color(0, 0, 0, 0.8), 1.5, true)
-		_threat.draw_line(rp + Vector2(-14, -14), rp + Vector2(14, 14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
-		_threat.draw_line(rp + Vector2(-14, 14), rp + Vector2(14, -14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
+	for n: Dictionary in tr.get("nests", []):
+		var nt := _load(str(n["tex"]))
+		if nt != null:
+			var ns := rect.size.x * 0.075
+			_threat.draw_texture_rect(nt, Rect2(Vector2(n["at"]) - Vector2(ns, ns) / 2.0, Vector2(ns, ns)), false)
+	for rb: Dictionary in tr.get("rubble", []):
+		var rp := Vector2(rb["at"])
+		var rt := _load(str(rb.get("tex", "")))
+		if rt != null:   # завал — куча обломков; пробитый — лаз в обломках
+			var rs := rect.size.x * 0.065
+			_threat.draw_texture_rect(rt, Rect2(rp - Vector2(rs, rs) / 2.0, Vector2(rs, rs)), false)
+		elif str(rb["state"]) == "blocked":
+			for k in 5:
+				var off := Vector2(cos(k * 2.1) * 11.0, sin(k * 1.7) * 6.0)
+				_threat.draw_circle(rp + off, 9.0 - k, Color(0.25, 0.23, 0.22, 0.95))
+			_threat.draw_line(rp + Vector2(-14, -14), rp + Vector2(14, 14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
+			_threat.draw_line(rp + Vector2(-14, 14), rp + Vector2(14, -14), Color(1.0, 0.35, 0.25, 0.9), 3.0, true)
 	for m: Dictionary in tr.get("movers", []):
 		var at2 := Vector2(m["at"])
 		var fr := Vector2(m["from"])
 		var col2 := Color(1.0, 0.6, 0.2) if bool(m["wounded"]) else Color(0.95, 0.15, 0.12)
-		# след: пунктир от прошлого места
+		var trk := _load(str(m.get("tracks", "")))
+		# след от прошлого места: картинкой следов или пунктиром
 		if fr != Vector2.INF and at2 != Vector2.INF:
-			for i in 12:
-				if i % 2 == 0:
-					_threat.draw_line(fr.lerp(at2, i / 12.0), fr.lerp(at2, (i + 1) / 12.0), Color(col2.r, col2.g, col2.b, 0.55), 4.0, true)
+			if trk != null:
+				_strip(trk, fr, at2, Color(1, 1, 1, 0.9))
+			else:
+				for i in 12:
+					if i % 2 == 0:
+						_threat.draw_line(fr.lerp(at2, i / 12.0), fr.lerp(at2, (i + 1) / 12.0), Color(col2.r, col2.g, col2.b, 0.55), 4.0, true)
 		elif fr != Vector2.INF:
 			_threat.draw_circle(fr, 10.0, Color(col2.r, col2.g, col2.b, 0.35))   # место не видно — только следы
 		if at2 == Vector2.INF:
 			continue
-		var c2 := at2 + Vector2(float(m["size"]) * 0.3, -float(m["size"]) * 0.22 + 52.0 * int(m.get("slot", 0)))
+		var c2 := at2 + Vector2(float(m["size"]) * 0.3, -float(m["size"]) * 0.22 + 60.0 * int(m.get("slot", 0)))
+		var tok := _load(str(m.get("token", "")))
 		var r2 := 15.0 + 2.0 * pulse
-		_threat.draw_circle(c2, r2 + 6.0, Color(col2.r, col2.g, col2.b, 0.18 + 0.15 * pulse))
-		_threat.draw_circle(c2, r2, Color(0.04, 0.02, 0.03, 0.92))
-		_threat.draw_arc(c2, r2, 0.0, TAU, 32, col2, 3.0, true)
-		_threat.draw_circle(c2 + Vector2(-5, -2), 2.6, col2)
-		_threat.draw_circle(c2 + Vector2(5, -2), 2.6, col2)
+		if tok != null:   # фишка угрозы картинкой: Демон, охотник, статуя, тень под водой
+			var ts := maxf(64.0, float(m["size"]) * 0.3)
+			_threat.draw_circle(c2 + Vector2(0, ts * 0.3), ts * 0.42, Color(col2.r, col2.g, col2.b, 0.12 + 0.12 * pulse))
+			_threat.draw_texture_rect(tok, Rect2(c2 - Vector2(ts, ts) / 2.0, Vector2(ts, ts)), false,
+				Color(1.0, 0.75, 0.65) if bool(m["wounded"]) else Color.WHITE)
+			r2 = ts * 0.42
+		else:
+			_threat.draw_circle(c2, r2 + 6.0, Color(col2.r, col2.g, col2.b, 0.18 + 0.15 * pulse))
+			_threat.draw_circle(c2, r2, Color(0.04, 0.02, 0.03, 0.92))
+			_threat.draw_arc(c2, r2, 0.0, TAU, 32, col2, 3.0, true)
+			_threat.draw_circle(c2 + Vector2(-5, -2), 2.6, col2)
+			_threat.draw_circle(c2 + Vector2(5, -2), 2.6, col2)
 		var t2 := str(m["name"]) + (" (ранен)" if bool(m["wounded"]) else "")
 		var w2 := f.get_string_size(t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 		_threat.draw_string_outline(f, c2 + Vector2(-w2 / 2.0, r2 + 16.0), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
 		_threat.draw_string(f, c2 + Vector2(-w2 / 2.0, r2 + 16.0), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, col2.lightened(0.35))
+
+
+## Полоса-картинка вдоль тропы между точками (без краёв у самих мест).
+func _strip(tex: Texture2D, a: Vector2, b: Vector2, col: Color) -> void:
+	var ln := a.distance_to(b) * 0.62
+	_threat.draw_set_transform((a + b) / 2.0, (b - a).angle(), Vector2.ONE)
+	_threat.draw_texture_rect(tex, Rect2(-ln / 2.0, -ln * 0.125, ln, ln * 0.25), false, col)
+	_threat.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Метки событий у мест (по кругу вокруг места, чтобы не легли друг на друга) и полосы на тропах.
+func _draw_decals() -> void:
+	var offs := [Vector2(0.24, -0.2), Vector2(-0.27, 0.16), Vector2(0.2, 0.22), Vector2(-0.22, -0.22), Vector2(0.0, 0.3)]
+	for d: Dictionary in _info.get("decals", []):
+		var tex := _load(str(d["tex"]))
+		if tex == null:
+			continue
+		if d.has("a"):
+			_strip(tex, Vector2(d["a"]), Vector2(d["b"]), Color.WHITE)
+			continue
+		var c := Vector2(d["at"])
+		var sz := float(d["size"])
+		if tex.get_width() >= 3 * tex.get_height():   # полоса у места: туман, след — поперёк верха места (подпись внизу видна)
+			var w := sz * 0.7
+			_threat.draw_texture_rect(tex, Rect2(c + Vector2(-w / 2.0, -sz * 0.22), Vector2(w, w * 0.25)), false, Color(1, 1, 1, 0.8))
+			continue
+		var o: Vector2 = offs[int(d.get("slot", 0)) % offs.size()]
+		var ds := sz * 0.3
+		_threat.draw_texture_rect(tex, Rect2(c + o * sz - Vector2(ds, ds) / 2.0, Vector2(ds, ds)), false)
 
 
 func _draw_shade() -> void:
@@ -733,25 +922,62 @@ func _draw_over() -> void:
 		var cw := cf.get_string_size(ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 		_over.draw_string_outline(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
 		_over.draw_string(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.8, 0.5))
-	# подписи открытых мест — светятся серебром (просьба владельца 03.10): мягкий ореол, тёмная кромка, светлый текст
-	var f := UITheme.font("title")
+	# подписи открытых мест: стиль — label_style (варианты для выбора владельцем, docs/коллажи карт/5 …)
 	var feet: Dictionary = _info.get("feet", {})
 	var names: Dictionary = _info.get("names", {})
-	var breath := 0.85 + 0.15 * sin(_t * 1.4)
 	for lid: String in feet:
-		var fp: Vector2 = feet[lid]
-		var text: String = names[lid]
-		var fs := 21
-		var tw := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var p := fp + Vector2(-tw / 2.0, 24.0)
-		var wet: bool = _info["flooded"].has(lid)
-		var glow := Color(0.55, 0.78, 1.0) if wet else Color(0.82, 0.86, 0.95)
-		var col := Color(0.72, 0.88, 1.0) if wet else Color(0.93, 0.95, 1.0)
-		for k in 5:   # ореол: от широкого и бледного к узкому и яркому
-			_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 26 - k * 5,
-				Color(glow.r, glow.g, glow.b, (0.07 + 0.07 * k) * breath))
-		_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.02, 0.02, 0.04, 0.9))
-		_over.draw_string(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+		_draw_label(Vector2(feet[lid]) + Vector2(0.0, 24.0), str(names[lid]), _info["flooded"].has(lid))
+
+
+## Подпись места по стилю label_style. at — середина подписи по ширине, высота — базовая линия.
+## Только текст, без плашек (решение владельца): silver — серебро с ореолом; white — ярко-белый, плотная чёрная обводка,
+## рубленый шрифт; ice — бело-голубой рубленый, тёмно-синяя обводка с голубой кромкой; shadow — белый с тенью и тонкой
+## обводкой; gold — тёплое светлое золото; caps — белая капитель с чёрной обводкой; frost — белый книжный с чёрной
+## обводкой и лёгким холодным ореолом.
+func _draw_label(at: Vector2, text: String, wet: bool) -> void:
+	var style := label_style
+	var font_key: String = {"white": "sans_bold", "ice": "sans_bold", "shadow": "sans_bold", "caps": "caps"}.get(style, "title")
+	var f := UITheme.font(font_key)
+	var fs: int = {"white": 19, "ice": 19, "shadow": 19, "caps": 20, "gold": 22, "frost": 22}.get(style, 21)
+	var shown := text
+	var tw := f.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var p := at + Vector2(-tw / 2.0, 0.0)
+	var white := Color(0.78, 0.9, 1.0) if wet else Color(1.0, 1.0, 1.0)
+	match style:
+		"white":
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+		"ice":
+			var ice := Color(0.86, 0.94, 1.0)
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 8, Color(0.02, 0.04, 0.1, 0.95))
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 2, Color(0.55, 0.75, 1.0, 0.9))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ice)
+		"shadow":
+			_over.draw_string(f, p + Vector2(2, 2), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.9))
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, Color(0, 0, 0, 0.85))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+		"gold":
+			var gold := Color(0.75, 0.88, 1.0) if wet else Color(1.0, 0.9, 0.62)
+			for k in 3:
+				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 16 - k * 4, Color(gold.r, gold.g, gold.b, 0.08 + 0.06 * k))
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0.05, 0.03, 0.0, 0.95))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gold)
+		"caps":
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+		"frost":
+			for k in 3:
+				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 18 - k * 4, Color(0.7, 0.85, 1.0, 0.06 + 0.04 * k))
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+		_:   # silver — серебро с ореолом
+			var breath := 0.85 + 0.15 * sin(_t * 1.4)
+			var glow := Color(0.55, 0.78, 1.0) if wet else Color(0.82, 0.86, 0.95)
+			var col := Color(0.72, 0.88, 1.0) if wet else Color(0.93, 0.95, 1.0)
+			for k in 5:
+				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 26 - k * 5, Color(glow.r, glow.g, glow.b, (0.07 + 0.07 * k) * breath))
+			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.02, 0.02, 0.04, 0.9))
+			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
 ## Фигура: причина «нельзя» над участком при перетаскивании.
@@ -877,6 +1103,25 @@ func pick(content: Content, state: RunState, at: Vector2) -> String:
 ## Небо поверх окна (не сдвигается с картой): кровавая луна пульсирует, шторм — дождь и молнии.
 func _draw_weather() -> void:
 	var full := Rect2(Vector2.ZERO, view.size)
+	var air: Dictionary = _info.get("air", {})
+	var haze := _load(str(air.get("haze", "")))
+	if haze != null:   # багровая дымка в Кровавую луну — медленно плывёт
+		var hs := view.size.x * 0.5
+		var ox := fmod(_t * 6.0, hs)
+		for ix in range(-1, int(view.size.x / hs) + 2):
+			for iy in range(0, int(view.size.y / hs) + 2):
+				_weather.draw_texture_rect(haze, Rect2(Vector2(ix * hs + ox, iy * hs - fmod(_t * 2.0, hs)), Vector2(hs, hs)), false, Color(1, 1, 1, 0.1))
+	var glow := _load(str(air.get("edge_glow", "")))
+	if glow != null:   # отсвет Шпиля с северо-запада
+		var gs := view.size.x * 0.5
+		_weather.draw_texture_rect(glow, Rect2(Vector2.ZERO, Vector2(gs, gs)), false, Color(1, 1, 1, 0.65 + 0.15 * sin(_t * 0.8)))
+	var band := _load(str(air.get("storm_band", "")))
+	if band != null:   # пепельная буря: полосы пепла несёт по карте
+		for k in 3:
+			var bw := view.size.x * 0.5
+			var bx := fmod(_t * (55.0 + k * 17.0) + k * 611.0, view.size.x + bw) - bw
+			var by := view.size.y * (0.18 + 0.27 * k)
+			_weather.draw_texture_rect(band, Rect2(Vector2(bx, by), Vector2(bw, bw * 0.22)), false, Color(1, 1, 1, 0.32))
 	if sky == "blood_moon":
 		var beat := 0.5 + 0.5 * sin(_t * 1.6)
 		_weather.draw_rect(full, Color(0.5, 0.04, 0.06, 0.06 + 0.05 * beat))

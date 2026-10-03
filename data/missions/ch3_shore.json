@@ -729,6 +729,12 @@
       "b": "P03",
       "value": 1,
       "text": "поверила её видению"
+     },
+     {
+      "cmd": "map_mark",
+      "place": "statue_hill",
+      "state": "restored",
+      "missions": 999
      }
     ],
     "requires_hero": [
@@ -763,6 +769,12 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 1
+     },
+     {
+      "cmd": "map_mark",
+      "place": "statue_hill",
+      "state": "restored",
+      "missions": 999
      }
     ]
    },
@@ -789,6 +801,12 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 3
+     },
+     {
+      "cmd": "map_mark",
+      "place": "statue_hill",
+      "state": "restored",
+      "missions": 999
      }
     ],
     "cost": {
@@ -4730,6 +4748,12 @@
       "cmd": "add_codex",
       "entry": "last_legion_1",
       "text": "Последний легионер: знамя носят до сих пор"
+     },
+     {
+      "cmd": "map_mark",
+      "place": "legion_ruins",
+      "state": "banner",
+      "missions": 999
      }
     ]
    },
@@ -4755,6 +4779,12 @@
       "cmd": "adjust_resource",
       "resource": "shards",
       "value": 2
+     },
+     {
+      "cmd": "map_mark",
+      "place": "legion_ruins",
+      "state": "banner",
+      "missions": 999
      }
     ]
    },

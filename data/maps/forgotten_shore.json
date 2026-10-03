@@ -52,7 +52,8 @@
     "flooded",
     "silt",
     "ravaged",
-    "storm"
+    "storm",
+    "burning"
    ]
   },
   "shelter": {
@@ -75,7 +76,8 @@
    "states": [
     "dry",
     "flooded",
-    "ravaged"
+    "ravaged",
+    "molting"
    ]
   },
   "high_ground": {
@@ -86,7 +88,8 @@
    "size": 0.12,
    "states": [
     "dry",
-    "storm"
+    "storm",
+    "beacon"
    ]
   },
   "hunting_grounds": {
@@ -101,7 +104,8 @@
     "dry_c",
     "flooded",
     "silt",
-    "ravaged"
+    "ravaged",
+    "molting"
    ]
   },
   "drowned_hall": {
@@ -113,7 +117,8 @@
    "states": [
     "dry",
     "flooded",
-    "silt"
+    "silt",
+    "open"
    ]
   },
   "statue_hill": {
@@ -124,7 +129,9 @@
    "size": 0.12,
    "states": [
     "dry",
-    "ravaged"
+    "ravaged",
+    "bonfire",
+    "restored"
    ]
   },
   "legion_ruins": {
@@ -136,7 +143,8 @@
    "states": [
     "dry",
     "flooded",
-    "storm"
+    "storm",
+    "banner"
    ]
   },
   "spire_view": {
@@ -147,7 +155,8 @@
    "size": 0.2,
    "states": [
     "dry",
-    "storm"
+    "storm",
+    "red"
    ]
   },
   "shore_altar": {
@@ -157,7 +166,8 @@
    ],
    "size": 0.1,
    "states": [
-    "dry"
+    "dry",
+    "blood"
    ]
   },
   "leviathan_ribs": {
@@ -201,6 +211,87 @@
     "dry",
     "flooded"
    ]
+  },
+  "strangers_camp": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "abandoned",
+    "ravaged",
+    "flooded"
+   ]
+  },
+  "whale_carcass": {
+   "size": 0.1,
+   "states": [
+    "dry",
+    "picked",
+    "flooded"
+   ]
+  },
+  "tide_grotto": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "fallen_star": {
+   "size": 0.09,
+   "states": [
+    "dry",
+    "dim"
+   ]
+  },
+  "legion_well": {
+   "size": 0.09,
+   "states": [
+    "dry",
+    "dug"
+   ]
+  },
+  "coral_sinkhole": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "flooded"
+   ]
+  },
+  "sleeping_golem": {
+   "size": 0.1,
+   "states": [
+    "dry",
+    "broken"
+   ]
+  },
+  "messenger_nest": {
+   "size": 0.09,
+   "states": [
+    "dry",
+    "empty"
+   ]
+  },
+  "centipede_lair": {
+   "size": 0.095,
+   "states": [
+    "dry",
+    "burned"
+   ]
+  },
+  "sleepers_graves": {
+   "size": 0.085,
+   "states": [
+    "dry",
+    "old"
+   ]
+  },
+  "stranded_islet": {
+   "size": 0.09,
+   "states": [
+    "dry",
+    "empty",
+    "flooded"
+   ]
   }
  },
  "variants": {
@@ -239,6 +330,38 @@
   [
    0.53,
    0.7
+  ],
+  [
+   0.47,
+   0.175
+  ],
+  [
+   0.495,
+   0.6
+  ],
+  [
+   0.215,
+   0.79
+  ],
+  [
+   0.585,
+   0.835
+  ],
+  [
+   0.165,
+   0.41
+  ],
+  [
+   0.3,
+   0.105
+  ],
+  [
+   0.255,
+   0.62
+  ],
+  [
+   0.44,
+   0.88
   ]
  ],
  "paths": [
@@ -314,5 +437,384 @@
    "shelter",
    "high_ground"
   ]
- ]
+ ],
+ "ebb_sockets": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "emerge_groups": {
+  "strangers_camp": {
+   "sockets": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    12
+   ],
+   "phase": "dawn",
+   "day_in": 2,
+   "sink_after": "storm",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "whale_carcass": {
+   "sockets": [
+    8,
+    9
+   ],
+   "phase": "blood_moon",
+   "day_in": 1,
+   "sink_after": "blood_moon",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "tide_grotto": {
+   "sockets": [
+    10
+   ],
+   "phase": "dawn",
+   "day_in": 1,
+   "sink_after": "dawn",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "fallen_star": {
+   "sockets": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    12
+   ],
+   "phase": "night",
+   "day_in": 2,
+   "from_day": 8,
+   "sink_after": "night",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "legion_well": {
+   "sockets": [
+    6
+   ],
+   "phase": "night",
+   "day_in": 1,
+   "from_day": 6,
+   "count": [
+    1,
+    1
+   ]
+  },
+  "coral_sinkhole": {
+   "sockets": [
+    7
+   ],
+   "phase": "blood_moon",
+   "day_in": 1,
+   "sink_after": "blood_moon",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "sleeping_golem": {
+   "sockets": [
+    2,
+    3,
+    12
+   ],
+   "phase": "blood_moon",
+   "day_in": 2,
+   "sink_after": "night",
+   "count": [
+    1,
+    1
+   ]
+  },
+  "messenger_nest": {
+   "sockets": [
+    11
+   ],
+   "phase": "night",
+   "day_in": 1,
+   "from_day": 8,
+   "count": [
+    1,
+    1
+   ]
+  },
+  "centipede_lair": {
+   "sockets": [
+    12,
+    7
+   ],
+   "phase": "dawn",
+   "day_in": 2,
+   "from_day": 5,
+   "count": [
+    1,
+    1
+   ]
+  },
+  "sleepers_graves": {
+   "sockets": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    12
+   ],
+   "count": [
+    1,
+    1
+   ],
+   "phase": ""
+  },
+  "stranded_islet": {
+   "sockets": [
+    13,
+    9
+   ],
+   "phase": "storm",
+   "day_in": 1,
+   "sink_after": "storm",
+   "count": [
+    1,
+    1
+   ]
+  }
+ },
+ "event_states": [
+  {
+   "place": "statue_hill",
+   "state": "bonfire",
+   "camp": true,
+   "phase": [
+    "night",
+    "blood_moon"
+   ]
+  },
+  {
+   "place": "high_ground",
+   "state": "beacon",
+   "camp": true,
+   "phase": [
+    "night",
+    "blood_moon"
+   ]
+  },
+  {
+   "place": "drowned_hall",
+   "state": "open",
+   "phase": [
+    "dawn"
+   ]
+  },
+  {
+   "place": "shore_altar",
+   "state": "blood",
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "place": "spire_view",
+   "state": "red",
+   "phase": [
+    "blood_moon"
+   ],
+   "from_day": 8
+  },
+  {
+   "place": "hunting_grounds",
+   "state": "molting",
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "place": "centurion_gate",
+   "state": "molting",
+   "phase": [
+    "blood_moon"
+   ],
+   "from_day": 8
+  },
+  {
+   "place": "coral_maze",
+   "state": "burning",
+   "phase": [
+    "blood_moon"
+   ],
+   "day_in": 1
+  }
+ ],
+ "place_decals": [
+  {
+   "decal": "decal_legion_trap",
+   "place": "legion_ruins",
+   "open": true
+  },
+  {
+   "decal": "decal_ghost_column",
+   "place": "legion_ruins",
+   "phase": [
+    "night"
+   ]
+  },
+  {
+   "decal": "decal_blood_pools",
+   "place": "low_tide",
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "decal": "decal_moon_reflection",
+   "place": "shell_field",
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "decal": "decal_blood_flowers",
+   "place": "coral_maze",
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "decal": "decal_chalk_arrows",
+   "place": "coral_maze",
+   "variant": [
+    "coral_maze",
+    "dry_b"
+   ]
+  },
+  {
+   "decal": "decal_egg_clutch",
+   "place": "carapace_nest"
+  },
+  {
+   "decal": "decal_smoke_far",
+   "place": "strangers_camp",
+   "fog": true
+  },
+  {
+   "decal": "decal_lure_lights",
+   "camp": true,
+   "phase": [
+    "night"
+   ],
+   "height": [
+    "low",
+    "mid"
+   ]
+  }
+ ],
+ "path_decals": [
+  {
+   "decal": "decal_patrol_mark",
+   "path": [
+    "coral_maze",
+    "centurion_gate"
+   ],
+   "phase": [
+    "blood_moon"
+   ]
+  },
+  {
+   "decal": "decal_shortcut",
+   "path": [
+    "coral_maze",
+    "high_ground"
+   ],
+   "variant": [
+    "coral_maze",
+    "dry_b"
+   ]
+  },
+  {
+   "decal": "decal_coral_overgrowth",
+   "path": [
+    "coral_maze",
+    "shelter"
+   ],
+   "variant": [
+    "coral_maze",
+    "dry_c"
+   ]
+  },
+  {
+   "decal": "decal_rope_crossing",
+   "to": "stranded_islet"
+  },
+  {
+   "decal": "decal_fog_bank",
+   "path": [
+    "stone_isle",
+    "low_tide"
+   ],
+   "phase": [
+    "storm"
+   ]
+  }
+ ],
+ "mod_decals": {
+  "fog": "decal_fog_bank",
+  "cache": "decal_cairn",
+  "cursed": "decal_cursed_glint",
+  "ambush": "decal_bait_carcass",
+  "nest": "decal_egg_clutch",
+  "wounded": "decal_blood_trail",
+  "thunder": "decal_lightning_scorch",
+  "armored": "decal_claw_tracks",
+  "tidepools": "decal_deep_pool"
+ },
+ "traces": {
+  "retreat": "decal_abandoned_gear",
+  "death": "decal_fallen_sleepers",
+  "graves": "sleepers_graves",
+  "attack": "decal_hunter_mark",
+  "attack_path": "decal_claw_tracks",
+  "storm_chest": "decal_sea_chest",
+  "storm_scorch": "decal_lightning_scorch"
+ },
+ "haze": {
+  "tex": "crimson_haze",
+  "phase": [
+   "blood_moon"
+  ]
+ },
+ "edge_glow": {
+  "decal": "decal_spire_beam",
+  "phase": [
+   "blood_moon"
+  ],
+  "from_day": 8
+ }
 }

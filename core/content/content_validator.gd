@@ -70,6 +70,7 @@ static func _validate_maps(c: Content, errors: Array[String]) -> void:
 			if not ResourceLoader.exists(art + str(m.get(key, ""))):
 				errors.append("maps/%s: нет файла %s" % [region, m.get(key, "")])
 		_validate_threat(c, region, m, errors)
+		_validate_marks(region, m, errors)
 		var places: Dictionary = m.get("places", {})
 		for lid: String in places:
 			if not c.locations.has(lid) and not c.shops.has(lid):
@@ -167,6 +168,36 @@ static func _spine_check(nodes: Array, edges: Array, skip: Array, what: String, 
 	for lid: String in nodes:
 		if not seen.has(lid):
 			out.append("maps/%s: тупик — %s: место %s не связано тропами с %s" % [region, what, lid, nodes[0]])
+
+
+## Картинки следов событий и меток местности (MapEventRules, SleeperMap): каждая названная метка есть в art/map/<регион>/.
+static func _validate_marks(region: String, m: Dictionary, errors: Array[String]) -> void:
+	var art := str(m.get("art", ""))
+	var names: Array = []
+	for key: String in ["place_decals", "path_decals"]:
+		for d: Dictionary in m.get(key, []):
+			names.append(str(d.get("decal", "")))
+	names.append_array(Dictionary(m.get("mod_decals", {})).values())
+	for k: String in Dictionary(m.get("traces", {})):
+		if k != "graves":
+			names.append(str(m["traces"][k]))
+	for key2: String in ["haze", "edge_glow", "storm_band"]:
+		var d2: Dictionary = m.get(key2, {})
+		if not d2.is_empty():
+			names.append(str(d2.get("tex", d2.get("decal", ""))))
+	for z: Dictionary in Dictionary(m.get("zones", {})).values():
+		for key3: String in ["decal", "mark", "spread"]:
+			if z.has(key3):
+				names.append(str(z[key3]))
+	for mv: Dictionary in Dictionary(m.get("movers", {})).values():
+		for key4: String in ["token", "tracks"]:
+			if mv.has(key4):
+				names.append(str(mv[key4]))
+		names.append_array(mv.get("nest_tex", []))
+	names.append_array(Dictionary(m.get("rubble_tex", {})).values())
+	for n: String in names:
+		if n != "" and not ResourceLoader.exists("%s%s.webp" % [art, n]):
+			errors.append("maps/%s: нет картинки метки %s" % [region, n])
 
 
 ## Угрозы-точки карты (GateRules): точки на карте, места и миссии существуют, у мест есть миссии роя.

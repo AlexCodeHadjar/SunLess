@@ -1,0 +1,1742 @@
+[
+ {
+  "id": "SE01",
+  "location": "strangers_camp",
+  "type": "random",
+  "title": "Чужой лагерь: поговорить",
+  "briefing": "Дым над палатками — у берега стоят чужие Спящие. Держатся настороже, но разговор возможен.",
+  "arrival": "Чужаки молча смотрят из-за костра. Руки — у оружия.",
+  "rumors": [
+   {
+    "text": "Чужаки [насторожены]",
+    "tag": "Засада"
+   },
+   {
+    "text": "У них [запасы]",
+    "tag": "Укрытия"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Засада"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE01_go",
+    "label": "Переговоры",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Переговоры",
+      "req": {
+       "will": 6
+      },
+      "tags": [
+       "social"
+      ],
+      "ok": "Чужаки делятся запасами и уходят на рассвете.",
+      "fail": "Разговор не сложился."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     },
+     {
+      "cmd": "map_mark",
+      "place": "strangers_camp",
+      "state": "abandoned",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE01_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE02",
+  "location": "strangers_camp",
+  "type": "random",
+  "title": "Чужой лагерь: ночной гость",
+  "briefing": "К палаткам повадилась тварь. Чужаки отбиваются — без помощи не выстоят.",
+  "arrival": "Порванная ткань, следы когтей. Тварь вернётся.",
+  "rumors": [
+   {
+    "text": "Тварь [возвращается]",
+    "tag": "Когти"
+   },
+   {
+    "text": "Чужие [ранены]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Когти"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE02_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_06",
+       "power": 1.0
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Тварь убита. Лагерь разорён, но люди живы.",
+      "fail": "Тварь утаскивает добычу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "strangers_camp",
+      "state": "ravaged",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE02_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M03",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE03",
+  "location": "whale_carcass",
+  "type": "random",
+  "title": "Туша исполина: срезать жир",
+  "briefing": "Шторм вынес на мель тушу морского исполина. Жир, кость, чешуя — пока не пришли падальщики.",
+  "arrival": "Запах бьёт в нос. Под шкурой что-то ещё шевелится.",
+  "rumors": [
+   {
+    "text": "Туша [свежая]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Падальщики [рядом]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Вода"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE03_go",
+    "label": "Разделка",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Разделка",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Срезали лучшее до прихода тварей.",
+      "fail": "Туша слишком скользкая."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "whale_carcass",
+      "state": "picked",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE03_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE04",
+  "location": "whale_carcass",
+  "type": "random",
+  "title": "Падальщики у туши",
+  "briefing": "К туше сползлись Падальщики Карапакса. Добыча — тому, кто их отгонит.",
+  "arrival": "Хитин блестит на мясе. Твари рвут тушу.",
+  "rumors": [
+   {
+    "text": "Их [несколько]",
+    "tag": "Когти"
+   },
+   {
+    "text": "Они [сыты]",
+    "tag": "Панцирь"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03",
+   "M03"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Когти"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE04_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03",
+        "M03"
+       ],
+       "field": "F_17",
+       "power": 0.8
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Падальщики разбежались. Туша ваша.",
+      "fail": "Падальщики теснят к воде."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     },
+     {
+      "cmd": "map_mark",
+      "place": "whale_carcass",
+      "state": "picked",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE04_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M03",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE05",
+  "location": "tide_grotto",
+  "type": "random",
+  "title": "Грот отлива: войти до воды",
+  "briefing": "Отлив открыл пещеру в утёсе. Внутри отсвет и, говорят, вещи утонувших. Вода вернётся к ночи.",
+  "arrival": "Мокрые камни, лужи, тихий плеск в глубине.",
+  "rumors": [
+   {
+    "text": "Вода [вернётся]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Внутри [отсвет]",
+    "tag": "Глубина"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Вода"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE05_go",
+    "label": "Грот",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Грот",
+      "req": {
+       "cunning": 6
+      },
+      "tags": [
+       "stealth",
+       "survival"
+      ],
+      "ok": "В нише — вещи утонувшего Спящего.",
+      "fail": "Пришлось уйти раньше воды."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "SE05_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE06",
+  "location": "tide_grotto",
+  "type": "random",
+  "title": "Хозяин грота",
+  "briefing": "В гроте живёт то, что приходит с приливом. Сейчас оно сонное — и голодное.",
+  "arrival": "Щупальца шевелятся в тёмной луже.",
+  "rumors": [
+   {
+    "text": "В луже [щупальца]",
+    "tag": "Щупальца"
+   },
+   {
+    "text": "Вода [холодная]",
+    "tag": "Глубина"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M09"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Щупальца"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE06_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M09"
+       ],
+       "field": "F_17",
+       "power": 0.9
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Хозяин грота уполз в глубину.",
+      "fail": "Щупальца тянут в воду."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "SE06_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M09",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE07",
+  "location": "fallen_star",
+  "type": "random",
+  "title": "Звёздный осколок: достать",
+  "briefing": "Ночью с неба упал осколок света. Он ещё горит в воронке — и манит всё живое.",
+  "arrival": "Серебряные искры над илом. Тепло, как у костра.",
+  "rumors": [
+   {
+    "text": "Осколок [горит]",
+    "tag": "Свет"
+   },
+   {
+    "text": "На свет [идут]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Свет"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE07_go",
+    "label": "Осколок",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Осколок",
+      "req": {
+       "will": 6
+      },
+      "tags": [
+       "ritual"
+      ],
+      "ok": "Осколок в руках — тёплый и тяжёлый.",
+      "fail": "Свет обжигает."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 7
+     },
+     {
+      "cmd": "map_mark",
+      "place": "fallen_star",
+      "state": "dim",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE07_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE08",
+  "location": "fallen_star",
+  "type": "random",
+  "title": "Твари на свет звезды",
+  "briefing": "На свет осколка сползлись твари. Сначала — они.",
+  "arrival": "У воронки — хитин и когти.",
+  "rumors": [
+   {
+    "text": "Твари [на свету]",
+    "tag": "Свет"
+   },
+   {
+    "text": "Их [много]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Свет"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE08_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03",
+       "power": 1.0
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Твари отогнаны, осколок погас в руках.",
+      "fail": "Твари не подпускают."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "fallen_star",
+      "state": "dim",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE08_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M03",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE09",
+  "location": "legion_well",
+  "type": "random",
+  "title": "Колодец Легиона: раскопать",
+  "briefing": "Из ила торчит обод колодца со звёздами Легиона. Если раскопать — будет пресная вода и, может, что-то ещё.",
+  "arrival": "Обод в иле, под ним — пустота и запах старой воды.",
+  "rumors": [
+   {
+    "text": "Под илом [пустота]",
+    "tag": "Камень"
+   },
+   {
+    "text": "Звёзды [Легиона]",
+    "tag": "Укрытия"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE09_go",
+    "label": "Раскопки",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Раскопки",
+      "req": {
+       "power": 7
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Колодец открыт: вода чистая, на дне — тайник легионера.",
+      "fail": "Ил осыпается обратно."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     },
+     {
+      "cmd": "map_mark",
+      "place": "legion_well",
+      "state": "dug",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE09_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE10",
+  "location": "legion_well",
+  "type": "random",
+  "title": "Что-то в колодце",
+  "briefing": "Из колодца ночью слышен скрежет. Что бы там ни жило, оно стережёт воду.",
+  "arrival": "Скрежет внизу затих, когда вы подошли.",
+  "rumors": [
+   {
+    "text": "Внизу [скрежет]",
+    "tag": "Тьма"
+   },
+   {
+    "text": "Вода [чистая]",
+    "tag": "Вода"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M09"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Тьма"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE10_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M09"
+       ],
+       "field": "F_06",
+       "power": 0.9
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Колодец свободен — вода чистая.",
+      "fail": "Тварь утаскивает ведро вместе с верёвкой."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "legion_well",
+      "state": "dug",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE10_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M09",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE11",
+  "location": "coral_sinkhole",
+  "type": "random",
+  "title": "Провал: спуститься за блеском",
+  "briefing": "На краю лабиринта провалился коралл. На дне блестит — кости и что-то металлическое.",
+  "arrival": "Края провала крошатся. Внизу — блеск.",
+  "rumors": [
+   {
+    "text": "Края [крошатся]",
+    "tag": "Высота"
+   },
+   {
+    "text": "На дне [блеск]",
+    "tag": "Кость"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Высота"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE11_go",
+    "label": "Спуск",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Спуск",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "На дне — оружие павшего Спящего.",
+      "fail": "Коралл обвалился под ногой."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     }
+    ]
+   },
+   {
+    "id": "SE11_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE12",
+  "location": "coral_sinkhole",
+  "type": "random",
+  "title": "Многоножки в провале",
+  "briefing": "Из провала лезут красные многоножки — коралл открыл их ходы.",
+  "arrival": "Шорох тысячи ног под кораллом.",
+  "rumors": [
+   {
+    "text": "Их [ходы]",
+    "tag": "Засада"
+   },
+   {
+    "text": "Они [ядовиты]",
+    "tag": "Когти"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M06"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Засада"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE12_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M06"
+       ],
+       "field": "F_06",
+       "power": 1.0
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Ходы завалены телами многоножек.",
+      "fail": "Многоножки лезут отовсюду."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "SE12_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M06",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE13",
+  "location": "sleeping_golem",
+  "type": "random",
+  "title": "Голем: забрать сердце тихо",
+  "briefing": "Коралловый голем спит в иле. В его груди светится сердце — если взять его тихо, он не проснётся.",
+  "arrival": "Каменная грудь медленно поднимается. Свет пульсирует.",
+  "rumors": [
+   {
+    "text": "Он [спит]",
+    "tag": "Тишина"
+   },
+   {
+    "text": "Сердце [светится]",
+    "tag": "Свет"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Тишина"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE13_go",
+    "label": "Тихо",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Тихо",
+      "req": {
+       "cunning": 7
+      },
+      "tags": [
+       "stealth"
+      ],
+      "ok": "Сердце голема в руках, свет гаснет.",
+      "fail": "Голем шевелится — уходите."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 7
+     }
+    ]
+   },
+   {
+    "id": "SE13_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE14",
+  "location": "sleeping_golem",
+  "type": "random",
+  "title": "Разбить голема",
+  "briefing": "Голем просыпается от шагов. Если разбить его сейчас — коралл и камень станут добычей.",
+  "arrival": "Ил вздрагивает. Огромная рука поднимается.",
+  "rumors": [
+   {
+    "text": "Он [просыпается]",
+    "tag": "Камень"
+   },
+   {
+    "text": "Удар [сокрушительный]",
+    "tag": "Панцирь"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M04"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Камень"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE14_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M04"
+       ],
+       "field": "F_06",
+       "power": 0.7
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Голем рассыпается грудой коралла.",
+      "fail": "Голем отбрасывает вас."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 9
+     },
+     {
+      "cmd": "map_mark",
+      "place": "sleeping_golem",
+      "state": "broken",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE14_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M04",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE15",
+  "location": "messenger_nest",
+  "type": "random",
+  "title": "Гнездо: подобраться",
+  "briefing": "На шпиле гнездо Посланника. Пока он на охоте — можно забрать то, что он натащил.",
+  "arrival": "Перья, кости, ветер. Гнездо пустует — пока.",
+  "rumors": [
+   {
+    "text": "Его [нет]",
+    "tag": "Высота"
+   },
+   {
+    "text": "Он [вернётся]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Высота"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE15_go",
+    "label": "Подъём",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Подъём",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "В гнезде — блестящие вещи Спящих.",
+      "fail": "Скала не держит."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     }
+    ]
+   },
+   {
+    "id": "SE15_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE16",
+  "location": "messenger_nest",
+  "type": "random",
+  "title": "Разорить гнездо",
+  "briefing": "Посланник дома. Разорить гнездо — значит выгнать его с этого берега.",
+  "arrival": "Чёрные крылья раскрываются над шпилем.",
+  "rumors": [
+   {
+    "text": "Он [дома]",
+    "tag": "Летучий"
+   },
+   {
+    "text": "Гнездо [высоко]",
+    "tag": "Высота"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Летучий"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE16_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03",
+       "power": 1.1
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Гнездо разорено, Посланник улетел.",
+      "fail": "Посланник сбрасывает со скалы."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 7
+     },
+     {
+      "cmd": "map_mark",
+      "place": "messenger_nest",
+      "state": "empty",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE16_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M03",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE17",
+  "location": "centipede_lair",
+  "type": "random",
+  "title": "Логово: выкурить огнём",
+  "briefing": "Логово многоножек можно выжечь: дым по норам, огонь у выходов.",
+  "arrival": "Норы дышат теплом. Внутри шуршит.",
+  "rumors": [
+   {
+    "text": "Норы [глубокие]",
+    "tag": "Засада"
+   },
+   {
+    "text": "Огонь [их гонит]",
+    "tag": "Огонь"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Засада"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE17_go",
+    "label": "Огонь",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Огонь",
+      "req": {
+       "will": 6
+      },
+      "tags": [
+       "survival"
+      ],
+      "ok": "Логово выжжено. Многоножки ушли.",
+      "fail": "Дым ушёл не туда."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 4
+     },
+     {
+      "cmd": "map_mark",
+      "place": "centipede_lair",
+      "state": "burned",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE17_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE18",
+  "location": "centipede_lair",
+  "type": "random",
+  "title": "Бой в ходах логова",
+  "briefing": "Чтобы логово замолчало, придётся войти в ходы.",
+  "arrival": "Красные сегменты мелькают в темноте.",
+  "rumors": [
+   {
+    "text": "Их [сотни]",
+    "tag": "Когти"
+   },
+   {
+    "text": "Ходы [тесные]",
+    "tag": "Засада"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M06",
+   "M06"
+  ],
+  "field": "F_06",
+  "known_tags": [
+   "Когти"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE18_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M06",
+        "M06"
+       ],
+       "field": "F_06",
+       "power": 0.8
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Логово мертво и выжжено.",
+      "fail": "Многоножки выдавливают наружу."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 6
+     },
+     {
+      "cmd": "map_mark",
+      "place": "centipede_lair",
+      "state": "burned",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE18_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M06",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE19",
+  "location": "sleepers_graves",
+  "type": "random",
+  "title": "Могилы: почтить павших",
+  "briefing": "Здесь похоронены павшие. Постоять у могил — и стать немного крепче.",
+  "arrival": "Ветер звенит о сломанный клинок.",
+  "rumors": [
+   {
+    "text": "Здесь [свои]",
+    "tag": "Кость"
+   },
+   {
+    "text": "Ветер [тихий]",
+    "tag": "Тишина"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Кость"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE19_go",
+    "label": "Память",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Память",
+      "req": {
+       "will": 4
+      },
+      "tags": [
+       "ritual"
+      ],
+      "ok": "Отряд постоял у могил. Стало легче.",
+      "fail": "Слишком больно."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "psyche",
+      "value": 8,
+      "text": "почтили павших"
+     },
+     {
+      "cmd": "map_mark",
+      "place": "sleepers_graves",
+      "state": "old",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE19_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE20",
+  "location": "sleepers_graves",
+  "type": "random",
+  "title": "Падальщики у могил",
+  "briefing": "К могилам пришли Падальщики. Этого нельзя позволить.",
+  "arrival": "Камни разбросаны. Хитин скребёт.",
+  "rumors": [
+   {
+    "text": "Они [роют]",
+    "tag": "Когти"
+   },
+   {
+    "text": "Это [свои]",
+    "tag": "Кость"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M03"
+  ],
+  "field": "F_03",
+  "known_tags": [
+   "Когти"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE20_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M03"
+       ],
+       "field": "F_03",
+       "power": 1.0
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Могилы целы.",
+      "fail": "Падальщики не уходят."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 3
+     },
+     {
+      "cmd": "map_mark",
+      "place": "sleepers_graves",
+      "state": "old",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE20_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M03",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE21",
+  "location": "stranded_islet",
+  "type": "random",
+  "title": "Островок: перебросить верёвку",
+  "briefing": "Шторм отрезал кого-то на скале в море. Верёвка, бросок, переправа — пока волны не смыли их.",
+  "arrival": "Волны бьют в скалу. С островка машут.",
+  "rumors": [
+   {
+    "text": "Волны [выше]",
+    "tag": "Вода"
+   },
+   {
+    "text": "Верёвка [одна]",
+    "tag": "Высота"
+   }
+  ],
+  "threat": 1,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [],
+  "field": "F_03",
+  "known_tags": [
+   "Вода"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "survival"
+  ],
+  "actions": [
+   {
+    "id": "SE21_go",
+    "label": "Переправа",
+    "text": "Осторожно.",
+    "stages": [
+     {
+      "name": "Переправа",
+      "req": {
+       "power": 6
+      },
+      "tags": [
+       "climb"
+      ],
+      "ok": "Отрезанных перевели на берег — они отдали всё, что было.",
+      "fail": "Верёвка оборвалась."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "stranded_islet",
+      "state": "empty",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE21_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "expires": 2,
+  "local": true,
+  "local_kind": "calm",
+  "xp_mult": 1.5
+ },
+ {
+  "id": "SE22",
+  "location": "stranded_islet",
+  "type": "random",
+  "title": "Твари вокруг островка",
+  "briefing": "Вокруг островка кружат щупальца. Сначала — они.",
+  "arrival": "В пене мелькают щупальца.",
+  "rumors": [
+   {
+    "text": "Щупальца [в пене]",
+    "tag": "Щупальца"
+   },
+   {
+    "text": "Скала [скользкая]",
+    "tag": "Вода"
+   }
+  ],
+  "threat": 2,
+  "duration": 5,
+  "rest": 15,
+  "squad": {
+   "min": 1,
+   "max": 3
+  },
+  "enemies": [
+   "M09"
+  ],
+  "field": "F_17",
+  "known_tags": [
+   "Щупальца"
+  ],
+  "hidden_tags": [],
+  "context": [
+   "combat"
+  ],
+  "actions": [
+   {
+    "id": "SE22_fight",
+    "label": "Бой",
+    "text": "Каждый удар на счету.",
+    "stages": [
+     {
+      "name": "Бой",
+      "combat": {
+       "enemies": [
+        "M09"
+       ],
+       "field": "F_17",
+       "power": 0.9
+      },
+      "tags": [
+       "combat"
+      ],
+      "ok": "Щупальца ушли в глубину, островок свободен.",
+      "fail": "Волна смывает с камней."
+     }
+    ],
+    "on_success": [
+     {
+      "cmd": "adjust_resource",
+      "resource": "shards",
+      "value": 5
+     },
+     {
+      "cmd": "map_mark",
+      "place": "stranded_islet",
+      "state": "empty",
+      "missions": 999
+     }
+    ]
+   },
+   {
+    "id": "SE22_retreat",
+    "label": "Отступить",
+    "text": "Отступить и вернуться позже.",
+    "retreat": true
+   }
+  ],
+  "from_event": "M09",
+  "expires": 2,
+  "local": true,
+  "local_kind": "fight",
+  "xp_mult": 1.5
+ }
+]

@@ -55,7 +55,8 @@ var _figure_at := ""            # где фигура стоит на экран
 var _cinema := false            # ночь у фигуры: окно ночи открыто, у фигуры горит костёр
 var _night_after_event := false # событие проведено — после отчёта (и выбора добычи) наступит ночь
 var _note: Control              # карточка итогов ночи после перехода фигуры
-var _fire: TextureRect          # костёр лагеря у фигуры ночью
+var _fire: TextureRect          # лагерь у фигуры ночью (camp_<облик> или костёр)
+var _last_task := ""            # дело лагеря этого дня (Дозор — лагерь с факелом)
 
 
 func _ready() -> void:
@@ -582,6 +583,7 @@ func _pick_task_hero(task: String) -> void:
 		b.pressed.connect(func() -> void:
 			panel.queue_free()
 			if FigureRules.on(ContentDB.data, GameState.state):   # фигура: дело лагеря — действие дня, потом ночь
+				_last_task = task
 				var r := GameState.figure_task(task, cid)
 				if str(r["error"]) != "":
 					_show_toast(str(r["error"]))
@@ -1728,7 +1730,8 @@ func _night_cinematic(ev: Array) -> void:
 	_close_travel()
 	if is_instance_valid(_note):
 		_note.queue_free()
-	_camp_fire(true)
+	_camp_fire(true, ev)
+	_last_task = ""
 	GameState.tutorial("figure_camp")
 	_show_night(ev)
 
@@ -1740,8 +1743,9 @@ func _end_cinema() -> void:
 	_refresh()
 
 
-## Костёр лагеря у фигуры на поле (картинка campfire); гаснет утром.
-func _camp_fire(on: bool) -> void:
+## Лагерь у фигуры на поле ночью (комплект событий Берега): спокойно, дозор, тревога (было нападение), вода у палаток;
+## нет картинки — костёр. Утром лагерь сворачивается.
+func _camp_fire(on: bool, ev: Array = []) -> void:
 	if is_instance_valid(_fire):
 		var old: TextureRect = _fire
 		_fire = null
@@ -1750,7 +1754,19 @@ func _camp_fire(on: bool) -> void:
 		tw.tween_callback(old.queue_free)
 	if not on or _figure == null or not _figure.visible:
 		return
-	var tex := FigurePiece.art("campfire")
+	var s := GameState.state
+	var look := "calm"
+	if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "night_ordeal"):
+		look = "alarm"
+	elif TideRules.flooded(s, s.party_at) or TideRules.threatened(s, s.party_at):
+		look = "flooded"
+	elif _last_task == "watch":
+		look = "watch"
+	var tex := FigurePiece.art("camp_" + look)
+	var width := 150.0
+	if tex == null:
+		tex = FigurePiece.art("campfire")
+		width = 84.0
 	if tex == null:
 		return
 	var fr := TextureRect.new()
@@ -1758,7 +1774,7 @@ func _camp_fire(on: bool) -> void:
 	fr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	fr.stretch_mode = TextureRect.STRETCH_SCALE
 	fr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fr.size = Vector2(tex.get_width(), tex.get_height()) * (84.0 / float(tex.get_width()))
+	fr.size = Vector2(tex.get_width(), tex.get_height()) * (width / float(tex.get_width()))
 	fr.position = _figure.position + Vector2(-fr.size.x * 0.55, FigurePiece.H - fr.size.y * 0.8)   # слева: справа — карты событий
 	fr.modulate.a = 0.0
 	_pan_layer.add_child(fr)

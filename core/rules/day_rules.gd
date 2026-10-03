@@ -199,6 +199,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 		chance *= float(cfg(content).get("tasks", {}).get("watch", {}).get("danger_mult", 0.5))
 	if chance > 0.0 and not heroes.is_empty() and rng.randf() < chance:
 		out.append_array(_ordeal(content, state, att, "На лагерь напали ночью", "нападение", rng))
+		MapEventRules.night_attack(content, state)   # след на карте: метка охотника, когти на тропе к лагерю
 	# 2. отдых: психика по месту, койка лечит грань, починка
 	var rest := float(c.get("rest", 20))
 	var bed_rest := float(cfg(content).get("bed_rest", 20))
@@ -237,6 +238,8 @@ static func end_day(content: Content, state: RunState) -> Array:
 	out.append_array(MissionFlow.expire_day(content, state))
 	out.append_array(GateRules.night(content, state, rng))   # прорывы и рой (Академия), Врата (Город)
 	out.append_array(TerrainRules.morning(content, state, rng, ph))   # буря, котловины и островки, обвалы
+	if str(ph["id"]) == "storm" and str(today["id"]) != "storm":
+		MapEventRules.after_storm(content, state, rng)   # море выбросило сундук, молния опалила место
 	out.append_array(ZoneRules.night(content, state))   # территории растут, Очарование
 	out.append_array(MoverRules.night(content, state, rng))   # Демон, тень под водой, охотники, статуи
 	out.append_array(MissionFlow.spawn_day(content, state))

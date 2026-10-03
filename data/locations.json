@@ -2000,5 +2000,346 @@
     "DL15"
    ]
   }
+ },
+ {
+  "id": "strangers_camp",
+  "name": "Чужой лагерь",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Палатки из латаной ткани, кострище, сушатся плащи. Здесь стоят чужие Спящие.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "strangers_camp",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE01",
+    "SE02"
+   ],
+   "local": [
+    "SE01",
+    "SE02"
+   ]
+  }
+ },
+ {
+  "id": "whale_carcass",
+  "name": "Туша исполина",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "После шторма море выбросило тушу огромного зверя. На запах уже идут.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "whale_carcass",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE03",
+    "SE04"
+   ],
+   "local": [
+    "SE03",
+    "SE04"
+   ]
+  }
+ },
+ {
+  "id": "tide_grotto",
+  "name": "Грот отлива",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Пещера у кромки воды: открывается только в большой отлив. Изнутри — синий отсвет.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "tide_grotto",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE05",
+    "SE06"
+   ],
+   "local": [
+    "SE05",
+    "SE06"
+   ]
+  }
+ },
+ {
+  "id": "fallen_star",
+  "name": "Звёздный осколок",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "high",
+  "text": "Ночью что-то упало с неба: в иле дымится свежая воронка, в ней светится осколок.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "fallen_star",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE07",
+    "SE08"
+   ],
+   "local": [
+    "SE07",
+    "SE08"
+   ]
+  }
+ },
+ {
+  "id": "legion_well",
+  "name": "Колодец Легиона",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Каменный колодец Звёздного Легиона, почти занесённый илом. Звёзды на ободе ещё видны.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "legion_well",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE09",
+    "SE10"
+   ],
+   "local": [
+    "SE09",
+    "SE10"
+   ]
+  }
+ },
+ {
+  "id": "coral_sinkhole",
+  "name": "Коралловый провал",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "low",
+  "text": "Шторм обрушил коралл: на краю лабиринта открылся провал, на дне что-то блестит.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "coral_sinkhole",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE11",
+    "SE12"
+   ],
+   "local": [
+    "SE11",
+    "SE12"
+   ]
+  }
+ },
+ {
+  "id": "sleeping_golem",
+  "name": "Спящий голем",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Огромная фигура из коралла и камня лежит в иле, как холм. В груди — слабый свет.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "sleeping_golem",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE13",
+    "SE14"
+   ],
+   "local": [
+    "SE13",
+    "SE14"
+   ]
+  }
+ },
+ {
+  "id": "messenger_nest",
+  "name": "Гнездо посланника",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "high",
+  "text": "На скальном шпиле — гнездо из костей и коралла. Посланник Шпиля возвращается сюда.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "messenger_nest",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE15",
+    "SE16"
+   ],
+   "local": [
+    "SE15",
+    "SE16"
+   ]
+  }
+ },
+ {
+  "id": "centipede_lair",
+  "name": "Логово многоножек",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "mid",
+  "text": "Холм пористого коралла в норах: логово красных многоножек. Пока его не выжгут, они будут лезть.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "centipede_lair",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE17",
+    "SE18"
+   ],
+   "local": [
+    "SE17",
+    "SE18"
+   ]
+  }
+ },
+ {
+  "id": "sleepers_graves",
+  "name": "Могилы Спящих",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "high",
+  "text": "Холмики камней на иле и меч в одном из них. Здесь лежат те, кто шёл с вами.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "sleepers_graves",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE19",
+    "SE20"
+   ],
+   "local": [
+    "SE19",
+    "SE20"
+   ]
+  }
+ },
+ {
+  "id": "stranded_islet",
+  "name": "Островок отрезанных",
+  "chapter": "shore",
+  "region": "forgotten_shore",
+  "pos": [
+   0.5,
+   0.5
+  ],
+  "height": "high",
+  "text": "В шторм на скале посреди моря остались отрезанные Спящие: обрывок навеса и верёвка.",
+  "emerge": true,
+  "raid_only": true,
+  "socket_group": "stranded_islet",
+  "camp": {
+   "rest": 15,
+   "beds": 1,
+   "danger": 0.15,
+   "services": []
+  },
+  "random": {
+   "pool": [
+    "SE21",
+    "SE22"
+   ],
+   "local": [
+    "SE21",
+    "SE22"
+   ]
+  }
  }
 ]
