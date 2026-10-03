@@ -5,6 +5,7 @@ extends TestCase
 
 func _academy(seed_value: int = 5) -> RunState:
 	var s := MissionFlow.new_run(content(), seed_value, "academy")
+	s.flags["movement"] = "steps"   # ход прорыва по ночам — со старыми сроками (с фигурой сроки вдвое длиннее, docs/18)
 	for mid: String in MissionFlow.open_missions(s):
 		s.missions[mid]["status"] = "done"   # без сюжета под ногами: только прорывы
 	return s

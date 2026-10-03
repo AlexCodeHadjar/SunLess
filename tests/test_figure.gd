@@ -74,7 +74,7 @@ func test_events_only_where_figure_stands() -> void:
 	eq(s.party_at, "shelter", "фигура не сдвинулась:")
 
 
-func test_jump_to_neighbour_event() -> void:
+func test_jump_and_event_is_one_day() -> void:
 	var c := content()
 	var s := _shore(7)
 	var n: String = FigureRules.targets(c, s)[0]
@@ -83,9 +83,55 @@ func test_jump_to_neighbour_event() -> void:
 	var r := FigureRules.jump(c, s, mid)
 	check(r["ok"], "прыжок: %s" % str(r["error"]))
 	eq(s.party_at, n, "фигура перескочила к событию:")
-	eq(s.day, day + 1, "прыжок — день:")
-	if str(s.missions.get(mid, {}).get("status", "")) == "open":
-		eq(FigureRules.pending(c, s), mid, "утром событие откроется само:")
+	eq(s.day, day, "ночь ещё не наступила — событие сегодня:")
+	eq(FigureRules.reach(c, s, mid), 0, "событие теперь здесь:")
+	check(FigureRules.why_not(c, s, "shelter") != "", "второй шаг в тот же день — нельзя")
+	var lr := MissionFlow.launch(c, s, mid, ["P01"])
+	check(lr["ok"], "событие начато в тот же день")
+	var act := ""
+	for e: Dictionary in MissionFlow.actions_for(c, s, mid, ["P01"]):
+		if e["available"] and not bool(e["action"].get("retreat", false)):
+			act = str(e["action"]["id"])
+			break
+	s = MissionResolver.resolve_through(c, s, int(lr["squad"]["id"]), act)["state"]
+	check(not FigureRules.end_after_event(c, s).is_empty(), "после события — ночь")
+	eq(s.day, day + 1, "прыжок и событие — один день:")
+
+
+func test_jump_cancel_spends_the_day() -> void:
+	var c := content()
+	var s := _shore(9)
+	var n: String = FigureRules.targets(c, s)[0]
+	var mid := _event_at(c, s, n)
+	var day := s.day
+	FigureRules.jump(c, s, mid)
+	check(not FigureRules.jump_cancel(c, s).is_empty(), "передумали — день ушёл на переход, ночь")
+	eq(s.day, day + 1, "день прошёл:")
+	eq(FigureRules.jumped(s), "", "прыжок забыт:")
+
+
+func test_camp_task_is_a_day() -> void:
+	var c := content()
+	var s := _shore(15)
+	var day := s.day
+	var r := FigureRules.task(c, s, "forage", "P01")
+	check(r["ok"], "сбор: %s" % str(r["error"]))
+	eq(s.day, day + 1, "дело лагеря — день:")
+	check((r["entries"] as Array).any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "night"), "после дела — ночь")
+
+
+func test_expires_longer_with_figure() -> void:
+	var c := content()
+	var s := _shore(19)
+	var mid := ""
+	for m: String in c.missions:
+		if float(c.missions[m].get("expires", 0)) > 0 and MissionFlow.chapter_of(c, m) == "shore":
+			mid = m
+			break
+	var base := ModifierRules.expires(c, s, mid)
+	s.flags["movement"] = "steps"
+	var old := ModifierRules.expires(c, s, mid)
+	check(base >= old * 2 - 1 and base > old, "с фигурой срок длиннее: %d против %d" % [base, old])
 
 
 func test_event_is_a_day() -> void:

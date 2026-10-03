@@ -9,8 +9,8 @@ signal drag_moved(at: Vector2)
 signal dropped(at: Vector2)
 signal clicked
 
-const W := 78.0
-const H := 120.0
+const W := 96.0
+const H := 150.0
 const DRAG_START := 6.0
 const ART := {"P01": "sunny", "P02": "nephis", "P03": "cassie"}
 const ACCENT := {"P01": Color(0.78, 0.84, 1.0), "P02": Color(1.0, 0.93, 0.75), "P03": Color(0.6, 0.85, 1.0)}
@@ -32,9 +32,9 @@ static func make(hero_id: String) -> FigurePiece:
 	return f
 
 
-## Картинка фигуры героя (null — рисовать самому).
+## Картинка фигуры героя или предмета (party, campfire); null — рисовать самому.
 static func art(hero_id: String) -> Texture2D:
-	var key := str(ART.get(hero_id, "sunny"))
+	var key := str(ART.get(hero_id, hero_id))
 	for ext: String in ["webp", "png"]:
 		var path := "res://art/map/figure/%s.%s" % [key, ext]
 		if ResourceLoader.exists(path):
@@ -126,7 +126,10 @@ static func paint(ci: CanvasItem, r: Rect2, tex: Texture2D, accent: Color, glow:
 		for k in 4:
 			ci.draw_circle(r.position + Vector2(r.size.x / 2.0, r.size.y * 0.55), r.size.x * (0.55 + 0.1 * k), Color(1.0, 0.85, 0.5, 0.06 * glow))
 	if tex != null:
-		ci.draw_texture_rect(tex, r, false)
+		# по пропорциям картинки, основанием вниз
+		var k := minf(r.size.x / float(tex.get_width()), r.size.y / float(tex.get_height()))
+		var sz := Vector2(tex.get_width(), tex.get_height()) * k
+		ci.draw_texture_rect(tex, Rect2(Vector2(r.position.x + (r.size.x - sz.x) / 2.0, r.end.y - sz.y), sz), false)
 		return
 	var w := r.size.x
 	var h := r.size.y

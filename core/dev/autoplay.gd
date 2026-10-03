@@ -193,16 +193,17 @@ static func _figure_step(c: Content, s: RunState, started: String) -> Dictionary
 			MissionFlow.launch(c, s, mid, team)
 			s.flags["bot_idle"] = 0
 			return {"state": s, "error": "", "chapter_started": started}
+		# по соседству — прыжок и событие в тот же день
+		if int(cd[1]) == 1 and FigureRules.jump(c, s, mid)["ok"]:
+			if DayRules.can_equip(c, s) == "":
+				equip(c, s, team)
+			if MissionFlow.launch(c, s, mid, team)["ok"]:
+				s.flags["bot_idle"] = 0
+				return {"state": s, "error": "", "chapter_started": started}
+			FigureRules.jump_cancel(c, s)
+			return {"state": s, "error": "", "chapter_started": started}
 		target = mid   # ближайшее подходящее (сюжет — первым)
 		break
-	# дела лагеря — бесплатно, до того как день кончится
-	for task: String in DayPlanner.tasks_left(c, s):
-		if task == "watch" and float(DayRules.camp(c, s).get("danger", 0.0)) < 0.15:
-			continue
-		for h: String in MissionFlow.free_heroes(c, s):
-			if PsycheRules.psyche(s, h) >= LOW_PSY and DayRules.sorties(s, h) < TIRED:
-				DayPlanner.do_task(c, s, task, h)
-				return {"state": s, "error": "", "chapter_started": started}
 	if target != "":
 		var path := TravelRules.route(c, s, s.party_at, str(c.missions[target].get("location", "")))
 		if not path.is_empty() and FigureRules.move(c, s, str(path[0]))["ok"]:
@@ -214,6 +215,13 @@ static func _figure_step(c: Content, s: RunState, started: String) -> Dictionary
 			if not TideRules.threatened(s, n) and MapRules.revealed(c, s, n) and FigureRules.move(c, s, n)["ok"]:
 				return {"state": s, "error": "", "chapter_started": started}
 	s.flags["bot_idle"] = int(s.flags.get("bot_idle", 0)) + 1
+	# дело лагеря — тоже действие дня: лучше, чем просто ждать
+	for task: String in DayPlanner.tasks_left(c, s):
+		if task == "watch" and float(DayRules.camp(c, s).get("danger", 0.0)) < 0.15:
+			continue
+		for h: String in MissionFlow.free_heroes(c, s):
+			if PsycheRules.psyche(s, h) >= LOW_PSY and FigureRules.task(c, s, task, h)["ok"]:
+				return {"state": s, "error": "", "chapter_started": started}
 	DayRules.end_day(c, s)   # переждать день
 	return {"state": s, "error": "", "chapter_started": started}
 

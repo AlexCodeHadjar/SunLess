@@ -29,6 +29,8 @@ static func why_not(content: Content, state: RunState, lid: String) -> String:
 		return "Прохождение окончено"
 	if not state.squads.is_empty():
 		return "Сначала закончите событие"
+	if jumped(state) != "":
+		return "Фигура уже перескочила к событию — сегодня это событие"
 	if lid == state.party_at:
 		return "Фигура уже здесь"
 	if not neighbors(content, state).has(lid):
@@ -81,26 +83,48 @@ static func move(content: Content, state: RunState, lid: String) -> Dictionary:
 	return {"ok": true, "error": "", "entries": out}
 
 
-## Щелчок по событию на соседнем участке: фигура сразу перескакивает, утром событие откроется само.
+## Щелчок по событию на соседнем участке (решение владельца 03.10): фигура сразу перескакивает, и событие идёт в тот
+## же день — прыжок и событие вместе занимают один день. Ночь ещё не наступила; передумали (событие не начали) —
+## день всё равно ушёл на переход: jump_cancel. {ok, error, entries}.
 static func jump(content: Content, state: RunState, mid: String) -> Dictionary:
 	var lid := str(content.missions.get(mid, {}).get("location", ""))
-	var r := move(content, state, lid)
-	if r["ok"]:
-		state.flags["figure_event"] = mid
-	return r
+	var why := why_not(content, state, lid)
+	if why != "":
+		return {"ok": false, "error": why, "entries": []}
+	var out: Array = []
+	var from := state.party_at
+	TerrainRules.on_travel(content, state, [lid], from, out)
+	TravelRules.visit(state, lid)
+	state.party_at = lid
+	state.clock += 1.0
+	state.flags["figure_jump"] = mid
+	out.append({"kind": "move", "text": "Фигура перескочила к событию: %s → %s" % [_name(content, from), _name(content, lid)]})
+	return {"ok": true, "error": "", "entries": out}
 
 
-## Событие, которое ждёт утром после прыжка ("" — нет или уже ушло).
-static func pending(content: Content, state: RunState) -> String:
-	var mid := str(state.flags.get("figure_event", ""))
-	if mid == "" or str(state.missions.get(mid, {}).get("status", "")) != "open" or reach(content, state, mid) != 0:
-		return ""
-	return mid
+## Сегодня фигура уже перескочила к событию (его и надо проводить; "" — нет).
+static func jumped(state: RunState) -> String:
+	return str(state.flags.get("figure_jump", ""))
 
 
-## Событие уйдёт этой ночью — прыгать к нему бессмысленно (утром его уже не будет).
-static func gone_by_morning(content: Content, state: RunState, mid: String) -> bool:
-	return MissionFlow.expires_in(content, state, mid) == 1
+## После прыжка событие так и не начали — день ушёл на переход: ночь. Записи ночи ([] — прыжка не было).
+static func jump_cancel(content: Content, state: RunState) -> Array:
+	if jumped(state) == "" or not state.squads.is_empty() or state.flags.has("event_done"):
+		return []
+	state.flags.erase("figure_jump")
+	return DayRules.end_day(content, state)
+
+
+## Дело лагеря — тоже действие дня (решение владельца 03.10): сделано — ночь. {ok, error, entries}.
+static func task(content: Content, state: RunState, task_id: String, cid: String) -> Dictionary:
+	if jumped(state) != "":
+		return {"ok": false, "error": "Фигура перескочила к событию — сегодня это событие", "entries": []}
+	var r := DayPlanner.do_task(content, state, task_id, cid)
+	if not r["ok"]:
+		return {"ok": false, "error": str(r["error"]), "entries": []}
+	var out: Array = Array(r["entries"]).duplicate()
+	out.append_array(DayRules.end_day(content, state))
+	return {"ok": true, "error": "", "entries": out}
 
 
 ## Событие закончилось — день тоже: ночь (записи для окна ночи). [] — если событие ещё не решено.
@@ -108,8 +132,13 @@ static func end_after_event(content: Content, state: RunState) -> Array:
 	if not on(content, state) or not state.squads.is_empty() or state.game_over or state.demo_complete \
 			or not state.flags.has("event_done"):
 		return []
-	state.flags.erase("figure_event")
+	state.flags.erase("figure_jump")
 	return DayRules.end_day(content, state)
+
+
+## Сроки событий в днях — длиннее: в день теперь одно действие (решение владельца 03.10, days.json figure_expires_mult).
+static func expires_mult(content: Content, state: RunState) -> float:
+	return float(content.days.get("figure_expires_mult", 2.0)) if on(content, state) else 1.0
 
 
 static func _days(n: int) -> String:

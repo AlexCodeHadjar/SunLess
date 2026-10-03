@@ -60,6 +60,7 @@ var drag_hover := ""             # участок под фигурой
 var camp_scene := 0.0            # 0..1 — ночная сцена лагеря (наезд камеры): фигура у костра, вокруг темно
 var camp_hero := "P01"
 var _cam_tw: Tween
+var _camp_nodes: Array = []      # картинки сцены лагеря (фигура отряда, костёр) — узлы на слое мира
 
 
 static func make(config: Dictionary, area: Rect2) -> SleeperMap:
@@ -764,8 +765,8 @@ func _draw_figure_marks(centers: Dictionary, sizes: Dictionary) -> void:
 	for ext: String in ["webp", "png"]:
 		if fart == null and ResourceLoader.exists("res://art/map/figure/campfire.%s" % ext):
 			fart = load("res://art/map/figure/campfire.%s" % ext)
-	if fart != null:
-		_over.draw_texture_rect(fart, Rect2(fire - Vector2(30, 40), Vector2(60, 60)), false, Color(1, 1, 1, a))
+	if fart != null or not _camp_nodes.is_empty():
+		pass   # костёр — картинкой (camp_show)
 	else:
 		# кольцо камней, угли, языки пламени
 		for i in 9:
@@ -780,7 +781,7 @@ func _draw_figure_marks(centers: Dictionary, sizes: Dictionary) -> void:
 	var fw := FigurePiece.W * 0.62
 	var fh := FigurePiece.H * 0.62
 	_over.draw_circle(base + Vector2(0, -2), fw * 0.45, Color(0, 0, 0, 0.35 * a))
-	if a > 0.25:   # фигура встаёт у огня, когда камера уже наезжает
+	if a > 0.25 and _camp_nodes.is_empty():   # нарисованная фигура — если картинок нет
 		FigurePiece.paint(_over, Rect2(base - Vector2(fw / 2.0, fh), Vector2(fw, fh)), FigurePiece.art(camp_hero),
 			FigurePiece.ACCENT.get(camp_hero, Color.WHITE), 0.0, _t)
 	# тёплый отсвет огня на фигуре
@@ -818,6 +819,48 @@ func pick(content: Content, state: RunState, at: Vector2) -> String:
 			bd = d
 			best = lid
 	return best
+
+
+## Сцена лагеря картинками: фигура отряда (или героя) у костра на участке фигуры — узлы на слое мира, проявляются.
+func camp_show(content: Content, state: RunState, hero_key: String) -> void:
+	camp_hide()
+	var lid := state.party_at
+	if not cfg.get("places", {}).has(lid):
+		return
+	var sz := _sprite_size(content, state, lid)
+	var base := center(content, state, lid) - view.position + Vector2(-sz * 0.08, sz * 0.12)
+	var fire := base + Vector2(sz * 0.14, 4.0)
+	var ftex := FigurePiece.art("campfire")
+	var htex := FigurePiece.art(hero_key)
+	if ftex != null:
+		var fs := Vector2(ftex.get_width(), ftex.get_height()) * (78.0 / float(ftex.get_width()))
+		_camp_nodes.append(_camp_sprite(ftex, Rect2(fire - Vector2(fs.x / 2.0, fs.y * 0.7), fs)))
+	if htex != null:
+		var box := Vector2(FigurePiece.W * 0.75, FigurePiece.H * 0.62)
+		var k := minf(box.x / float(htex.get_width()), box.y / float(htex.get_height()))
+		var hs := Vector2(htex.get_width(), htex.get_height()) * k
+		_camp_nodes.append(_camp_sprite(htex, Rect2(base - Vector2(hs.x / 2.0, hs.y), hs)))
+
+
+func camp_hide() -> void:
+	for n: Node in _camp_nodes:
+		if is_instance_valid(n):
+			n.queue_free()
+	_camp_nodes.clear()
+
+
+func _camp_sprite(tex: Texture2D, r: Rect2) -> TextureRect:
+	var tr := TextureRect.new()
+	tr.texture = tex
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_SCALE
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tr.position = r.position
+	tr.size = r.size
+	tr.modulate.a = 0.0
+	_over.add_child(tr)
+	create_tween().tween_property(tr, "modulate:a", 1.0, 0.0 if Vfx.reduced() else 0.9).set_delay(0.0 if Vfx.reduced() else 0.4)
+	return tr
 
 
 ## Камера: точка карты (координаты слоя мира) — в центр окна, увеличение k. Возвращает твин.

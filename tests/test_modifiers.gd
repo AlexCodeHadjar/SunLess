@@ -68,6 +68,7 @@ func test_combat_changes() -> void:
 func test_checks_rewards_expires() -> void:
 	var c := content()
 	var s := _shore()
+	s.flags["movement"] = "steps"   # сроки — без удвоения фигуры (docs/18): проверяем сам модификатор
 	MissionFlow.open(c, s, "RS02", true)
 	s.missions["RS02"]["mods"] = ["fog"]
 	var parts := ModifierRules.check_parts(c, s, "RS02", ["stealth"])

@@ -133,9 +133,26 @@ func figure_move(lid: String) -> Dictionary:
 	return {"error": "", "events": r["entries"]}
 
 
-## Фигура: щелчок по событию на соседнем участке — сразу прыжок (день), утром событие откроется само.
+## Фигура: щелчок по событию на соседнем участке — сразу прыжок; событие идёт в тот же день.
 func figure_jump(mission_id: String) -> Dictionary:
 	var r := FigureRules.jump(content(), state, mission_id)
+	if not r["ok"]:
+		return {"error": r["error"], "events": []}
+	_after_day()
+	return {"error": "", "events": r["entries"]}
+
+
+## Фигура: после прыжка событие не начали — день ушёл на переход. Записи ночи ([] — прыжка не было).
+func figure_jump_cancel() -> Array:
+	var ev := FigureRules.jump_cancel(content(), state)
+	if not ev.is_empty():
+		_after_day()
+	return ev
+
+
+## Фигура: дело лагеря — действие дня. {error, events} — дело и ночь.
+func figure_task(task: String, cid: String) -> Dictionary:
+	var r := FigureRules.task(content(), state, task, cid)
 	if not r["ok"]:
 		return {"error": r["error"], "events": []}
 	_after_day()

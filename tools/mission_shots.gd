@@ -743,3 +743,11 @@ func _figure() -> void:
 	await _wait(0.35)
 	await _shot("f05_shatter")
 	await _wait(1.2)
+	# прыжок к событию на соседнем участке: фигура перескакивает, брифинг открывается в тот же день
+	var cs := GameState.state
+	for mid: String in MissionFlow.open_missions(cs):
+		if FigureRules.reach(c, cs, mid) == 1:
+			game.call("_open_mission", mid)
+			break
+	await _wait(1.6)
+	await _shot("f06_jump_brief")
