@@ -131,7 +131,7 @@ static func expires(content: Content, state: RunState, mid: String) -> int:
 		return 0
 	for d: Dictionary in of(content, state, mid):
 		e *= float(d.get("expires_mult", 1.0))
-	e *= FigureRules.expires_mult(content, state)   # фигура: в день одно действие — сроки длиннее
+	e *= FigureRules.expires_mult(content, state)   # фигура: действия по полдня — сроки длиннее (×1,5)
 	return maxi(1, int(ceil(e)))
 
 

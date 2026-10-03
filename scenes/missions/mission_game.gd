@@ -129,8 +129,9 @@ func _process(delta: float) -> void:
 		_night_after_event = false
 		var ev := GameState.figure_event_done()
 		if not ev.is_empty():
-			_night_cinematic(ev)
-			return
+			_after_half(ev, true)
+			if FigureRules.is_night(ev):
+				return
 	if GameState.state.game_over and quiet:
 		_show_end()
 	elif GameState.state.demo_complete and quiet:
@@ -569,14 +570,13 @@ func _pick_task_hero(task: String) -> void:
 	var def := DayPlanner.task_def(c, task)
 	v.add_child(UITheme.label(str(def.get("name", task)), "title", 26, Palette.TEXT))
 	var fig := FigureRules.on(c, s)
-	var t := UITheme.label(str(def.get("text", "")) + ("\nЗаймёт весь день: потом ночь у фигуры." if fig else ""), "sans", 16, Palette.SILVER)
+	var t := UITheme.label(str(def.get("text", "")) + (("\nЗаймёт полдня" + (": потом ночь у фигуры." if FigureRules.half(s) == 1 else ".")) if fig else ""),
+		"sans", 16, Palette.SILVER)
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.custom_minimum_size.x = 380
 	v.add_child(t)
 	for cid: String in MissionFlow.heroes(c, s):
 		var why := DayPlanner.can_task(c, s, task, cid)
-		if why == "" and fig and FigureRules.jumped(s) != "":
-			why = "сегодня — событие"
 		var b := Button.new()
 		var loss := DayRules.fatigue_cost(c, s, cid)
 		b.text = "%s · психика %d%s" % [c.card_name(cid), PsycheRules.psyche(s, cid), (" · усталость %d" % loss) if loss < 0 else ""]
@@ -586,13 +586,13 @@ func _pick_task_hero(task: String) -> void:
 		b.custom_minimum_size = Vector2(380, 40)
 		b.pressed.connect(func() -> void:
 			panel.queue_free()
-			if FigureRules.on(ContentDB.data, GameState.state):   # фигура: дело лагеря — действие дня, потом ночь
+			if FigureRules.on(ContentDB.data, GameState.state):   # фигура: дело лагеря — полдня
 				_last_task = task
 				var r := GameState.figure_task(task, cid)
 				if str(r["error"]) != "":
 					_show_toast(str(r["error"]))
 				else:
-					_night_cinematic(r["events"])
+					_after_half(r["events"], true)
 				return
 			var err := GameState.do_task(task, cid)
 			if err != "":
@@ -615,13 +615,22 @@ func _update_day() -> void:
 	var nx := DayRules.tomorrow(c, s)
 	var more := int(ph["left"]) - 1
 	var tail := ("ещё %d %s" % [more, UITheme.plural(more, ["день", "дня", "дней"])]) if more > 0 else "последний день"
-	_day_label.text = "День %d · %s — %s · завтра: %s" % [s.day, ph["name"], tail, nx["name"]]
+	var half := ""
+	if FigureRules.on(c, s):
+		half = " · после полудня" if FigureRules.half(s) == 1 else " · утро"
+	_day_label.text = "День %d%s · %s — %s · завтра: %s" % [s.day, half, ph["name"], tail, nx["name"]]
 	_day_label.tooltip_text = str(ph["hint"])
 	_day_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	HintTargets.put("day_label", [_day_label])
 	var fig := FigureRules.on(c, s)
-	_end_btn.text = "ПЕРЕЖДАТЬ ДЕНЬ ›" if fig else "ЗАКОНЧИТЬ ДЕНЬ ›"
-	_end_btn.tooltip_text = "Ничего не делать сегодня: ночь у фигуры, утром новый день" if fig else ""
+	if fig:
+		var late := FigureRules.half(s) == 1
+		_end_btn.text = "ПЕРЕЖДАТЬ ДО НОЧИ ›" if late else "ПЕРЕЖДАТЬ ПОЛДНЯ ›"
+		_end_btn.tooltip_text = "Переждать полдня: дальше ночь у фигуры, утром новый день" if late else \
+			"Переждать полдня: наступит полдень, останется ещё полдня"
+	else:
+		_end_btn.text = "ЗАКОНЧИТЬ ДЕНЬ ›"
+		_end_btn.tooltip_text = ""
 	var cp := DayRules.camp(c, s)
 	var where := str(c.locations.get(s.party_at, c.shops.get(s.party_at, {})).get("name", "—"))
 	var warn := ""
@@ -645,7 +654,9 @@ func _update_day() -> void:
 	var parts: Array = ["Сегодня: миссий рядом %d" % today.size(), "переходов без усталости %d из %d" % [steps, TravelRules.free_steps(c)]]
 	if fig:
 		var here_n := today.filter(func(m: String) -> bool: return FigureRules.reach(c, s, m) == 0).size()
-		parts = ["Сегодня: событий здесь %d, по соседству %d" % [here_n, today.size() - here_n], "одно действие: событие, шаг фигуры, дело лагеря или ожидание"]
+		var halves := "осталось полдня до ночи" if FigureRules.half(s) == 1 else "впереди две половины дня"
+		parts = ["Сегодня: событий здесь %d, по соседству %d" % [here_n, today.size() - here_n],
+			"%s: событие, шаг фигуры, дело лагеря или ожидание — по полдня" % halves]
 	if not (opt["cut"] as Array).is_empty():
 		parts.append("за водой %d" % (opt["cut"] as Array).size())
 	var wait := MissionFlow.story_wait(c, s)   # сюжет ждёт закрытых Врат / зачищенных районов
@@ -667,6 +678,13 @@ func _update_day() -> void:
 
 func _on_end_day() -> void:
 	if _night != null or _window != null:
+		return
+	if FigureRules.on(ContentDB.data, GameState.state):   # фигура: переждать полдня
+		var r := GameState.figure_wait()
+		if str(r["error"]) != "":
+			_show_toast(str(r["error"]))
+			return
+		_after_half(r["events"], true)
 		return
 	var ev := GameState.end_day()
 	if ev.is_empty():
@@ -769,6 +787,22 @@ func _fit_night_panel(panel: Control) -> void:
 
 ## После перехода фигуры (решение владельца 03.10): лагерь не открывается — итоги ночи короткой карточкой справа
 ## сверху; карта остаётся под рукой. Карточка гаснет сама или по щелчку.
+## Действие фигуры заняло полдня (решение владельца 03.10): утром — полдень, карточка с итогами; после полудня —
+## ночь у фигуры: scene — сцена лагеря у костра (событие, дело, ожидание), иначе карточка итогов ночи (шаг).
+func _after_half(ev: Array, scene: bool) -> void:
+	if ev.is_empty():
+		return
+	_refresh()
+	if not FigureRules.is_night(ev):
+		_night_note(ev)
+		return
+	AudioManager.play("bell", -6.0, 0.5)
+	if scene:
+		_night_cinematic(ev)
+	else:
+		_night_note(ev)
+
+
 func _night_note(ev: Array) -> void:
 	AudioManager.play("bell", -10.0, 0.6)
 	if is_instance_valid(_note):
@@ -783,12 +817,15 @@ func _night_note(ev: Array) -> void:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(v)
 	var ph := DayRules.phase(ContentDB.data, GameState.state)
-	v.add_child(UITheme.label("Ночь прошла · утро дня %d · %s" % [GameState.state.day, ph["name"]], "title", 22, Palette.TEXT))
+	var title := "Ночь прошла · утро дня %d · %s" % [GameState.state.day, ph["name"]]
+	if not FigureRules.is_night(ev):
+		title = "Полдень · день %d — осталось полдня" % GameState.state.day
+	v.add_child(UITheme.label(title, "title", 22, Palette.TEXT))
 	var shown := 0
 	for e: Dictionary in ev:
 		var t := str(e.get("text", ""))
 		var kind := str(e.get("kind", ""))
-		if t == "" or kind in ["psyche", "night"] or shown >= 8:
+		if t == "" or kind in ["psyche", "night", "half"] or shown >= 8:
 			continue
 		var col := Palette.SILVER
 		match kind:
@@ -1311,12 +1348,13 @@ func _open_mission(mid: String) -> void:
 	var c := ContentDB.data
 	if FigureRules.on(c, GameState.state) and not _cinema:
 		var r := FigureRules.reach(c, GameState.state, mid)
-		if r == 1:
-			_figure_jump(mid)
+		if r == 1:   # по соседству: шаг фигуры туда (полдня), событие — во вторую половину
+			_figure_click_place(str(c.missions[mid].get("location", "")), mid)
+			GameState.tutorial("figure_far")
 			return
 		if r != 0:
 			_show_toast(FigureRules.why_not(c, GameState.state, str(c.missions[mid].get("location", ""))) if r < 0 else
-				"Далеко: %d %s пути — переносите фигуру по соседним участкам" % [r, UITheme.plural(r, ["день", "дня", "дней"])])
+				"Далеко: %d %s — переносите фигуру по соседним участкам (шаг — полдня)" % [r, UITheme.plural(r, ["шаг", "шага", "шагов"])])
 			GameState.tutorial("figure_far")
 			return
 	_open_window()
@@ -1622,12 +1660,12 @@ func _on_figure_click() -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	var cp := DayRules.camp(c, s)
-	_show_toast("Лагерь у фигуры: %s · ночью психика +%d · коек %d. Перенесите фигуру на соседний участок — 1 день" % [
+	_show_toast("Лагерь у фигуры: %s · ночью психика +%d · коек %d. Перенесите фигуру на соседний участок — полдня" % [
 		str(c.locations.get(s.party_at, c.shops.get(s.party_at, {})).get("name", "")), int(cp.get("rest", 20)), int(cp.get("beds", 0))])
 
 
-## Щелчок по участку карты: соседний — окно «перенести фигуру»; дальний — почему нельзя.
-func _figure_click_place(lid: String) -> void:
+## Щелчок по участку карты (или по событию на нём — mid): соседний — окно «перенести фигуру»; дальний — почему нельзя.
+func _figure_click_place(lid: String, mid: String = "") -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	if lid == "":
@@ -1656,11 +1694,19 @@ func _figure_click_place(lid: String) -> void:
 		(" · " + line.to_lower()) if line != "" else ""], "sans", 16, Palette.SILVER)
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(info)
+	if mid != "":
+		var late := FigureRules.half(s) == 1
+		var ev_l := UITheme.label("Событие там: «%s» — %s" % [str(c.missions[mid].get("title", mid)),
+			"проведёте завтра: шаг займёт оставшиеся полдня" if late else "после шага останется полдня, чтобы его провести"],
+			"sans_bold", 16, Palette.GOLD)
+		ev_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ev_l.custom_minimum_size.x = 380
+		v.add_child(ev_l)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
 	var go := Button.new()
-	go.text = "ПЕРЕНЕСТИ ФИГУРУ — 1 ДЕНЬ ›"
+	go.text = "ПЕРЕНЕСТИ ФИГУРУ — ПОЛДНЯ ›"
 	go.add_theme_font_override("font", UITheme.font("caps"))
 	go.pressed.connect(func() -> void:
 		_close_travel()
@@ -1673,7 +1719,7 @@ func _figure_click_place(lid: String) -> void:
 	panel.position = (_place_point(lid) + _pan_layer.position + Vector2(-190, 30)).clamp(Vector2(20, 100), _screen() - Vector2(420, 260))
 
 
-## Перенести фигуру на соседний участок: день прошёл — фигура прыгает, потом сцена лагеря.
+## Перенести фигуру на соседний участок — полдня: карточка полудня или итогов ночи (лагерь не открывается).
 func _figure_move(lid: String) -> void:
 	var r := GameState.figure_move(lid)
 	if str(r["error"]) != "":
@@ -1683,24 +1729,10 @@ func _figure_move(lid: String) -> void:
 	AudioManager.play("place", -4.0, 0.8)
 	_refresh()
 	await get_tree().create_timer(0.7 if not Vfx.reduced() else 0.0).timeout
-	_night_note(r["events"])   # после перехода лагерь не открывается — итоги ночи карточкой
+	_after_half(r["events"], false)
 
 
-## Событие на соседнем участке: фигура сразу перескакивает, брифинг открывается — событие в тот же день.
-func _figure_jump(mid: String) -> void:
-	var r := GameState.figure_jump(mid)
-	if str(r["error"]) != "":
-		_show_toast(str(r["error"]))
-		return
-	AudioManager.play("place", -4.0, 0.8)
-	_refresh()
-	await get_tree().create_timer(0.6 if not Vfx.reduced() else 0.0).timeout
-	_open_window()
-	_window.show_brief(mid)
-	GameState.tutorial("figure_jump")
-
-
-## Метка события в режиме фигуры: здесь — как обычно; рядом — «↷ 1 день»; дальше — «N дней пути», приглушена.
+## Метка события в режиме фигуры: здесь — как обычно; рядом — «1 ШАГ» (полдня); дальше — «N ШАГОВ», приглушена.
 func _figure_badge(mk: MissionMarker, mid: String, badge: String, under: bool) -> void:
 	var c := ContentDB.data
 	var s := GameState.state
@@ -1710,9 +1742,9 @@ func _figure_badge(mk: MissionMarker, mid: String, badge: String, under: bool) -
 		badge = "ПОД ВОДОЙ"
 		tint = Color(0.5, 0.64, 0.86, 0.8)
 	elif r == 1:
-		badge = "↷ ПРЫЖОК"
+		badge = "1 ШАГ · ПОЛДНЯ"
 	elif r >= 2:
-		badge = "%d %s ПУТИ" % [r, UITheme.plural(r, ["ДЕНЬ", "ДНЯ", "ДНЕЙ"])]
+		badge = "%d %s" % [r, UITheme.plural(r, ["ШАГ", "ШАГА", "ШАГОВ"])]
 		tint = Color(0.62, 0.62, 0.66, 0.85)
 	elif r < 0:
 		badge = "НЕТ ПРОХОДА"
@@ -1734,12 +1766,6 @@ func _after_event_window() -> void:
 	_refresh()
 	if FigureRules.on(ContentDB.data, GameState.state) and GameState.state.flags.has("event_done"):
 		_night_after_event = true
-	elif FigureRules.jumped(GameState.state) != "" and GameState.state.squads.is_empty():
-		# перескочили к событию, но не начали — день ушёл на переход
-		var ev := GameState.figure_jump_cancel()
-		if not ev.is_empty():
-			_show_toast("Событие отложено — день ушёл на переход")
-			_night_note(ev)
 
 
 ## Карта события разрывается на части: снимок карты с экрана — на осколки, они разлетаются и гаснут.

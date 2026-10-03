@@ -124,7 +124,7 @@ func move_party(lid: String) -> String:
 	return ""
 
 
-## Фигура (docs/18): переставить на соседний участок — день прошёл. {error, events} — события перехода и ночи.
+## Фигура (docs/18): переставить на соседний участок — полдня. {error, events} — переход и полдень или ночь.
 func figure_move(lid: String) -> Dictionary:
 	var r := FigureRules.move(content(), state, lid)
 	if not r["ok"]:
@@ -133,24 +133,16 @@ func figure_move(lid: String) -> Dictionary:
 	return {"error": "", "events": r["entries"]}
 
 
-## Фигура: щелчок по событию на соседнем участке — сразу прыжок; событие идёт в тот же день.
-func figure_jump(mission_id: String) -> Dictionary:
-	var r := FigureRules.jump(content(), state, mission_id)
+## Фигура: «Переждать полдня». {error, events} — полдень или ночь.
+func figure_wait() -> Dictionary:
+	var r := FigureRules.wait(content(), state)
 	if not r["ok"]:
 		return {"error": r["error"], "events": []}
 	_after_day()
 	return {"error": "", "events": r["entries"]}
 
 
-## Фигура: после прыжка событие не начали — день ушёл на переход. Записи ночи ([] — прыжка не было).
-func figure_jump_cancel() -> Array:
-	var ev := FigureRules.jump_cancel(content(), state)
-	if not ev.is_empty():
-		_after_day()
-	return ev
-
-
-## Фигура: дело лагеря — действие дня. {error, events} — дело и ночь.
+## Фигура: дело лагеря — полдня. {error, events} — дело и полдень или ночь.
 func figure_task(task: String, cid: String) -> Dictionary:
 	var r := FigureRules.task(content(), state, task, cid)
 	if not r["ok"]:
@@ -159,7 +151,7 @@ func figure_task(task: String, cid: String) -> Dictionary:
 	return {"error": "", "events": r["entries"]}
 
 
-## Фигура: событие закончено — день тоже. Записи ночи ([] — день не кончился).
+## Фигура: событие закончено — прошло полдня. Записи полудня или ночи ([] — событие не решено).
 func figure_event_done() -> Array:
 	var ev := FigureRules.end_after_event(content(), state)
 	if not ev.is_empty():

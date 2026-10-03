@@ -221,7 +221,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 	TerrainRules.exposed_night(content, state, out)   # ночь в открытом пепле в бурю
 	state.camp["beds"] = []
 	state.flags.erase("event_done")
-	state.flags.erase("figure_jump")
+	state.flags.erase("figure_half")   # фигура: новый день — снова две половины
 	# 3. новый день: шаги и дела лагеря снова свободны
 	TravelRules.new_day(state)
 	DayPlanner.new_day(state)

@@ -1,7 +1,7 @@
 extends TestCase
-## Фигура (docs/18, ветка gameplay/figure): с Академии отряд — фигура на карте-плане; день — одно действие (шаг на
-## соседний участок, событие там, где фигура, или ожидание); щелчок по соседнему событию — прыжок, утром событие;
-## после события — ночь; планировщик держит события здесь и по соседству; бот проходит главы фигурой.
+## Фигура (docs/18, ветка gameplay/figure): с Академии отряд — фигура на карте-плане; день — две половины, действие —
+## полдня (шаг на соседний участок, событие там, где фигура, дело лагеря, ожидание); две половины — ночь;
+## планировщик держит события здесь и по соседству; бот проходит главы фигурой.
 
 
 func _shore(seed_value: int = 5) -> RunState:
@@ -40,7 +40,7 @@ func test_figure_from_academy() -> void:
 	check(not FigureRules.on(c, s), "старое передвижение включается явно")
 
 
-func test_move_one_step_is_a_day() -> void:
+func test_move_is_half_a_day() -> void:
 	var c := content()
 	var s := _shore()
 	var targets := FigureRules.targets(c, s)
@@ -53,8 +53,8 @@ func test_move_one_step_is_a_day() -> void:
 	var r := FigureRules.move(c, s, to)
 	check(r["ok"], "шаг на соседний участок: %s" % str(r["error"]))
 	eq(s.party_at, to, "фигура — на новом участке (там и лагерь):")
-	eq(s.day, day + 1, "шаг — это день:")
-	check((r["entries"] as Array).any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "night"), "после шага — ночь")
+	eq(s.day, day, "шаг — полдня, день тот же:")
+	eq(FigureRules.half(s), 1, "наступил полдень:")
 
 
 func test_events_only_where_figure_stands() -> void:
@@ -74,50 +74,70 @@ func test_events_only_where_figure_stands() -> void:
 	eq(s.party_at, "shelter", "фигура не сдвинулась:")
 
 
-func test_jump_and_event_is_one_day() -> void:
+## Решение владельца 03.10 (вместо прыжка): шаг к соседнему событию — полдня, событие — полдня, потом ночь.
+func test_step_and_event_is_one_day() -> void:
 	var c := content()
 	var s := _shore(7)
 	var n: String = FigureRules.targets(c, s)[0]
 	var mid := _event_at(c, s, n)
 	var day := s.day
-	var r := FigureRules.jump(c, s, mid)
-	check(r["ok"], "прыжок: %s" % str(r["error"]))
-	eq(s.party_at, n, "фигура перескочила к событию:")
-	eq(s.day, day, "ночь ещё не наступила — событие сегодня:")
+	var r := FigureRules.move(c, s, n)
+	check(r["ok"], "шаг к событию: %s" % str(r["error"]))
+	eq(s.day, day, "после шага — полдень, ночь ещё не наступила:")
+	eq(FigureRules.half(s), 1, "осталось полдня:")
+	check(not FigureRules.is_night(r["entries"]), "в записях — полдень, не ночь")
 	eq(FigureRules.reach(c, s, mid), 0, "событие теперь здесь:")
-	check(FigureRules.why_not(c, s, "shelter") != "", "второй шаг в тот же день — нельзя")
 	var lr := MissionFlow.launch(c, s, mid, ["P01"])
-	check(lr["ok"], "событие начато в тот же день")
+	check(lr["ok"], "событие начато во второй половине дня")
 	var act := ""
 	for e: Dictionary in MissionFlow.actions_for(c, s, mid, ["P01"]):
 		if e["available"] and not bool(e["action"].get("retreat", false)):
 			act = str(e["action"]["id"])
 			break
 	s = MissionResolver.resolve_through(c, s, int(lr["squad"]["id"]), act)["state"]
-	check(not FigureRules.end_after_event(c, s).is_empty(), "после события — ночь")
-	eq(s.day, day + 1, "прыжок и событие — один день:")
+	check(FigureRules.is_night(FigureRules.end_after_event(c, s)), "после события — ночь")
+	eq(s.day, day + 1, "шаг и событие — один день:")
+	eq(FigureRules.half(s), 0, "утро — снова две половины:")
 
 
-func test_jump_cancel_spends_the_day() -> void:
+func test_two_steps_a_day() -> void:
 	var c := content()
 	var s := _shore(9)
-	var n: String = FigureRules.targets(c, s)[0]
-	var mid := _event_at(c, s, n)
 	var day := s.day
-	FigureRules.jump(c, s, mid)
-	check(not FigureRules.jump_cancel(c, s).is_empty(), "передумали — день ушёл на переход, ночь")
+	var a: String = FigureRules.targets(c, s)[0]
+	check(FigureRules.move(c, s, a)["ok"], "первый шаг")
+	var back := FigureRules.targets(c, s)
+	check(not back.is_empty(), "после полудня можно шагнуть ещё раз")
+	var r := FigureRules.move(c, s, str(back[0]))
+	check(r["ok"], "второй шаг: %s" % str(r["error"]))
+	check(FigureRules.is_night(r["entries"]), "два шага — день прошёл, ночь")
 	eq(s.day, day + 1, "день прошёл:")
-	eq(FigureRules.jumped(s), "", "прыжок забыт:")
 
 
-func test_camp_task_is_a_day() -> void:
+func test_wait_is_half_a_day() -> void:
+	var c := content()
+	var s := _shore(21)
+	var day := s.day
+	var r := FigureRules.wait(c, s)
+	check(r["ok"] and not FigureRules.is_night(r["entries"]), "утром переждать — до полудня")
+	eq(s.day, day, "день тот же:")
+	r = FigureRules.wait(c, s)
+	check(FigureRules.is_night(r["entries"]), "после полудня переждать — до ночи")
+	eq(s.day, day + 1, "наступил новый день:")
+
+
+func test_camp_task_is_half_a_day() -> void:
 	var c := content()
 	var s := _shore(15)
 	var day := s.day
 	var r := FigureRules.task(c, s, "forage", "P01")
 	check(r["ok"], "сбор: %s" % str(r["error"]))
-	eq(s.day, day + 1, "дело лагеря — день:")
-	check((r["entries"] as Array).any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "night"), "после дела — ночь")
+	eq(s.day, day, "дело лагеря — полдня, день тот же:")
+	check(not FigureRules.is_night(r["entries"]), "после первого дела — полдень")
+	r = FigureRules.task(c, s, "watch", "P01")
+	check(r["ok"], "второе дело в тот же день: %s" % str(r["error"]))
+	check(FigureRules.is_night(r["entries"]), "два дела — ночь")
+	eq(s.day, day + 1, "день прошёл:")
 
 
 func test_expires_longer_with_figure() -> void:
@@ -131,10 +151,10 @@ func test_expires_longer_with_figure() -> void:
 	var base := ModifierRules.expires(c, s, mid)
 	s.flags["movement"] = "steps"
 	var old := ModifierRules.expires(c, s, mid)
-	check(base >= old * 2 - 1 and base > old, "с фигурой срок длиннее: %d против %d" % [base, old])
+	check(base > old and base <= int(ceil(old * 1.5)) + 1, "с фигурой срок в полтора раза длиннее: %d против %d" % [base, old])
 
 
-func test_event_is_a_day() -> void:
+func test_event_is_half_a_day() -> void:
 	var c := content()
 	var s := _shore(11)
 	var mid := _event_at(c, s, s.party_at)
@@ -151,8 +171,9 @@ func test_event_is_a_day() -> void:
 	s = res["state"]
 	var day := s.day
 	var ev := FigureRules.end_after_event(c, s)
-	check(not ev.is_empty(), "событие проведено — наступила ночь")
-	eq(s.day, day + 1, "событие — день:")
+	check(not ev.is_empty() and not FigureRules.is_night(ev), "событие утром — полдня, наступил полдень")
+	eq(s.day, day, "день тот же:")
+	eq(FigureRules.end_after_event(c, s), [], "полдень не повторяется:")
 
 
 func test_onslaught_comes_to_figure() -> void:

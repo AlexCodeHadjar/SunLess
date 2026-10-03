@@ -2,10 +2,10 @@ class_name FigureRules
 extends RefCounted
 ## Фигура (docs/18, экспериментальная ветка gameplay/figure; решения владельца 02.10.2026): с Академии отряд —
 ## каменная фигура главного героя на карте-плане. Где фигура — там лагерь (state.party_at).
-## День — одно действие: переставить фигуру на соседний участок, провести событие там, где она стоит, или переждать
-## день; после действия наступает ночь (DayRules.end_day). Щелчок по событию на соседнем участке — фигура сразу
-## перескакивает (день прошёл), утром событие открывается само (flags.figure_event).
-## Бесплатно (день не кончается): лавка рядом, дела лагеря, кармашки, койки.
+## День — две половины (решение владельца 03.10, вместо прыжка): шаг фигуры на соседний участок, событие там, где
+## она стоит, дело лагеря или ожидание — по полдня, в любом сочетании. Две половины прошли — ночь у фигуры
+## (DayRules.end_day). Событие на соседнем участке: шаг (полдня) + событие (полдня) — один день.
+## Бесплатно: лавка рядом, кармашки, койки.
 ## Старое передвижение (шаги дня, марш-бросок, несколько выходов в день) — days.json "movement": "steps"
 ## или state.flags.movement = "steps" (тесты старых правил).
 
@@ -29,8 +29,6 @@ static func why_not(content: Content, state: RunState, lid: String) -> String:
 		return "Прохождение окончено"
 	if not state.squads.is_empty():
 		return "Сначала закончите событие"
-	if jumped(state) != "":
-		return "Фигура уже перескочила к событию — сегодня это событие"
 	if lid == state.party_at:
 		return "Фигура уже здесь"
 	if not neighbors(content, state).has(lid):
@@ -53,8 +51,8 @@ static func targets(content: Content, state: RunState) -> Array:
 	return neighbors(content, state).filter(func(l: String) -> bool: return why_not(content, state, l) == "")
 
 
-## Сколько дней до события: 0 — здесь (или Натиск — он приходит к фигуре), 1 — на соседнем участке, дальше — путь,
-## -1 — пути нет.
+## Сколько шагов фигуры (по полдня) до события: 0 — здесь (или Натиск — он приходит к фигуре), 1 — на соседнем
+## участке, дальше — путь, -1 — пути нет.
 static func reach(content: Content, state: RunState, mid: String) -> int:
 	var m: Dictionary = content.missions.get(mid, {})
 	if str(m.get("type", "")) == "onslaught":
@@ -67,7 +65,7 @@ static func reach(content: Content, state: RunState, mid: String) -> int:
 	return TravelRules.distance(content, state, lid)
 
 
-## Переставить фигуру на соседний участок: переход по правилам местности, затем ночь. {ok, error, entries}.
+## Переставить фигуру на соседний участок: переход по правилам местности — полдня. {ok, error, entries}.
 static func move(content: Content, state: RunState, lid: String) -> Dictionary:
 	var why := why_not(content, state, lid)
 	if why != "":
@@ -79,66 +77,59 @@ static func move(content: Content, state: RunState, lid: String) -> Dictionary:
 	state.party_at = lid
 	state.clock += 1.0
 	out.append({"kind": "move", "text": "Фигура перешла: %s → %s" % [_name(content, from), _name(content, lid)]})
-	out.append_array(DayRules.end_day(content, state))
+	out.append_array(spend(content, state))
 	return {"ok": true, "error": "", "entries": out}
 
 
-## Щелчок по событию на соседнем участке (решение владельца 03.10): фигура сразу перескакивает, и событие идёт в тот
-## же день — прыжок и событие вместе занимают один день. Ночь ещё не наступила; передумали (событие не начали) —
-## день всё равно ушёл на переход: jump_cancel. {ok, error, entries}.
-static func jump(content: Content, state: RunState, mid: String) -> Dictionary:
-	var lid := str(content.missions.get(mid, {}).get("location", ""))
-	var why := why_not(content, state, lid)
+## Половина дня: 0 — утро (впереди целый день), 1 — после полудня (осталось полдня, потом ночь).
+static func half(state: RunState) -> int:
+	return int(state.flags.get("figure_half", 0))
+
+
+## Действие заняло полдня: утром — наступает полдень; после полудня — ночь у фигуры. Записи (полдень или ночь).
+static func spend(content: Content, state: RunState) -> Array:
+	if half(state) == 0:
+		state.flags["figure_half"] = 1
+		state.flags.erase("event_done")
+		return [{"kind": "half", "text": "Полдень · день %d — осталось полдня" % state.day}]
+	return DayRules.end_day(content, state)   # снимает и figure_half
+
+
+## Записи действия закончились ночью (а не полднем).
+static func is_night(entries: Array) -> bool:
+	return entries.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "night")
+
+
+## «Переждать полдня» (решение владельца 03.10): утром — до полудня, после полудня — до ночи. {ok, error, entries}.
+static func wait(content: Content, state: RunState) -> Dictionary:
+	var why := DayRules.can_end(state)
 	if why != "":
 		return {"ok": false, "error": why, "entries": []}
-	var out: Array = []
-	var from := state.party_at
-	TerrainRules.on_travel(content, state, [lid], from, out)
-	TravelRules.visit(state, lid)
-	state.party_at = lid
-	state.clock += 1.0
-	state.flags["figure_jump"] = mid
-	out.append({"kind": "move", "text": "Фигура перескочила к событию: %s → %s" % [_name(content, from), _name(content, lid)]})
-	return {"ok": true, "error": "", "entries": out}
+	return {"ok": true, "error": "", "entries": spend(content, state)}
 
 
-## Сегодня фигура уже перескочила к событию (его и надо проводить; "" — нет).
-static func jumped(state: RunState) -> String:
-	return str(state.flags.get("figure_jump", ""))
-
-
-## После прыжка событие так и не начали — день ушёл на переход: ночь. Записи ночи ([] — прыжка не было).
-static func jump_cancel(content: Content, state: RunState) -> Array:
-	if jumped(state) == "" or not state.squads.is_empty() or state.flags.has("event_done"):
-		return []
-	state.flags.erase("figure_jump")
-	return DayRules.end_day(content, state)
-
-
-## Дело лагеря — тоже действие дня (решение владельца 03.10): сделано — ночь. {ok, error, entries}.
+## Дело лагеря — полдня (решение владельца 03.10). {ok, error, entries}.
 static func task(content: Content, state: RunState, task_id: String, cid: String) -> Dictionary:
-	if jumped(state) != "":
-		return {"ok": false, "error": "Фигура перескочила к событию — сегодня это событие", "entries": []}
 	var r := DayPlanner.do_task(content, state, task_id, cid)
 	if not r["ok"]:
 		return {"ok": false, "error": str(r["error"]), "entries": []}
 	var out: Array = Array(r["entries"]).duplicate()
-	out.append_array(DayRules.end_day(content, state))
+	out.append_array(spend(content, state))
 	return {"ok": true, "error": "", "entries": out}
 
 
-## Событие закончилось — день тоже: ночь (записи для окна ночи). [] — если событие ещё не решено.
+## Событие закончилось — прошло полдня: полдень или ночь (записи). [] — если событие ещё не решено.
 static func end_after_event(content: Content, state: RunState) -> Array:
 	if not on(content, state) or not state.squads.is_empty() or state.game_over or state.demo_complete \
 			or not state.flags.has("event_done"):
 		return []
-	state.flags.erase("figure_jump")
-	return DayRules.end_day(content, state)
+	return spend(content, state)
 
 
-## Сроки событий в днях — длиннее: в день теперь одно действие (решение владельца 03.10, days.json figure_expires_mult).
+## Сроки событий в днях — длиннее: за день два действия по полдня (решение владельца 03.10, days.json
+## figure_expires_mult = 1.5).
 static func expires_mult(content: Content, state: RunState) -> float:
-	return float(content.days.get("figure_expires_mult", 2.0)) if on(content, state) else 1.0
+	return float(content.days.get("figure_expires_mult", 1.5)) if on(content, state) else 1.0
 
 
 static func _days(n: int) -> String:

@@ -241,7 +241,7 @@ static func can_launch(content: Content, state: RunState, mission_id: String, he
 		return "Отряд уже на миссии — сначала решите, что он делает"
 	# фигура (docs/18): события — только там, где она стоит (Натиск приходит к ней сам)
 	if FigureRules.on(content, state) and FigureRules.reach(content, state, mission_id) != 0:
-		return "Событие не здесь — поставьте фигуру на этот участок (1 день)"
+		return "Событие не здесь — поставьте фигуру на этот участок (шаг — полдня)"
 	if not DayRules.mission_reachable(content, state, mission_id):
 		return TravelRules.why_not(content, state, str(m.get("location", "")))
 	var sq: Dictionary = m.get("squad", {})

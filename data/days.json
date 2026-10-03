@@ -209,6 +209,6 @@
   }
  },
  "movement": "figure",
- "_movement": "figure — фигура (docs/18, ветка gameplay/figure): день — одно действие; steps — шаги дня и марш-бросок (docs/17)",
- "figure_expires_mult": 2
+ "_movement": "figure — фигура (docs/18, ветка gameplay/figure): день — две половины, действие — полдня; steps — шаги дня и марш-бросок (docs/17)",
+ "figure_expires_mult": 1.5
 }
