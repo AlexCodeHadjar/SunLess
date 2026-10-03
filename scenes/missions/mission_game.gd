@@ -54,7 +54,8 @@ var _figure: FigurePiece        # фигура главного героя (docs
 var _figure_at := ""            # где фигура стоит на экране (перешла — анимация)
 var _cinema := false            # ночная сцена лагеря: камера наехала на фигуру
 var _night_after_event := false
-var _bottom_ui: Array = []      # тень, ряд карт, дневная панель — в сцене лагеря прячутся # событие проведено — после отчёта (и выбора добычи) наступит ночь
+var _bottom_ui: Array = []
+var _note: Control              # карточка итогов ночи после перехода фигуры      # тень, ряд карт, дневная панель — в сцене лагеря прячутся # событие проведено — после отчёта (и выбора добычи) наступит ночь
 
 
 func _ready() -> void:
@@ -692,11 +693,12 @@ func _show_night(ev: Array) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	panel.add_child(v)
-	if _cinema:   # сцена лагеря: окно справа, фигура у костра видна
-		panel.position = Vector2(_screen().x - 860, 120)
 	var ph := DayRules.phase(ContentDB.data, GameState.state)
 	v.add_child(UITheme.label("Ночь прошла · утро дня %d" % GameState.state.day, "title", 32, Palette.TEXT))
-	v.add_child(UITheme.label("%s · %s" % [ph["name"], ph["hint"]], "serif_italic", 19, Palette.SILVER))
+	var phl := UITheme.label("%s · %s" % [ph["name"], ph["hint"]], "serif_italic", 19, Palette.SILVER)
+	phl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # длинное описание фазы не растягивает окно за край
+	phl.custom_minimum_size.x = 740
+	v.add_child(phl)
 	for e: Dictionary in ev:
 		var t := str(e.get("text", ""))
 		if t == "" or str(e.get("kind", "")) == "psyche":
@@ -745,6 +747,80 @@ func _show_night(ev: Array) -> void:
 		if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "planner"):
 			GameState.tutorial("planner"))
 	v.add_child(b)
+	_fit_night_panel.call_deferred(panel)
+
+
+## Окно ночи целиком в окне игры: в сцене лагеря — справа (фигура у костра видна), иначе — по центру.
+func _fit_night_panel(panel: Control) -> void:
+	if not is_instance_valid(panel):
+		return
+	panel.reset_size()
+	var scr := _screen()
+	var sz := panel.get_combined_minimum_size()
+	var x := scr.x - sz.x - 40.0 if _cinema else (scr.x - sz.x) / 2.0
+	var y := 110.0 if _cinema else maxf(90.0, (scr.y - sz.y) / 2.0 - 60.0)
+	panel.position = Vector2(clampf(x, 20.0, maxf(20.0, scr.x - sz.x - 20.0)), clampf(y, 20.0, maxf(20.0, scr.y - sz.y - 20.0)))
+
+
+## После перехода фигуры (решение владельца 03.10): лагерь не открывается — итоги ночи короткой карточкой справа
+## сверху; карта остаётся под рукой. Карточка гаснет сама или по щелчку.
+func _night_note(ev: Array) -> void:
+	AudioManager.play("bell", -10.0, 0.6)
+	if is_instance_valid(_note):
+		_note.queue_free()
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.04, 0.045, 0.06, 0.92), Palette.LINE, 1, 10, 16))
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(panel)
+	_note = panel
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(v)
+	var ph := DayRules.phase(ContentDB.data, GameState.state)
+	v.add_child(UITheme.label("Ночь прошла · утро дня %d · %s" % [GameState.state.day, ph["name"]], "title", 22, Palette.TEXT))
+	var shown := 0
+	for e: Dictionary in ev:
+		var t := str(e.get("text", ""))
+		var kind := str(e.get("kind", ""))
+		if t == "" or kind in ["psyche", "night"] or shown >= 8:
+			continue
+		var col := Palette.SILVER
+		match kind:
+			"night_ordeal", "mover":
+				col = Palette.STAT_UP if bool(e.get("ok", false)) else Palette.REQ_MISS
+			"edge", "death", "lost", "expired":
+				col = Palette.REQ_MISS
+			"planner", "mission":
+				col = Palette.GOLD
+			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave":
+				col = Color(1.0, 0.45, 0.35)
+		var l := UITheme.label("• " + t, "sans", 16, col)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 460
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(l)
+		shown += 1
+	var hint := UITheme.label("щелчок — закрыть", "sans", 13, Palette.TEXT_DIM)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(hint)
+	panel.reset_size()
+	panel.position = Vector2(_screen().x - panel.get_combined_minimum_size().x - 30.0, 120.0)
+	move_child(_toast, get_child_count() - 1)
+	var close := func() -> void:
+		if is_instance_valid(panel):
+			var tw := panel.create_tween()
+			tw.tween_property(panel, "modulate:a", 0.0, 0.3)
+			tw.tween_callback(panel.queue_free)
+	panel.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
+			close.call())
+	get_tree().create_timer(7.0).timeout.connect(close)
+	_refresh()
+	if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "phase"):
+		GameState.tutorial("phase")
+	if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "planner"):
+		GameState.tutorial("planner")
 
 
 func _build_toast() -> void:
@@ -1566,8 +1642,8 @@ func _figure_move(lid: String) -> void:
 		return
 	AudioManager.play("place", -4.0, 0.8)
 	_refresh()
-	await get_tree().create_timer(0.8 if not Vfx.reduced() else 0.0).timeout
-	_night_cinematic(r["events"])
+	await get_tree().create_timer(0.7 if not Vfx.reduced() else 0.0).timeout
+	_night_note(r["events"])   # после перехода лагерь не открывается — итоги ночи карточкой
 
 
 ## Событие на соседнем участке: фигура сразу перескакивает, брифинг открывается — событие в тот же день.
@@ -1623,7 +1699,7 @@ func _after_event_window() -> void:
 		var ev := GameState.figure_jump_cancel()
 		if not ev.is_empty():
 			_show_toast("Событие отложено — день ушёл на переход")
-			_night_cinematic(ev)
+			_night_note(ev)
 
 
 ## Карта события разрывается на части: снимок карты с экрана — на осколки, они разлетаются и гаснут.
@@ -1655,6 +1731,8 @@ func _night_cinematic(ev: Array) -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	_close_travel()
+	if is_instance_valid(_note):
+		_note.queue_free()
 	if _figure != null:
 		# у костра — весь отряд, если в нём больше одного героя (картинка party), иначе — фигура героя
 		var many := MissionFlow.heroes(c, s).size() >= 2 and FigurePiece.art("party") != null

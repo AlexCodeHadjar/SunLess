@@ -723,6 +723,9 @@ func _figure() -> void:
 	await _shot("f02_drag")
 	if not targets.is_empty():
 		game.call("_on_figure_drop", sl.center(c, GameState.state, str(targets[0])) + sl.pan)
+	await _wait(1.6)
+	await _shot("f03_move_note")   # после перехода — карточка итогов ночи, лагерь не открывается
+	game.call("_on_end_day")        # «Переждать день» — сцена лагеря
 	await _wait(2.6)
 	await _shot("f03_camp_scene")
 	# утро: камера отъехала

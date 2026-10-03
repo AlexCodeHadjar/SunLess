@@ -868,7 +868,7 @@ func camera_to(world_p: Vector2, k: float, dur: float) -> Tween:
 	if _cam_tw != null and _cam_tw.is_valid():
 		_cam_tw.kill()
 	_cam_tw = create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	var target := view.size / 2.0 - world_p * k
+	var target := Vector2(view.size.x * 0.33, view.size.y * 0.52) - world_p * k   # левее середины: справа — окно ночи
 	var d := 0.0 if Vfx.reduced() else dur
 	_cam_tw.tween_property(_world, "scale", Vector2(k, k), d)
 	_cam_tw.tween_property(_world, "position", target, d)
