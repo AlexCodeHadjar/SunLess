@@ -19,6 +19,7 @@ var _sky := ""                # небо над картой (Atmosphere): night
 var _pins_layer: Control
 var _markers := {}            # mission_id -> MissionMarker
 var _shown_missions: Array = []
+var _shown_icons := false      # события показаны ромбами (настройка event_icons) — сменилась, метки пересобрать
 var _shops := {}              # shop_id -> ShopIcon
 var _shop_window: ShopWindow
 var _top_labels := {}
@@ -94,7 +95,10 @@ func _ready() -> void:
 
 func _first_toast() -> void:
 	if GameState.state.completed_missions == 0 and GameState.state.squads.is_empty():
-		_show_toast("Щёлкните по карте миссии, прочтите её и отправьте отряд — или перетащите героя прямо на карту.")
+		if _icons_on():
+			_show_toast("Наведите на ромб события — откроется его карта; щелчок — брифинг. Героя можно бросить прямо на ромб.")
+		else:
+			_show_toast("Щёлкните по карте миссии, прочтите её и отправьте отряд — или перетащите героя прямо на карту.")
 
 
 func _process(delta: float) -> void:
@@ -897,9 +901,9 @@ func _hint_target(name: String) -> Rect2:
 					ok = FigureRules.reach(c, s, mid) != 0 if FigureRules.on(c, s) else 						(TravelRules.distance(c, s, str(m.get("location", ""))) > 0 and str(m.get("type", "")) != "onslaught")
 				"marker_breach":
 					ok = GateRules.mission_ids(c, s).has(mid)
-			var mk: Control = _markers[mid]
-			if ok and is_instance_valid(mk) and mk.is_visible_in_tree():
-				return mk.get_global_rect()
+			var mk: Variant = _markers[mid]
+			if ok and is_instance_valid(mk) and (mk as MissionMarker).is_visible_in_tree():
+				return (mk as MissionMarker).body_global_rect()
 		return Rect2()
 	if name.begins_with("hero_"):
 		for cv in _heroes_row.get_children():
@@ -944,7 +948,7 @@ func _refresh() -> void:
 	if _tray_cards() != _shown_collection:
 		_rebuild_cards()
 	_update_badges()
-	if _map_missions() != _shown_missions or _tide_key() != _shown_tide:
+	if _map_missions() != _shown_missions or _tide_key() != _shown_tide or _icons_on() != _shown_icons:
 		_rebuild_markers()
 	_update_pins()
 	_update_tide()
@@ -1114,10 +1118,16 @@ func _map_missions() -> Array:
 	return out
 
 
+## События ромбами (эксперимент 03.10, настройка «События на карте — ромбами»): только на карте-плане.
+func _icons_on() -> bool:
+	return _sleeper != null and bool(SettingsService.get_value("event_icons"))
+
+
 func _rebuild_markers() -> void:
 	var c := ContentDB.data
 	_shown_missions = _map_missions()
 	_shown_tide = _tide_key()
+	_shown_icons = _icons_on()
 	for ch in _pins_layer.get_children():
 		ch.queue_free()
 	_markers.clear()
@@ -1136,6 +1146,17 @@ func _rebuild_markers() -> void:
 			var sa := str(c.missions[a].get("type", "")) == "story"
 			var sb := str(c.missions[b].get("type", "")) == "story"
 			return sa and not sb if sa != sb else a < b)
+		if _shown_icons:   # ромбы над местом рядком: подпись места (внизу) остаётся видна
+			var step := 150.0
+			var x0 := foot.x - step * (here.size() - 1) / 2.0
+			for i2 in here.size():
+				var mk2 := MissionMarker.make_icon(here[i2])
+				mk2.position = Vector2(x0 + step * i2 - MissionMarker.ICON_SIZE.x / 2.0, foot.y - 132.0)
+				mk2.pressed.connect(_open_mission)
+				mk2.hero_dropped.connect(_on_hero_dropped)
+				_pins_layer.add_child(mk2)
+				_markers[here[i2]] = mk2
+			continue
 		var sizes: Array = []
 		var total_w := 0.0
 		for mid: String in here:
@@ -1535,19 +1556,37 @@ func _place_figure() -> void:
 	if not _figure.visible:
 		return
 	var foot := _place_point(s.party_at)
+	# видимые части меток событий: фигура не должна их закрывать
+	var bodies: Array = []
 	var left := foot.x - 40.0
+	var right := foot.x + 40.0
 	for mid: String in _markers:
+		if not is_instance_valid(_markers[mid]):
+			continue
+		var mk: MissionMarker = _markers[mid]
+		var br := Rect2(mk.position + mk.body_rect().position, mk.body_rect().size)
+		bodies.append(br)
 		if str(c.missions.get(mid, {}).get("location", "")) == s.party_at:
-			left = minf(left, (_markers[mid] as Control).position.x - 8.0)
-	var at := Vector2(left - FigurePiece.W / 2.0, foot.y + 6.0)
+			left = minf(left, br.position.x - 8.0)
+			right = maxf(right, br.end.x + 8.0)
+	var cands: Array = [Vector2(left - FigurePiece.W / 2.0, foot.y + 6.0), Vector2(right + FigurePiece.W / 2.0, foot.y + 6.0),
+		Vector2(foot.x - 70.0, foot.y + 70.0), Vector2(foot.x + 70.0, foot.y + 70.0), Vector2(left - FigurePiece.W, foot.y + 40.0)]
+	var at: Vector2 = cands[0]
+	for cand: Vector2 in cands:
+		var fr := Rect2(cand - Vector2(FigurePiece.W / 2.0, FigurePiece.H), Vector2(FigurePiece.W, FigurePiece.H))
+		if not bodies.any(func(b: Rect2) -> bool: return b.intersects(fr)):
+			at = cand
+			break
 	_figure.stand_at(at, _figure_at != "" and _figure_at != s.party_at)
 	_figure_at = s.party_at
+	_pan_layer.move_child(_figure, 0)   # события — поверх фигуры: она их не закрывает
 
 
 func _on_figure_drag() -> void:
 	var c := ContentDB.data
 	var s := GameState.state
 	_close_travel()
+	_pan_layer.move_child(_figure, _pan_layer.get_child_count() - 1)   # в руке — поверх всего
 	_sleeper.drag_targets = FigureRules.targets(c, s)
 	var blocked := {}
 	for lid: String in FigureRules.neighbors(c, s):
@@ -1710,7 +1749,7 @@ func _shatter(mk: Control) -> void:
 	var vp := get_viewport()
 	var img := vp.get_texture().get_image()
 	var k := Vector2(img.get_size()) / vp.get_visible_rect().size
-	var gr := mk.get_global_rect()
+	var gr := (mk as MissionMarker).body_global_rect() if mk is MissionMarker else mk.get_global_rect()
 	var reg := Rect2i(Vector2i(gr.position * k), Vector2i(gr.size * k)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	if reg.size.x < 4 or reg.size.y < 4:
 		return

@@ -31,6 +31,28 @@ func test_hints_once() -> void:
 	check(TutorialRules.seen(s2, "T01_map"), "показанные сохраняются")
 
 
+## Начало поздней главы из режима разработчика: обучение прошлых глав не всплывает, своё — остаётся.
+func test_dev_skip_before() -> void:
+	var c := content()
+	var s := MissionFlow.new_run(c, 21)
+	eq(TutorialRules.skip_before(c, s), 0, "в Кошмаре ничего не пропускаем:")
+	s.chapter = "academy"
+	TutorialRules.skip_before(c, s)
+	check(TutorialRules.seen(s, "T01_map"), "Академия: базовый цикл Кошмара уже знаком")
+	check(not TutorialRules.seen(s, "T40_day"), "Академия: про день подсказка остаётся")
+	check(not TutorialRules.take(c, s, "trust").is_empty(), "Академия: свои подсказки показываются")
+	var s2 := MissionFlow.new_run(c, 22)
+	s2.chapter = "tree"
+	check(TutorialRules.skip_before(c, s2) > 30, "Древо: прошлого обучения много — всё отмечено")
+	for ev: String in ["map", "trust", "day", "figure", "tide", "traces"]:
+		check(TutorialRules.take(c, s2, ev).is_empty(), "Древо: подсказки «%s» прошлых глав нет" % ev)
+	var own := 0
+	for hid: String in c.tutorial:
+		if str(c.tutorial[hid].get("chapter", "")) == "tree" and not TutorialRules.seen(s2, hid):
+			own += 1
+	check(own >= 5, "Древо: свои подсказки остаются")
+
+
 func test_state_events() -> void:
 	var c := content()
 	var s := MissionFlow.new_run(c, 21)

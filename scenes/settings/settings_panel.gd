@@ -11,6 +11,7 @@ func _ready() -> void:
 	_check("Уменьшить движение (без наклонов, тряски и анимаций)", "reduce_motion")
 	_check("Монохромная шкала шанса (для различения цветов)", "chance_monochrome")
 	_check("Подсказки обучения", "tutorial")
+	_check("События на карте — ромбами (эксперимент)", "event_icons")
 	add_child(UITheme.label("Громкость", "caps", 22, Palette.SILVER))
 	_slider("Общая", "vol_master")
 	_slider("Музыка", "vol_music")

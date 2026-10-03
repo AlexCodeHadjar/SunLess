@@ -37,6 +37,35 @@ static func take(content: Content, state: RunState, event: String) -> Dictionary
 	return {}
 
 
+## Общие подсказки (без главы), которые игрок точно видел ещё в Кошмаре: базовый цикл миссии.
+const BASE_EVENTS := ["map", "brief", "launch", "arrival", "report", "edge", "shop", "fork", "cost", "expires", "exclusive", "journal"]
+
+
+## Начало главы из режима разработчика: бот проходит игру без экрана и подсказок не видит, поэтому в поздней главе
+## всплывало обучение с самого начала. Здесь отмечается показанным всё, что игрок увидел бы раньше: подсказки прошлых
+## глав, общие подсказки базового цикла (с Академии) и все общие (с Берега, после обеих обучающих глав).
+## Подсказки текущей главы остаются. Возвращает, сколько отмечено.
+static func skip_before(content: Content, state: RunState) -> int:
+	var cur := CHAPTERS.find(state.chapter)
+	if cur <= 0:
+		return 0
+	var list: Array = state.flags.get("tut_seen", [])
+	var n := 0
+	for hid: String in content.tutorial:
+		var h: Dictionary = content.tutorial[hid]
+		var ch := str(h.get("chapter", ""))
+		var old := false
+		if ch == "":
+			old = cur >= CHAPTERS.find("shore") or BASE_EVENTS.has(str(h.get("event", "")))
+		else:
+			old = CHAPTERS.find(ch) >= 0 and CHAPTERS.find(ch) < cur
+		if old and not list.has(hid):
+			list.append(hid)
+			n += 1
+	state.flags["tut_seen"] = list
+	return n
+
+
 ## События, которые можно понять по состоянию (проверяются при обновлении карты).
 ## Глава 4 (TerrainRules, ZoneRules, MoverRules): подсказка — когда механика впервые видна игроку на карте.
 static func _terrain_events(content: Content, state: RunState) -> Array:

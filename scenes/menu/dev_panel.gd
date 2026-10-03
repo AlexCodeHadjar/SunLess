@@ -149,6 +149,7 @@ func _load(slot: String) -> void:
 		_status.text = str(r["error"])
 		return
 	GameState.state = r["state"]
+	TutorialRules.skip_before(ContentDB.data, GameState.state)   # обучение прошлых глав игрок уже видел
 	SaveService.save_state(GameState.state)   # дальше — обычный автосейв
 	EventBus.state_changed.emit()
 	loaded.emit()

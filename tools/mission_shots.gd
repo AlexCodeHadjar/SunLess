@@ -8,6 +8,7 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var icons_shots := false   # --mshots-from=icons: события ромбами — поле, наведение (круг загрузки), карта события, фигура рядом
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
 
@@ -25,6 +26,8 @@ func _ready() -> void:
 			events_shots = true
 		if a == "--mshots-from=labels":
 			labels_shots = true
+		if a == "--mshots-from=icons":
+			icons_shots = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -94,6 +97,10 @@ func _run() -> void:
 		return
 	if labels_shots:
 		await _labels()
+		get_tree().quit()
+		return
+	if icons_shots:
+		await _icons()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -768,6 +775,39 @@ func _figure() -> void:
 			break
 	await _wait(1.6)
 	await _shot("f06_jump_brief")
+
+
+# --- события ромбами (эксперимент 03.10) ------------------------------------------------------------------------------
+
+func _icons() -> void:
+	var c := ContentDB.data
+	for chapter: String in ["shore", "academy", "tree"]:
+		var s := MissionFlow.new_run(c, 77, chapter)
+		EffectApplier.add_card(c, s, "P02")
+		EffectApplier.add_card(c, s, "P03")
+		_reveal_all(c, s, chapter)
+		SettingsService.values["event_icons"] = false
+		await _open_map(s, chapter, chapter == "shore")
+		await _shot("i_%s_0cards" % chapter)
+		SettingsService.values["event_icons"] = true
+		await _open_map(s, chapter, false)
+		await _shot("i_%s_1icons" % chapter)
+		var game := get_tree().current_scene
+		var markers: Dictionary = game.get("_markers")
+		# наведение на событие у фигуры (если есть), иначе на первое
+		var pick: MissionMarker = null
+		for mid: String in markers:
+			if pick == null or str(c.missions[mid].get("location", "")) == s.party_at:
+				pick = markers[mid]
+		if pick == null:
+			continue
+		pick.set("_hover", true)
+		await _wait(0.3)
+		await _shot("i_%s_2loading" % chapter)
+		await _wait(0.6)
+		await _shot("i_%s_3detail" % chapter)
+		pick.set("_hover", false)
+		await _wait(0.8)
 
 
 # --- места и следы событий (комплекты событий Берега и Главы 4) ------------------------------------------------------
