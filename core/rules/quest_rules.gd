@@ -38,6 +38,10 @@ static func list(content: Content, state: RunState) -> Array:
 	var story: Array = []
 	var side: Array = []
 	var threat: Array = []
+	var boss: Array = []
+	var left_of := {}
+	for w: Dictionary in WanderRules.active(c, s):
+		left_of[str(w["mid"])] = int(w["left"])
 	for mid: String in mids:
 		var m: Dictionary = c.missions.get(mid, {})
 		var typ := str(m.get("type", ""))
@@ -45,6 +49,14 @@ static func list(content: Content, state: RunState) -> Array:
 		if typ == "story":
 			e["kind"] = "story"
 			story.append(e)
+		elif m.has("wander"):
+			e["kind"] = "boss"
+			e["group"] = "Бродячий босс"
+			e["title"] = str(m.get("title", mid)).trim_prefix("Бродячий босс: ")
+			if left_of.has(mid) and not busy.has(mid):
+				var lf := int(left_of[mid])
+				e["line"] = str(e["line"]) + " · уйдёт %s" % ("этой ночью" if lf <= 1 else "через %d %s" % [lf, UITheme.plural(lf, ["день", "дня", "дней"])])
+			boss.append(e)
 		elif threats.has(mid):
 			e["kind"] = "threat"
 			threat.append(e)
@@ -65,7 +77,7 @@ static func list(content: Content, state: RunState) -> Array:
 		return [la, sa, str(a["id"])] < [lb, sb, str(b["id"])]
 	threat.sort_custom(near)
 	side.sort_custom(near)
-	return story + threat.slice(0, MAX_THREAT) + side.slice(0, MAX_SIDE)
+	return story + threat.slice(0, MAX_THREAT) + boss + side.slice(0, MAX_SIDE)
 
 
 ## Одно задание: где событие и что сделать, чтобы его провести.

@@ -8,7 +8,8 @@ extends Control
 signal show_place(entry: Dictionary)
 
 const W := 360.0
-const COLORS := {"story": Color("#E3C98E"), "threat": Color(1.0, 0.5, 0.42), "side": Color(0.84, 0.87, 0.95)}
+const COLORS := {"story": Color("#E3C98E"), "threat": Color(1.0, 0.5, 0.42), "side": Color(0.84, 0.87, 0.95),
+	"boss": Color(0.8, 0.62, 1.0)}
 
 var _box: VBoxContainer
 var _list: VBoxContainer

@@ -4,7 +4,7 @@ extends TestCase
 
 const KNOWN := ["nightmare", "academy", "shore", "tree", "dark_city", "city", "night", "dawn", "storm", "blood_moon", "day",
 	"dusk", "ash_storm", "morning", "midday", "place", "story", "after_win", "after_loss", "after_night", "move", "water", "idle",
-	"low", "high", "edge", "pocket", "knows", "skill", "worn", "no_pocket"]
+	"low", "high", "edge", "pocket", "knows", "skill", "worn", "no_pocket", "wander"]
 
 
 func _known(c: Content, t: String) -> bool:

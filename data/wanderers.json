@@ -1,0 +1,125 @@
+{
+ "_doc": "Бродячие боссы (WanderRules, docs/22). Генерируется tools/gen_wanderers.py — не править руками.",
+ "list": [
+  {
+   "id": "W1",
+   "name": "Багровый Отшельник",
+   "chapter": "shore",
+   "enemy": "MW1",
+   "appear_day": 4,
+   "rest": [
+    2,
+    3
+   ],
+   "haunts": [
+    "centurion_gate",
+    "coral_maze",
+    "drowned_hall",
+    "high_ground",
+    "hunting_grounds",
+    "legion_ruins",
+    "low_tide",
+    "shelter",
+    "spire_view",
+    "statue_hill",
+    "stone_isle"
+   ],
+   "reward": "LW1",
+   "shards": 15,
+   "stop": "встал на отдых"
+  },
+  {
+   "id": "W2",
+   "name": "Пепельный Змей",
+   "chapter": "tree",
+   "enemy": "MW2",
+   "appear_day": 3,
+   "rest": [
+    2,
+    3
+   ],
+   "haunts": [
+    "abyss_bridge",
+    "abyss_edge",
+    "ash_bones",
+    "ash_dunes",
+    "ash_lord",
+    "black_rocks",
+    "boat_cove",
+    "death_beacon",
+    "deep_maw",
+    "demon_trail",
+    "lake_shore",
+    "shore_exit",
+    "soul_tree",
+    "star_landing",
+    "stone_hulk",
+    "tree_nest"
+   ],
+   "reward": "LW2",
+   "shards": 16,
+   "stop": "залёг в пепле"
+  },
+  {
+   "id": "W3",
+   "name": "Ловчий Теней",
+   "chapter": "dark_city",
+   "enemy": "MW3",
+   "appear_day": 3,
+   "rest": [
+    2,
+    3
+   ],
+   "haunts": [
+    "bright_castle",
+    "canals",
+    "castle_gate",
+    "catacombs",
+    "dark_well",
+    "east_gate",
+    "graveyard_hope",
+    "harbour",
+    "hunters_guild",
+    "lighthouse",
+    "memory_market",
+    "ruined_cathedral",
+    "south_road",
+    "statue_plaza",
+    "sunny_lair"
+   ],
+   "reward": "LW3",
+   "shards": 16,
+   "stop": "раскинул сети"
+  },
+  {
+   "id": "W4",
+   "name": "Стеклянная Королева",
+   "chapter": "city",
+   "enemy": "MW4",
+   "appear_day": 3,
+   "rest": [
+    2,
+    3
+   ],
+   "haunts": [
+    "academy_link",
+    "bridges",
+    "bunker",
+    "gov_quarter",
+    "hospital",
+    "industry",
+    "market",
+    "metro_hub",
+    "monorail",
+    "old_center",
+    "outskirts",
+    "park",
+    "port",
+    "wall"
+   ],
+   "reward": "LW4",
+   "shards": 18,
+   "stop": "свила гнездо"
+  }
+ ]
+}

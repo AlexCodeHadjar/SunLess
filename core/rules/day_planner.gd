@@ -31,6 +31,8 @@ static func options(content: Content, state: RunState) -> Dictionary:
 		if MissionFlow.chapter_of(content, mid) != state.chapter:
 			continue
 		var m: Dictionary = content.missions.get(mid, {})
+		if m.has("wander"):
+			continue   # бродячий босс — особое событие, не «дело на сегодня» (docs/22)
 		if str(m.get("type", "")) == "onslaught":
 			out["today"].append(mid)   # натиск приходит сам
 			continue

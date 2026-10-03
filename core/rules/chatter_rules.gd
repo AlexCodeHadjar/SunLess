@@ -58,6 +58,8 @@ static func scene(content: Content, state: RunState, heroes: Array, extra: Array
 	for cid: String in heroes:
 		if not MissionFlow.pocket(state, cid).is_empty():
 			t.append("pocket@" + cid)
+	if not WanderRules.active(content, state).is_empty():
+		t.append("wander")   # по карте бродит босс (docs/22)
 	t.append_array(extra)
 	return {"tags": t, "place": place, "story_place": story_place}
 

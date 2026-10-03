@@ -49,7 +49,7 @@ static func step(c: Content, s: RunState, on_report: Callable = Callable()) -> D
 		s.flags["bot_story_day"] = s.day
 	var desperate := s.day - int(s.flags.get("bot_story_day", s.day)) > 4
 	for mid: String in open:
-		if TideRules.mission_flooded(c, s, mid) or not DayRules.mission_reachable(c, s, mid):
+		if TideRules.mission_flooded(c, s, mid) or not DayRules.mission_reachable(c, s, mid) or c.missions[mid].has("wander"):
 			continue
 		var story := str(c.missions[mid]["type"]) == "story"
 		# как игрок: видит только открытое на карте; на несюжетное — без марш-броска
@@ -170,8 +170,8 @@ static func _figure_step(c: Content, s: RunState, started: String) -> Dictionary
 	var cands: Array = []
 	var ra := FigureRules.reach_all(c, s, open)
 	for mid: String in open:
-		if MissionFlow.chapter_of(c, mid) != s.chapter or TideRules.mission_flooded(c, s, mid):
-			continue
+		if MissionFlow.chapter_of(c, mid) != s.chapter or TideRules.mission_flooded(c, s, mid) or c.missions[mid].has("wander"):
+			continue   # бродячих боссов бот обходит стороной (необязательный бой, docs/22)
 		var r := int(ra[mid])
 		if r < 0:
 			continue

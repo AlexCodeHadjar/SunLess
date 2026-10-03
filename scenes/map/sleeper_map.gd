@@ -46,6 +46,8 @@ var _fog_mask: ColorRect
 var _fog_last: Array = []      # прошлые круги и коридоры: не изменились — маску не трогать
 var _over: Control
 var _labels: Control         # подписи мест — свой слой: перерисовка только при смене карты (sync), не каждый кадр
+var _wander_layer: Control   # бродячие боссы (docs/22): фишки на местах, где стоят
+var _wanderers := {}         # босс -> {token, at}
 var _threat: Control
 var _weather: Control
 var _sprites := {}        # место -> TextureRect
@@ -131,6 +133,7 @@ func _ready() -> void:
 	_ink = _layer(_world)
 	_ink.draw.connect(_draw_paths)
 	_sprites_layer = _layer(_world)
+	_wander_layer = _layer(_world)
 	_glow = _layer(_world)
 	var add := CanvasItemMaterial.new()
 	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -369,6 +372,43 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 		"decals": _decal_info(content, state, revealed), "air": _air_info(content, state)}
 	_ink.queue_redraw()
 	_labels.queue_redraw()
+	_sync_wanderers(content, state, revealed)
+
+
+## Бродячие боссы: фишка на месте босса — левее и ниже середины (над серединой висит ромб события); ушёл — фишка
+## идёт к новому месту; побеждён или ушёл из главы — гаснет.
+func _sync_wanderers(content: Content, state: RunState, revealed: Array) -> void:
+	var now := {}
+	for w: Dictionary in WanderRules.active(content, state):
+		if revealed.has(str(w["at"])):
+			now[str(w["id"])] = str(w["at"])
+	for wid: String in _wanderers.keys():
+		if not now.has(wid):
+			var old: Control = _wanderers[wid]["token"]
+			_wanderers.erase(wid)
+			if is_instance_valid(old):
+				var tw := old.create_tween()
+				tw.tween_property(old, "modulate:a", 0.0, 0.6)
+				tw.tween_callback(old.queue_free)
+	for wid2: String in now:
+		var lid: String = now[wid2]
+		var side := _sprite_size(content, state, lid) * 0.62
+		var p := center(content, state, lid) - view.position + Vector2(-side * 1.15, -side * 0.5)   # левее ромба события
+		if not _wanderers.has(wid2):
+			var tk := WanderToken.make(wid2, side)
+			tk.position = p
+			tk.modulate.a = 0.0
+			_wander_layer.add_child(tk)
+			tk.create_tween().tween_property(tk, "modulate:a", 1.0, 0.8)
+			_wanderers[wid2] = {"token": tk, "at": lid}
+		elif str(_wanderers[wid2]["at"]) != lid:
+			_wanderers[wid2]["at"] = lid
+			(_wanderers[wid2]["token"] as WanderToken).walk_to(p)
+		else:
+			var t2: Control = _wanderers[wid2]["token"]
+			t2.size = Vector2(side, side)
+			if t2.get_tree() != null and not t2.has_meta("walking"):
+				t2.position = p
 
 
 ## Что рисовать от угроз: проломы по стадии, метки мест по облику, рой (откуда → где).

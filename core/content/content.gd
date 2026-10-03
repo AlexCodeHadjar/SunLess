@@ -29,6 +29,7 @@ var story: Dictionary = {}         # сюжетные окна по главам
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
 var chatter: Dictionary = {}       # мысли и реплики героев над картами: data/chatter.json (ChatterRules)
 var quests: Dictionary = {}        # задания справа: data/quests.json (QuestRules) — {goals: {глава: цель}}
+var wanderers: Dictionary = {}     # бродячие боссы: data/wanderers.json (WanderRules) — {list: [...]}
 var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
 var deck: Dictionary = {}          # колода событий глав: data/deck.json (DeckRules) — {глава: [{name, pick, min_chains, units}]}
 var days: Dictionary = {}          # дни, неделя, лагерь-стоянка: data/days.json (DayRules)
@@ -113,6 +114,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.psyche_lines = pl
 		else:
 			c.load_errors.append("data/psyche.json: ожидается словарь реплик")
+	if FileAccess.file_exists(dir + "/wanderers.json"):
+		var wd: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/wanderers.json"))
+		if wd is Dictionary:
+			c.wanderers = wd
+		else:
+			c.load_errors.append("data/wanderers.json: ожидается словарь {list}")
 	if FileAccess.file_exists(dir + "/quests.json"):
 		var qs: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/quests.json"))
 		if qs is Dictionary:

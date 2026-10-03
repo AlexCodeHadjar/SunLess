@@ -246,6 +246,8 @@ static func end_day(content: Content, state: RunState) -> Array:
 	out.append_array(OnslaughtRules.tick(content, state))
 	# 4. утро: планировщик проверяет, что сегодня есть чем заняться (docs/17 §4)
 	out.append_array(DayPlanner.ensure(content, state))
+	# бродячие боссы — последними: встают на место, где уже ничего нет (docs/22)
+	out.append_array(WanderRules.night(content, state, rng))
 	return out
 
 

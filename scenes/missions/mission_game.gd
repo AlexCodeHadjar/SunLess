@@ -922,6 +922,8 @@ func _hint_target(name: String) -> Rect2:
 					ok = FigureRules.reach(c, s, mid) != 0 if FigureRules.on(c, s) else 						(TravelRules.distance(c, s, str(m.get("location", ""))) > 0 and str(m.get("type", "")) != "onslaught")
 				"marker_breach":
 					ok = GateRules.mission_ids(c, s).has(mid)
+				"marker_wander":
+					ok = m.has("wander")
 			var mk: Variant = _markers[mid]
 			if ok and is_instance_valid(mk) and (mk as MissionMarker).is_visible_in_tree():
 				return (mk as MissionMarker).body_global_rect()

@@ -8,6 +8,7 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var boss_shots := false     # --mshots-from=bosses: бродячие боссы на картах глав (docs/22)
 var live_chatter := false   # --mshots-from=live: мысли героев вживую (с подсказками, обычные сроки)
 var mods_shots := false     # --mshots-from=mods: значки модификаторов над ромбами
 var resize_shots := false   # --mshots-from=resize: история перед главой при смене размера окна
@@ -44,6 +45,8 @@ func _ready() -> void:
 			mods_shots = true
 		if a == "--mshots-from=live":
 			live_chatter = true
+		if a == "--mshots-from=bosses":
+			boss_shots = true
 		if a == "--mshots-from=resize":
 			resize_shots = true
 		if a == "--nohints":
@@ -139,6 +142,10 @@ func _run() -> void:
 		return
 	if live_chatter:
 		await _chatter_live()
+		get_tree().quit()
+		return
+	if boss_shots:
+		await _bosses()
 		get_tree().quit()
 		return
 	if resize_shots:
@@ -816,6 +823,33 @@ func _figure() -> void:
 			break
 	await _wait(1.0)
 	await _shot("f06_step_to_event")
+
+
+# --- бродячие боссы на карте (docs/22) --------------------------------------------------------------------------------
+
+func _bosses() -> void:
+	var c := ContentDB.data
+	var first := true
+	for chapter: String in ["shore", "tree", "dark_city", "city"]:
+		var s := MissionFlow.new_run(c, 91, chapter)
+		EffectApplier.add_card(c, s, "P02")
+		EffectApplier.add_card(c, s, "P03")
+		_reveal_all(c, s, chapter)
+		var w: Dictionary = WanderRules.defs(c, chapter)[0]
+		for i in int(w["appear_day"]):
+			DayRules.end_day(c, s)
+		await _open_map(s, chapter, first)
+		first = false
+		var game := get_tree().current_scene
+		var act := WanderRules.active(c, GameState.state)
+		if not act.is_empty():
+			var list := QuestRules.list(c, GameState.state)
+			for e: Dictionary in list:
+				if str(e["kind"]) == "boss":
+					game.call("_quest_show", e)
+					break
+			await _wait(1.0)
+		await _shot("b_%s_1" % chapter)
 
 
 # --- мысли героев вживую: с подсказками, обычные сроки (проверка 03.10) ---------------------------------------------

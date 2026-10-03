@@ -309,7 +309,7 @@ func _title_w() -> float:
 	var fs := 16 if typ == "story" else 15
 	var f := UITheme.font("sans_bold")
 	var w := 0.0
-	for line: String in _wrap(str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id)), f, fs, 138.0):
+	for line: String in _wrap(str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id)).trim_prefix("Бродячий босс: "), f, fs, 138.0):
 		w = maxf(w, f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
 	return w
 
@@ -439,8 +439,11 @@ func _draw() -> void:
 	if not diamond:
 		return
 	var typ := str(ContentDB.data.missions.get(mission_id, {}).get("type", ""))
+	var wander: bool = ContentDB.data.missions.get(mission_id, {}).has("wander")   # бродячий босс (docs/22)
 	var col: Color = Palette.GOLD if typ == "story" else (Color(1.0, 0.36, 0.3) if typ == "onslaught" else \
 		(Color(0.84, 0.88, 0.97) if typ == "side" else Color(0.74, 0.7, 0.64)))
+	if wander:
+		col = Color(0.82, 0.64, 1.0)
 	var c := icon_center()
 	var r := _radius() * (1.0 + 0.12 * _grow)
 	# свечение под ромбом: сюжет и наведение — ярче
@@ -451,8 +454,12 @@ func _draw() -> void:
 	draw_colored_polygon(pts, Color(0.06, 0.055, 0.09, 0.96))
 	pts.append(pts[0])
 	draw_polyline(pts, col.lightened(0.25 * _grow), 2.0 + _grow, true)
-	# знак внутри: сюжет — звезда, побочное — ромбик, встреча — точка, Натиск — «!»
-	if typ == "story":
+	# знак внутри: сюжет — звезда, побочное — ромбик, встреча — точка, Натиск — «!», бродячий босс — корона
+	if wander:
+		var q2 := r * 0.42
+		draw_colored_polygon(PackedVector2Array([c + Vector2(-q2, q2 * 0.55), c + Vector2(-q2, -q2 * 0.45), c + Vector2(-q2 * 0.45, 0),
+			c + Vector2(0, -q2 * 0.7), c + Vector2(q2 * 0.45, 0), c + Vector2(q2, -q2 * 0.45), c + Vector2(q2, q2 * 0.55)]), col)
+	elif typ == "story":
 		var star := PackedVector2Array()
 		for i in 8:
 			var a := TAU * i / 8.0 - PI / 2.0
@@ -485,7 +492,7 @@ func _draw() -> void:
 			draw_arc(c, lr + 4.0, 0.0, TAU, 64, Color(col.r, col.g, col.b, 0.35 * pulse), 2.0, true)
 	_draw_mods()
 	# название и метка (переход, срок) — под ромбом
-	var title := str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id))
+	var title := str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id)).trim_prefix("Бродячий босс: ")
 	var f := UITheme.font("sans_bold")
 	var fs := 16 if typ == "story" else 15
 	var lines := _wrap(title, f, fs, 138.0)
