@@ -85,6 +85,29 @@ static func route(content: Content, state: RunState, from: String, to: String, d
 
 
 ## Сколько переходов до места от лагеря: 0 — здесь, -1 — пути нет (вода или тропы нет).
+## Расстояния от from до всех мест разом — тот же обход и те же правила, что у route (длина пути = глубина обхода).
+## {место: переходов}; from — 0; недостижимых нет в ответе.
+static func distances(content: Content, state: RunState, from: String, dry_only: bool = true) -> Dictionary:
+	if from == "":
+		return {}
+	var adj := adjacency(content, state)
+	var out := {from: 0}
+	var queue: Array = [from]
+	while not queue.is_empty():
+		var cur: String = queue.pop_front()
+		for n: String in adj.get(cur, []):
+			if out.has(n) or not MapRules.present(content, state, n):
+				continue
+			if not content.locations.has(n) and not content.shops.has(n):
+				continue
+			if dry_only and (TideRules.flooded(state, n) or GateRules.blocked(state, n) or TerrainRules.blocked(content, state, n) \
+					or not TerrainRules.edge_ok(content, state, cur, n)):
+				continue
+			out[n] = int(out[cur]) + 1
+			queue.append(n)
+	return out
+
+
 static func distance(content: Content, state: RunState, lid: String) -> int:
 	if lid == state.party_at:
 		return 0

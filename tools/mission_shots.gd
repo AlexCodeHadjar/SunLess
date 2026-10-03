@@ -8,6 +8,11 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var live_chatter := false   # --mshots-from=live: мысли героев вживую (с подсказками, обычные сроки)
+var mods_shots := false     # --mshots-from=mods: значки модификаторов над ромбами
+var resize_shots := false   # --mshots-from=resize: история перед главой при смене размера окна
+var quests_shots := false   # --mshots-from=quests: задания справа, показ места (docs/20)
+var perf_run := false   # --mshots-from=perf: замер кадра и тяжёлых функций экрана карты (perf.txt в папке снимков)
 var chatter_shots := false   # --mshots-from=chatter: мысли и реплики героев над картами, полдень, шаг к событию
 var icons_shots := false   # --mshots-from=icons: события ромбами — поле, наведение (круг загрузки), карта события, фигура рядом
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
@@ -31,6 +36,16 @@ func _ready() -> void:
 			icons_shots = true
 		if a == "--mshots-from=chatter":
 			chatter_shots = true
+		if a == "--mshots-from=perf":
+			perf_run = true
+		if a == "--mshots-from=quests":
+			quests_shots = true
+		if a == "--mshots-from=mods":
+			mods_shots = true
+		if a == "--mshots-from=live":
+			live_chatter = true
+		if a == "--mshots-from=resize":
+			resize_shots = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -108,6 +123,26 @@ func _run() -> void:
 		return
 	if chatter_shots:
 		await _chatter()
+		get_tree().quit()
+		return
+	if perf_run:
+		await _perf()
+		get_tree().quit()
+		return
+	if quests_shots:
+		await _quests()
+		get_tree().quit()
+		return
+	if mods_shots:
+		await _mods()
+		get_tree().quit()
+		return
+	if live_chatter:
+		await _chatter_live()
+		get_tree().quit()
+		return
+	if resize_shots:
+		await _resize()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -200,7 +235,6 @@ func _run() -> void:
 		game.call("_open_mission", "MS03")
 		await _wait(0.8)
 		_window().call("_launch")
-	GameState.mission_tick(20.0)
 	await _wait(0.6)
 	game.call("_open_mission", "MS03")
 	await _wait(0.8)
@@ -782,6 +816,197 @@ func _figure() -> void:
 			break
 	await _wait(1.0)
 	await _shot("f06_step_to_event")
+
+
+# --- мысли героев вживую: с подсказками, обычные сроки (проверка 03.10) ---------------------------------------------
+
+func _chatter_live() -> void:
+	var c := ContentDB.data
+	var s := MissionFlow.new_run(c, 71, "shore")
+	EffectApplier.add_card(c, s, "P02")
+	EffectApplier.add_card(c, s, "P03")
+	StoryRules.mark_seen(s, "shore")
+	GameState.state = s
+	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	await _wait(3.0)
+	var game := get_tree().current_scene
+	var ch: ChatterLayer = game.get("_chatter")
+	var hint: HintPopup = game.get("_hint")
+	for t in 12:
+		print("[live] t=%ds можно говорить=%s подсказка видна=%s до реплики=%.1f пузырей=%d" % [t * 5, game.call("_chatter_ok"),
+			hint.is_showing() if hint != null else false, float(ch.get("_next")), (ch.get("_bubbles") as Dictionary).size()])
+		if t == 1 and hint != null and hint.visible:
+			# игрок прочитал подсказки — они ушли
+			print("[live] подсказка: ", (hint.get("_title") as Label).text, " · в очереди ", (hint.get("_queue") as Array).size())
+			(hint.get("_queue") as Array).clear()
+			hint.call("_hide")
+		if (ch.get("_bubbles") as Dictionary).size() > 0:
+			await _shot("live_bubble_%02d" % t)
+		await _wait(5.0)
+
+
+# --- значки модификаторов над ромбами; история при смене размера окна (03.10) ---------------------------------------
+
+func _mods() -> void:
+	var c := ContentDB.data
+	var s := MissionFlow.new_run(c, 61, "shore")
+	EffectApplier.add_card(c, s, "P02")
+	_reveal_all(c, s, "shore")
+	s.party_at = "coral_maze"
+	var sets := [["fog", "thunder", "cache"], ["wounded"], ["nest", "armored"], ["cursed", "ambush", "tidepools", "hurry"]]
+	var i := 0
+	for mid: String in ["SC01", "SS02", "RS05", "RS02"]:
+		MissionFlow.open(c, s, mid, true)
+		s.missions[mid]["mods"] = sets[i % sets.size()]
+		i += 1
+	await _open_map(s, "shore", true)
+	await _shot("x_mods_1")
+	var c2 := ContentDB.data
+	var s2 := MissionFlow.new_run(c2, 62, "city")
+	EffectApplier.add_card(c2, s2, "P02")
+	_reveal_all(c2, s2, "city")
+	var k := 0
+	for mid2: String in MissionFlow.open_missions(s2):
+		s2.missions[mid2]["mods"] = [["gate_rank2", "blackout"], ["gate_rank3", "panic_crowd", "fog"]][k % 2]
+		k += 1
+	await _open_map(s2, "city", false)
+	await _shot("x_mods_2_city")
+
+
+func _resize() -> void:
+	var c := ContentDB.data
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	DisplayServer.window_set_size(Vector2i(1280, 720))
+	await _wait(0.8)
+	var s := MissionFlow.new_run(c, 5, "shore")
+	GameState.state = s
+	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	await _wait(2.5)
+	await _shot("r1_story_small")
+	DisplayServer.window_set_size(Vector2i(1920, 1080))
+	await _wait(1.2)
+	await _shot("r2_story_big")
+
+
+# --- задания справа (docs/20) ------------------------------------------------------------------------------------------
+
+func _quests() -> void:
+	var c := ContentDB.data
+	var first := true
+	for chapter: String in ["shore", "academy", "tree"]:
+		var s := MissionFlow.new_run(c, 61, chapter)
+		EffectApplier.add_card(c, s, "P02")
+		EffectApplier.add_card(c, s, "P03")
+		_reveal_all(c, s, chapter)
+		if chapter == "shore":
+			MissionFlow.open(c, s, "SC01", true)
+			MissionFlow.open(c, s, "SS02", true)
+			s.party_at = "coral_maze"
+		await _open_map(s, chapter, first)
+		first = false
+		var game := get_tree().current_scene
+		await _shot("q_%s_1panel" % chapter)
+		var list := QuestRules.list(c, GameState.state)
+		if not list.is_empty():
+			game.call("_quest_show", list[0])
+			await _wait(0.9)
+			await _shot("q_%s_2show_story" % chapter)
+		if list.size() > 1:
+			await _wait(4.0)
+			game.call("_quest_show", list[-1])
+			await _wait(0.9)
+			await _shot("q_%s_3show_side" % chapter)
+		await _wait(4.5)
+
+
+# --- замер производительности (аудит 03.10): кадр и тяжёлые функции экрана карты -------------------------------------
+
+func _perf() -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = 0
+	SettingsService.values["chatter"] = false
+	var out: Array = []
+	var c := ContentDB.data
+	var first := true
+	for chapter: String in ["shore", "tree", "academy"]:
+		var s := MissionFlow.new_run(c, 41, chapter)
+		EffectApplier.add_card(c, s, "P02")
+		EffectApplier.add_card(c, s, "P03")
+		_reveal_all(c, s, chapter)
+		if chapter == "shore":
+			s.day = 13
+			s.party_at = "statue_hill"
+		DayPlanner.ensure(c, s)
+		await _open_map(s, chapter, first)
+		first = false
+		var game := get_tree().current_scene
+		await _wait(1.5)
+		out.append("== %s: мест открыто %d, событий на карте %d, узлов %d" % [chapter, MapRules.known(c, GameState.state).size(),
+			(game.get("_markers") as Dictionary).size(), int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+		out.append_array(await _frames(4.0))
+		var sl: SleeperMap = game.get("_sleeper")
+		if chapter == "shore":
+			# что сколько стоит: кадр без одной части (часть выключена — разница и есть её цена)
+			var parts := {"туман войны (шейдер)": [sl.get("_fog")], "вода (шейдер высот)": [sl.get("_water")],
+				"частицы экрана (туман, искры)": [game.get("_fog"), game.get("_embers")], "погода и тени облаков": [sl.get("_weather"), sl.get("_shade")],
+				"угрозы и следы на карте": [sl.get("_threat")], "метки событий": [game.get("_pins_layer")],
+				"ряд героев (карты, ауры)": [game.get("_heroes_row")], "подписи и кольца": [sl.get("_over"), sl.get("_labels")]}
+			for part: String in parts:
+				for n in parts[part]:
+					if n != null:
+						(n as CanvasItem).visible = false
+				var r: Array = await _frames(2.0)
+				out.append("   без «%s»: %s" % [part, str(r[0]).strip_edges().get_slice(";", 0)])
+				for n in parts[part]:
+					if n != null:
+						(n as CanvasItem).visible = true
+		out.append(_time("sleeper.sync (пересборка карты-плана)", 20, func() -> void: sl.sync(c, GameState.state, Atmosphere.sky(c, GameState.state))))
+		out.append(_time("_refresh (обновление экрана)", 20, func() -> void: game.call("_refresh")))
+		out.append(_time("_update_pins (метки событий)", 50, func() -> void: game.call("_update_pins")))
+		out.append(_time("_update_tide (вода и строка угроз)", 20, func() -> void: game.call("_update_tide")))
+		out.append(_time("_update_day (строка дня, план)", 50, func() -> void: game.call("_update_day")))
+		out.append(_time("DayPlanner.options", 50, func() -> void: DayPlanner.options(c, GameState.state)))
+		out.append(_time("TutorialRules.state_events", 50, func() -> void: TutorialRules.state_events(c, GameState.state)))
+		out.append(_time("FigureRules.targets", 100, func() -> void: FigureRules.targets(c, GameState.state)))
+		out.append(_time("MapRules.known", 100, func() -> void: MapRules.known(c, GameState.state)))
+		var rng := RandomNumberGenerator.new()
+		out.append(_time("ChatterRules.pick", 50, func() -> void: ChatterRules.pick(c, GameState.state, ["P01", "P02", "P03"], [], false, [], rng)))
+	var f := FileAccess.open(out_dir + "/perf.txt", FileAccess.WRITE)
+	f.store_string("\n".join(out) + "\n")
+	f.close()
+	print("\n".join(out))
+
+
+## Кадры: средний и 95-й перцентиль по delta (без вертикальной синхронизации), время _process, вызовы отрисовки.
+func _frames(sec: float) -> Array:
+	var deltas: Array = []
+	var proc := 0.0
+	var draws := 0.0
+	var n := 0
+	var t := 0.0
+	while t < sec:
+		await get_tree().process_frame
+		var d := get_process_delta_time()
+		t += d
+		deltas.append(d * 1000.0)
+		proc += Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+		draws += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+		n += 1
+	deltas.sort()
+	var avg := 0.0
+	for d2: float in deltas:
+		avg += d2
+	avg /= maxf(1.0, deltas.size())
+	return ["   кадр: в среднем %.2f мс (%.0f FPS), 95%% кадров не дольше %.2f мс; _process %.2f мс; вызовов отрисовки %.0f; память %.0f МБ" % [
+		avg, 1000.0 / avg, deltas[int(deltas.size() * 0.95)], proc / n, draws / n, Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0]]
+
+
+func _time(label: String, n: int, f: Callable) -> String:
+	var t0 := Time.get_ticks_usec()
+	for i in n:
+		f.call()
+	var us := float(Time.get_ticks_usec() - t0) / n
+	return "   %-40s %8.3f мс" % [label, us / 1000.0]
 
 
 # --- мысли и реплики героев, половины дня (03.10) ---------------------------------------------------------------------

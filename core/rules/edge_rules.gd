@@ -31,11 +31,6 @@ static func death_chance(content: Content, state: RunState, cid: String, extra: 
 	return clampi(d, DEATH_MIN, 100)
 
 
-## Шанс смерти для показа на карте героя: сколько будет при следующем поражении (0 — пока не на грани).
-static func shown_death(content: Content, state: RunState, cid: String) -> int:
-	return death_chance(content, state, cid) if on_edge(state, cid) else 0
-
-
 ## Поражение героя: не на грани — встаёт на грань; на грани — бросок смерти.
 ## pocket — усиления при нём (edge_shield), shielded — уже сработавший щит события (Dictionary, общий на событие),
 ## extra — прибавка к шансу смерти (жестокий удар врага). Пишет в result: edge [cid], death {chance, roll, died}.

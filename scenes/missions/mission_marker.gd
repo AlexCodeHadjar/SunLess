@@ -31,6 +31,10 @@ var _grow := 0.0
 var _panel: PanelContainer   # подробная карточка ромба: карта события и сведения рядом
 var _info_col: VBoxContainer
 var _badge_label: Label
+var _story := false        # сюжетный ромб пульсирует — его перерисовывать каждый кадр
+var _was_anim := false     # прошлый кадр ромб двигался: дорисовать конечное положение
+var _mods: Array = []      # модификаторы события: значки полукругом над ромбом (просьба владельца 03.10)
+var _shine := 0.0          # задание показало это событие (docs/20): кольца расходятся от ромба
 
 
 ## Событие ромбом: как лавка — ромб и название; при наведении ромб растёт, вокруг рисуется круг, и рядом — карта.
@@ -87,6 +91,8 @@ func _ready_icon() -> void:
 	# подробная карточка события — скрыта, пока круг загрузки не замкнётся
 	var m: Dictionary = ContentDB.data.missions.get(mission_id, {})
 	var typ := str(m.get("type", ""))
+	_story = typ == "story"
+	_mods = ModifierRules.of(ContentDB.data, GameState.state, mission_id)
 	var tone: Color = Palette.GOLD if typ == "story" else (Color(1.0, 0.45, 0.4) if typ == "onslaught" else Palette.SILVER)
 	_panel = PanelContainer.new()
 	_panel.add_theme_stylebox_override("panel", UITheme.box(Color(0.035, 0.035, 0.05, 0.95), tone.darkened(0.35), 1, 10, 12))
@@ -173,7 +179,44 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _has_point(point: Vector2) -> bool:
-	return body_rect().has_point(point) if diamond else Rect2(Vector2.ZERO, size).has_point(point)
+	if not diamond:
+		return Rect2(Vector2.ZERO, size).has_point(point)
+	return body_rect().has_point(point) or _mod_at(point) >= 0
+
+
+## Значки модификаторов над ромбом: центры по полукругу (середина — сверху).
+func _mod_points() -> Array:
+	var out: Array = []
+	var n := _mods.size()
+	if n == 0:
+		return out
+	var c := icon_center()
+	var rr := _radius() + 27.0
+	var step := deg_to_rad(36.0)
+	for i in n:
+		var a := -PI / 2.0 + (i - (n - 1) / 2.0) * step
+		out.append(c + Vector2(cos(a), sin(a)) * rr)
+	return out
+
+
+## Над каким значком модификатора точка (-1 — ни над каким).
+func _mod_at(point: Vector2) -> int:
+	var pts := _mod_points()
+	for i in pts.size():
+		if (pts[i] as Vector2).distance_to(point) <= 13.0:
+			return i
+	return -1
+
+
+## Подсказка над значком модификатора: название и что он делает.
+func _get_tooltip(at_position: Vector2) -> String:
+	if not diamond:
+		return tooltip_text
+	var i := _mod_at(at_position)
+	if i < 0:
+		return ""
+	var d: Dictionary = _mods[i]
+	return "%s — %s" % [d.get("name", ""), d.get("text", "")]
 
 
 func _can_drop_data(at: Vector2, data: Variant) -> bool:
@@ -182,6 +225,15 @@ func _can_drop_data(at: Vector2, data: Variant) -> bool:
 
 func _drop_data(at: Vector2, data: Variant) -> void:
 	_drop(at, data)
+
+
+## Задание показало это событие — вспышка (у ромба — кольца, у карты — свечение).
+func flash() -> void:
+	_shine = 1.0
+	if not diamond:
+		var tw := create_tween()
+		tw.tween_property(self, "modulate", Color(1.6, 1.4, 0.9), 0.25)
+		tw.tween_property(self, "modulate", Color.WHITE, 0.9)
 
 
 ## Центр ромба (в координатах метки) и его полуразмер.
@@ -199,7 +251,8 @@ func body_rect() -> Rect2:
 	if not diamond:
 		return Rect2(Vector2.ZERO, size)
 	var r := _radius()
-	return Rect2(Vector2(size.x / 2.0 - 78.0, icon_center().y - r - 6.0), Vector2(156.0, r * 2.0 + 62.0))
+	var up := 34.0 if not _mods.is_empty() else 0.0   # значки модификаторов над ромбом — тоже видимая часть
+	return Rect2(Vector2(size.x / 2.0 - 78.0, icon_center().y - r - 6.0 - up), Vector2(156.0, r * 2.0 + 62.0 + up))
 
 
 ## Видимая часть на экране — для подсказок-прожекторов и разрыва карты при удачном событии.
@@ -256,7 +309,7 @@ func _title_w() -> float:
 	var fs := 16 if typ == "story" else 15
 	var f := UITheme.font("sans_bold")
 	var w := 0.0
-	for line: String in _wrap(str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id)), f, fs, 200.0):
+	for line: String in _wrap(str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id)), f, fs, 138.0):
 		w = maxf(w, f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
 	return w
 
@@ -371,8 +424,15 @@ func _process(delta: float) -> void:
 				_load = 0.0
 	else:
 		_load = maxf(0.0, _load - delta * 3.0)
-	z_index = 30 if (_hover or _detail) else 0
-	queue_redraw()
+	var z := 30 if (_hover or _detail) else 0
+	if z_index != z:
+		z_index = z
+	# перерисовка — только пока ромб движется (наведение, круг, рост, отряд) или пульсирует сюжетный
+	_shine = maxf(0.0, _shine - delta / 2.2)
+	var anim := _hover or _detail or _load > 0.0 or (_grow > 0.0 and _grow < 1.0) or busy() or _story or _shine > 0.0
+	if anim or _was_anim:
+		queue_redraw()
+	_was_anim = anim
 
 
 func _draw() -> void:
@@ -406,6 +466,11 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -q), c + Vector2(q, 0), c + Vector2(0, q), c + Vector2(-q, 0)]), col)
 	else:
 		draw_circle(c, r * 0.18, col)
+	# задание показало событие: расходятся золотые кольца
+	if _shine > 0.0:
+		for k in 2:
+			var f := fmod(1.0 - _shine + k * 0.5, 1.0)
+			draw_arc(c, r + 8.0 + f * 46.0, 0.0, TAU, 48, Color(Palette.GOLD, (1.0 - f) * minf(1.0, _shine * 3.0)), 3.0, true)
 	# круг загрузки: рисуется по часовой и замыкается — тогда открывается карта
 	if _load > 0.0 and not busy():
 		var lr := r + 12.0
@@ -418,11 +483,12 @@ func _draw() -> void:
 			draw_circle(head, 3.0, Color(1, 1, 1, 0.95))
 		if _load >= 1.0:
 			draw_arc(c, lr + 4.0, 0.0, TAU, 64, Color(col.r, col.g, col.b, 0.35 * pulse), 2.0, true)
+	_draw_mods()
 	# название и метка (переход, срок) — под ромбом
 	var title := str(ContentDB.data.missions.get(mission_id, {}).get("title", mission_id))
 	var f := UITheme.font("sans_bold")
 	var fs := 16 if typ == "story" else 15
-	var lines := _wrap(title, f, fs, 200.0)
+	var lines := _wrap(title, f, fs, 138.0)
 	var y := c.y + _radius() + 22.0 + (18.0 if busy() else 0.0)   # под кольцом отряда — его подпись
 	for line: String in lines:
 		var w := f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -438,6 +504,97 @@ func _draw() -> void:
 		var bc := _badge_color(badge)
 		draw_string_outline(bf2, bp, badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 5, Color(0, 0, 0, 0.9))
 		draw_string(bf2, bp, badge, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, bc)
+
+
+## Значки модификаторов полукругом над ромбом: кружок цвета характера (хороший, плохой, смешанный) и знак.
+func _draw_mods() -> void:
+	var pts := _mod_points()
+	for i in pts.size():
+		var d: Dictionary = _mods[i]
+		var p: Vector2 = pts[i]
+		var tone: Color = (Palette.MOD_TONE.get(str(d.get("tone", "mixed")), Palette.GOLD) as Color).lightened(0.3)
+		draw_circle(p, 15.5, Color(tone.r, tone.g, tone.b, 0.18))   # мягкий свет вокруг
+		draw_circle(p, 13.0, Color(0.015, 0.018, 0.03, 0.97))
+		draw_arc(p, 13.0, 0.0, TAU, 32, tone, 2.4, true)
+		_mod_glyph(str(d.get("id", "")), p, tone.lightened(0.15))
+
+
+## Знак модификатора (рисуется, без картинок): туман — волны, вожак — капля крови, проклятие — знак, гнездо — яйца,
+## панцирь — щит, засада — скрещённые клинки, вода — волна с каплей, гроза — молния, тайник — сундук, спешка — песочные
+## часы, Врата — арка с рангом, темнота — чёрная луна, толпа — головы.
+func _mod_glyph(id: String, p: Vector2, col: Color) -> void:
+	match id:
+		"fog":
+			for k in 3:
+				var y := -4.0 + k * 4.0
+				var pts := PackedVector2Array()
+				for i in 9:
+					pts.append(p + Vector2(-7.0 + i * 1.75, y + sin(i * 0.9 + k) * 1.2))
+				draw_polyline(pts, col, 2.0, true)
+		"wounded":
+			var drop := PackedVector2Array()
+			for i in 17:
+				var a := TAU * i / 16.0
+				var q := Vector2(cos(a) * 4.5, sin(a) * 4.5)
+				if q.y < 0.0:
+					q.y *= 1.8
+				drop.append(p + Vector2(0, 2) + q)
+			draw_colored_polygon(drop, Color(0.85, 0.15, 0.15))
+		"cursed":
+			draw_arc(p, 5.5, 0.0, TAU, 20, col, 2.1, true)
+			draw_line(p + Vector2(0, -8), p + Vector2(0, 8), col, 2.1, true)
+			draw_line(p + Vector2(-6, 3), p + Vector2(6, 3), col, 2.1, true)
+		"nest":
+			for q: Vector2 in [Vector2(-4, 2), Vector2(4, 2), Vector2(0, -3)]:
+				draw_circle(p + q, 3.2, col)
+		"armored":
+			var sh := PackedVector2Array([p + Vector2(-6, -6), p + Vector2(6, -6), p + Vector2(5, 2), p + Vector2(0, 7),
+				p + Vector2(-5, 2), p + Vector2(-6, -6)])
+			draw_polyline(sh, col, 2.2, true)
+			draw_line(p + Vector2(0, -6), p + Vector2(0, 6), col, 1.8, true)
+		"ambush":
+			draw_line(p + Vector2(-6, -6), p + Vector2(6, 6), col, 2.4, true)
+			draw_line(p + Vector2(6, -6), p + Vector2(-6, 6), col, 2.4, true)
+			draw_line(p + Vector2(-7, 3), p + Vector2(-3, 7), col, 2.2, true)
+			draw_line(p + Vector2(7, 3), p + Vector2(3, 7), col, 2.2, true)
+		"tidepools":
+			var wv := PackedVector2Array()
+			for i in 9:
+				wv.append(p + Vector2(-7.0 + i * 1.75, 3.0 + sin(i * 0.9) * 1.6))
+			draw_polyline(wv, col, 2.2, true)
+			draw_circle(p + Vector2(0, -3), 2.5, col)
+		"thunder":
+			draw_colored_polygon(PackedVector2Array([p + Vector2(1, -8), p + Vector2(-5, 1), p + Vector2(0, 1), p + Vector2(-2, 8),
+				p + Vector2(5, -2), p + Vector2(0, -2)]), col)
+		"cache":
+			draw_rect(Rect2(p + Vector2(-6, -3), Vector2(12, 8)), col, false, 1.6)
+			draw_line(p + Vector2(-6, -1), p + Vector2(6, -1), col, 2.0, true)
+			draw_circle(p + Vector2(0, 1), 1.4, col)
+		"hurry":
+			draw_polyline(PackedVector2Array([p + Vector2(-5, -7), p + Vector2(5, -7), p + Vector2(-5, 7), p + Vector2(5, 7),
+				p + Vector2(-5, -7)]), col, 2.1, true)
+		"gate_rank2", "gate_rank3":
+			draw_arc(p + Vector2(0, 2), 6.0, PI, TAU, 14, col, 2.2, true)
+			draw_line(p + Vector2(-6, 2), p + Vector2(-6, 7), col, 2.2, true)
+			draw_line(p + Vector2(6, 2), p + Vector2(6, 7), col, 2.2, true)
+			var n := 3 if id == "gate_rank3" else 2
+			for k in n:
+				var x := (k - (n - 1) / 2.0) * 2.6
+				draw_line(p + Vector2(x, 0), p + Vector2(x, 5), col, 1.8, true)
+		"blackout":
+			draw_circle(p, 6.5, Color(0, 0, 0))
+			draw_arc(p, 6.5, 0.0, TAU, 20, col, 2.0, true)
+			draw_circle(p + Vector2(3, -3), 1.0, col)
+		"panic_crowd":
+			for q: Vector2 in [Vector2(-5, 2), Vector2(0, -1), Vector2(5, 2)]:
+				draw_circle(p + q, 2.6, col)
+			draw_line(p + Vector2(0, -9), p + Vector2(0, -5.5), col, 2.0, true)
+		_:
+			var f := UITheme.font("sans_bold")
+			var t := str(_mods.filter(func(d: Dictionary) -> bool: return str(d.get("id", "")) == id)[0].get("name", "?")).left(1) \
+				if _mods.any(func(d: Dictionary) -> bool: return str(d.get("id", "")) == id) else "?"
+			var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			draw_string(f, p + Vector2(-w / 2.0, 5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 
 
 static func _wrap(text: String, f: Font, fs: int, width: float) -> Array:

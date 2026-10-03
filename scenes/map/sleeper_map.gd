@@ -12,6 +12,7 @@ extends Control
 
 const WATER_SHADER := preload("res://scenes/map/sleeper_water.gdshader")
 const FOG_SHADER := preload("res://scenes/map/sleeper_fog.gdshader")
+const FOG_MASK_SHADER := preload("res://scenes/map/sleeper_fog_mask.gdshader")
 const GLOW_SHADER := preload("res://scenes/map/sleeper_glow.gdshader")
 const SILVER := Color(0.82, 0.88, 1.0)
 const GOLDEN := Color(1.0, 0.8, 0.42)
@@ -40,7 +41,11 @@ var _ink: Control
 var _sprites_layer: Control
 var _shade: Control
 var _fog: ColorRect
+var _fog_vp: SubViewport       # маска тумана: своя текстура в половину основы, пересчёт только при изменениях
+var _fog_mask: ColorRect
+var _fog_last: Array = []      # прошлые круги и коридоры: не изменились — маску не трогать
 var _over: Control
+var _labels: Control         # подписи мест — свой слой: перерисовка только при смене карты (sync), не каждый кадр
 var _threat: Control
 var _weather: Control
 var _sprites := {}        # место -> TextureRect
@@ -58,7 +63,11 @@ var _next_flash := 5.0
 var _clouds: Array = []
 var _rng := RandomNumberGenerator.new()
 # фигура (docs/18): лагерь рисует не костёр-точка, а сцена у фигуры; при перетаскивании — подсветка участков
-var label_style := "white"      # подписи мест: silver | white | ice | shadow | gold | caps | frost
+var label_style := "white":     # подписи мест: silver | white | ice | shadow | gold | caps | frost
+	set(v):
+		label_style = v
+		if _labels != null:
+			_labels.queue_redraw()
 var figure_mode := false
 # подсветка участков при перетаскивании фигуры: участок загорается светом вверх (серебро — можно, золото — под
 # фигурой, тёмно-красный — нельзя); меняются — карта сама перекрашивает участки (_apply_highlight)
@@ -75,6 +84,13 @@ var drag_hover := "":             # участок под фигурой
 		if v != drag_hover:
 			drag_hover = v
 			_apply_highlight()
+var quest_target := "":          # задание (docs/20): участок цели горит золотом, пока идёт показ
+	set(v):
+		if v != quest_target:
+			quest_target = v
+			_apply_highlight()
+var _quest_path: Array = []      # путь от фигуры к цели (места по порядку)
+var _quest_t := 0.0              # сколько ещё показывать
 var _glow: Control               # столбы света и искры над подсвеченными участками (сложение цветов)
 var _mats := {}                  # silver | gold | block -> ShaderMaterial
 
@@ -132,10 +148,23 @@ func _ready() -> void:
 	fm.set_shader_parameter("aspect", aspect)
 	_fog.material = fm
 	_world.add_child(_fog)
+	_fog_vp = SubViewport.new()
+	_fog_vp.disable_3d = true
+	_fog_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(_fog_vp)
+	_fog_mask = ColorRect.new()
+	var mm := ShaderMaterial.new()
+	mm.shader = FOG_MASK_SHADER
+	mm.set_shader_parameter("aspect", aspect)
+	_fog_mask.material = mm
+	_fog_vp.add_child(_fog_mask)
+	fm.set_shader_parameter("mask", _fog_vp.get_texture())
 	_fit()
 	set_pan(Vector2((view.size.x - rect.size.x) / 2.0, -float(cfg.get("view_top", 0.08)) * rect.size.y))
 	_over = _layer(_world)
 	_over.draw.connect(_draw_over)
+	_labels = _layer(_world)
+	_labels.draw.connect(_draw_labels)
 	_weather = _layer(_clip)
 	_weather.draw.connect(_draw_weather)
 	var names := ["clouds/cloud_01", "clouds/cloud_02", "clouds/cloud_03", "clouds/cloud_04"]
@@ -168,6 +197,10 @@ func _fit() -> void:
 	for layer: Control in [_bg, _water, _fog]:
 		layer.position = rect.position
 		layer.size = rect.size
+	if _fog_vp != null:
+		_fog_vp.size = Vector2i(maxi(1, int(rect.size.x / 2.0)), maxi(1, int(rect.size.y / 2.0)))
+		_fog_mask.size = Vector2(_fog_vp.size)
+		_fog_last = []
 
 
 ## Окно сменило размер: основа, места и сдвиг — под новую область. Сдвиг сохраняет середину окна.
@@ -335,6 +368,7 @@ func sync(content: Content, state: RunState, sky_now: String) -> void:
 		"boat": bool(state.flags.get("boat", false)), "terrain": _terrain_info(content, state, revealed),
 		"decals": _decal_info(content, state, revealed), "air": _air_info(content, state)}
 	_ink.queue_redraw()
+	_labels.queue_redraw()
 
 
 ## Что рисовать от угроз: проломы по стадии, метки мест по облику, рой (откуда → где).
@@ -626,12 +660,16 @@ func _process(delta: float) -> void:
 		var p1: Vector2 = uv[pr[1]]
 		segs.append(Vector4(p0.x, p0.y, p1.x, p1.y))
 		sw.append(Vector2(REVEAL_R * 0.75, ease(minf(float(_reveal.get(pr[0], 1.0)), float(_reveal.get(pr[1], 1.0))), 0.5)))
-	var fm := _fog.material as ShaderMaterial
-	fm.set_shader_parameter("holes", holes)
-	fm.set_shader_parameter("hole_count", holes.size())
-	fm.set_shader_parameter("segs", segs)
-	fm.set_shader_parameter("seg_w", sw)
-	fm.set_shader_parameter("seg_count", segs.size())
+	# маска пересчитывается только когда открытое изменилось (проявление, новые места) — не каждый кадр
+	if _fog_last.size() != 3 or _fog_last[0] != holes or _fog_last[1] != segs or _fog_last[2] != sw:
+		_fog_last = [holes, segs, sw]
+		var fm := _fog_mask.material as ShaderMaterial
+		fm.set_shader_parameter("holes", holes)
+		fm.set_shader_parameter("hole_count", holes.size())
+		fm.set_shader_parameter("segs", segs)
+		fm.set_shader_parameter("seg_w", sw)
+		fm.set_shader_parameter("seg_count", segs.size())
+		_fog_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	if not Vfx.reduced():
 		for cl: Dictionary in _clouds:
 			cl["pos"] += Vector2(cl["speed"] * delta, cl["speed"] * 0.25 * delta)
@@ -645,7 +683,14 @@ func _process(delta: float) -> void:
 		_flash = maxf(0.0, _flash - delta * 2.6)
 	_shade.queue_redraw()
 	_over.queue_redraw()
-	if not drag_targets.is_empty() or not drag_blocked.is_empty():
+	if label_style == "silver":   # серебро «дышит» — живая подпись; остальные стили неподвижны
+		_labels.queue_redraw()
+	if _quest_t > 0.0:
+		_quest_t -= delta
+		if _quest_t <= 0.0:
+			_quest_path = []
+			quest_target = ""
+	if not drag_targets.is_empty() or not drag_blocked.is_empty() or quest_target != "":
 		_glow.queue_redraw()
 	_weather.queue_redraw()
 	if not Dictionary(_info.get("threat", {})).is_empty() or not Dictionary(_info.get("terrain", {})).is_empty() \
@@ -898,6 +943,7 @@ func _draw_over() -> void:
 				pts.append(c + Vector2(cos(ang) * rr, sin(ang) * rr * 0.62))
 			_over.draw_polyline(pts, Color(0.55, 0.8, 1.0, (0.55 - 0.25 * k) * (0.6 + 0.4 * pulse)), 3.0, true)
 	_draw_figure_marks(centers, sizes)
+	_draw_quest_path(centers)
 	# соседние места — сюда можно пойти сегодня
 	for lid: String in ([] if figure_mode else _info.get("near", [])):
 		var nc: Vector2 = centers.get(lid, Vector2.ZERO)
@@ -922,11 +968,49 @@ func _draw_over() -> void:
 		var cw := cf.get_string_size(ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 		_over.draw_string_outline(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
 		_over.draw_string(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.8, 0.5))
-	# подписи открытых мест: стиль — label_style (варианты для выбора владельцем, docs/коллажи карт/5 …)
+
+
+## Задание (docs/20): показать цель — участок горит золотом, от фигуры к нему бежит золотой пунктир. path — места
+## от лагеря до цели по порядку; sec — сколько показывать.
+func show_quest(path: Array, target: String, sec: float = 4.5) -> void:
+	_quest_path = path
+	_quest_t = sec
+	quest_target = target
+	_glow.queue_redraw()
+
+
+func _draw_quest_path(centers: Dictionary) -> void:
+	if _quest_path.size() < 2 or _quest_t <= 0.0:
+		return
+	var fade := clampf(_quest_t / 0.8, 0.0, 1.0)
+	var phase := fmod(_t * 60.0, 28.0)
+	for i in _quest_path.size() - 1:
+		if not centers.has(_quest_path[i]) or not centers.has(_quest_path[i + 1]):
+			continue
+		var a: Vector2 = centers[_quest_path[i]]
+		var b: Vector2 = centers[_quest_path[i + 1]]
+		var len := a.distance_to(b)
+		var dir := (b - a) / maxf(len, 1.0)
+		var d := -phase
+		while d < len:
+			var p0 := a + dir * maxf(d, 0.0)
+			var p1 := a + dir * minf(d + 14.0, len)
+			if d + 14.0 > 0.0:
+				_over.draw_line(p0, p1, Color(0, 0, 0, 0.5 * fade), 7.0, true)
+				_over.draw_line(p0, p1, Color(GOLDEN, 0.95 * fade), 3.5, true)
+			d += 28.0
+	var tc: Vector2 = centers.get(_quest_path[-1], Vector2.ZERO)
+	var pulse := 0.5 + 0.5 * sin(_t * 5.0)
+	_over.draw_arc(tc, 40.0 + 10.0 * pulse, 0.0, TAU, 48, Color(GOLDEN, 0.8 * fade), 3.0, true)
+
+
+## Подписи открытых мест: стиль — label_style (варианты для выбора владельцем, docs/коллажи карт/5 …).
+func _draw_labels() -> void:
 	var feet: Dictionary = _info.get("feet", {})
 	var names: Dictionary = _info.get("names", {})
+	var flooded: Array = _info.get("flooded", [])
 	for lid: String in feet:
-		_draw_label(Vector2(feet[lid]) + Vector2(0.0, 24.0), str(names[lid]), _info["flooded"].has(lid))
+		_draw_label(Vector2(feet[lid]) + Vector2(0.0, 24.0), str(names[lid]), flooded.has(lid))
 
 
 ## Подпись места по стилю label_style. at — середина подписи по ширине, высота — базовая линия.
@@ -945,39 +1029,39 @@ func _draw_label(at: Vector2, text: String, wet: bool) -> void:
 	var white := Color(0.78, 0.9, 1.0) if wet else Color(1.0, 1.0, 1.0)
 	match style:
 		"white":
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
 		"ice":
 			var ice := Color(0.86, 0.94, 1.0)
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 8, Color(0.02, 0.04, 0.1, 0.95))
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 2, Color(0.55, 0.75, 1.0, 0.9))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ice)
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 8, Color(0.02, 0.04, 0.1, 0.95))
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 2, Color(0.55, 0.75, 1.0, 0.9))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ice)
 		"shadow":
-			_over.draw_string(f, p + Vector2(2, 2), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.9))
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, Color(0, 0, 0, 0.85))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+			_labels.draw_string(f, p + Vector2(2, 2), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.9))
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, Color(0, 0, 0, 0.85))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
 		"gold":
 			var gold := Color(0.75, 0.88, 1.0) if wet else Color(1.0, 0.9, 0.62)
 			for k in 3:
-				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 16 - k * 4, Color(gold.r, gold.g, gold.b, 0.08 + 0.06 * k))
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0.05, 0.03, 0.0, 0.95))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gold)
+				_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 16 - k * 4, Color(gold.r, gold.g, gold.b, 0.08 + 0.06 * k))
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0.05, 0.03, 0.0, 0.95))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, gold)
 		"caps":
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
 		"frost":
 			for k in 3:
-				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 18 - k * 4, Color(0.7, 0.85, 1.0, 0.06 + 0.04 * k))
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
+				_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 18 - k * 4, Color(0.7, 0.85, 1.0, 0.06 + 0.04 * k))
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 7, Color(0, 0, 0, 0.95))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, white)
 		_:   # silver — серебро с ореолом
 			var breath := 0.85 + 0.15 * sin(_t * 1.4)
 			var glow := Color(0.55, 0.78, 1.0) if wet else Color(0.82, 0.86, 0.95)
 			var col := Color(0.72, 0.88, 1.0) if wet else Color(0.93, 0.95, 1.0)
 			for k in 5:
-				_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 26 - k * 5, Color(glow.r, glow.g, glow.b, (0.07 + 0.07 * k) * breath))
-			_over.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.02, 0.02, 0.04, 0.9))
-			_over.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+				_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 26 - k * 5, Color(glow.r, glow.g, glow.b, (0.07 + 0.07 * k) * breath))
+			_labels.draw_string_outline(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.02, 0.02, 0.04, 0.9))
+			_labels.draw_string(f, p, shown, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
 ## Фигура: причина «нельзя» над участком при перетаскивании.
@@ -993,22 +1077,6 @@ func _draw_figure_marks(centers: Dictionary, sizes: Dictionary) -> void:
 			var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 			_over.draw_string_outline(f, c2 + Vector2(-w / 2.0, -r2 * 0.6 - 10.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 6, Color(0, 0, 0, 0.9))
 			_over.draw_string(f, c2 + Vector2(-w / 2.0, -r2 * 0.6 - 10.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1.0, 0.55, 0.5))
-
-
-func _ellipse_ring(c: Vector2, r: float, col: Color, width: float) -> void:
-	var pts := PackedVector2Array()
-	for i in 49:
-		var ang := TAU * i / 48.0
-		pts.append(c + Vector2(cos(ang) * r, sin(ang) * r * 0.6))
-	_over.draw_polyline(pts, col, width, true)
-
-
-func _ellipse_fill(c: Vector2, r: float, col: Color) -> void:
-	var pts := PackedVector2Array()
-	for i in 48:
-		var ang := TAU * i / 48.0
-		pts.append(c + Vector2(cos(ang) * r, sin(ang) * r * 0.6))
-	_over.draw_colored_polygon(pts, col)
 
 
 ## Участки при перетаскивании фигуры: картинке участка — шейдер света (sleeper_glow), остальным — без него.
@@ -1030,6 +1098,8 @@ func _apply_highlight() -> void:
 			key2 = "gold" if lid == drag_hover else "silver"
 		elif drag_blocked.has(lid):
 			key2 = "block"
+		elif lid == quest_target:
+			key2 = "gold"
 		tr.material = _mats[key2] if key2 != "" else null
 	if _glow != null:
 		_glow.queue_redraw()
@@ -1037,12 +1107,15 @@ func _apply_highlight() -> void:
 
 ## Свет вверх над участками, куда можно поставить фигуру: мягкое пятно, столбы света и поднимающиеся искры.
 func _draw_glow() -> void:
-	if drag_targets.is_empty() or _content == null:
+	if (drag_targets.is_empty() and quest_target == "") or _content == null:
 		return
-	for lid: String in drag_targets:
+	var lit: Array = drag_targets.duplicate()
+	if quest_target != "" and not lit.has(quest_target):
+		lit.append(quest_target)
+	for lid: String in lit:
 		if not _sprites.has(lid):
 			continue
-		var hot := lid == drag_hover
+		var hot := lid == drag_hover or lid == quest_target
 		var col := GOLDEN if hot else SILVER
 		var k := 1.0 if hot else 0.55
 		var c := center(_content, _state, lid) - view.position

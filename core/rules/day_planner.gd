@@ -25,6 +25,8 @@ static func min_options(content: Content) -> int:
 ## march — дойти можно, но с марш-броском, cut — под водой или путь отрезан водой.
 static func options(content: Content, state: RunState) -> Dictionary:
 	var out := {"today": [], "march": [], "cut": []}
+	var fig := FigureRules.on(content, state)
+	var ra := FigureRules.reach_all(content, state, MissionFlow.open_missions(state)) if fig else {}
 	for mid: String in MissionFlow.open_missions(state):
 		if MissionFlow.chapter_of(content, mid) != state.chapter:
 			continue
@@ -36,8 +38,8 @@ static func options(content: Content, state: RunState) -> Dictionary:
 		if TideRules.flooded(state, lid):
 			out["cut"].append(mid)
 			continue
-		if FigureRules.on(content, state):   # фигура: сегодня — здесь и на соседних участках, дальше — путь
-			var r := FigureRules.reach(content, state, mid)
+		if fig:   # фигура: сегодня — здесь и на соседних участках, дальше — путь
+			var r := int(ra[mid])
 			out["cut" if r < 0 else ("today" if r <= 1 else "march")].append(mid)
 			continue
 		var d := TravelRules.distance(content, state, lid)

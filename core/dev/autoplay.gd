@@ -168,10 +168,11 @@ static func _figure_step(c: Content, s: RunState, started: String) -> Dictionary
 	var desperate := s.day - int(s.flags.get("bot_story_day", s.day)) > 4 or int(s.flags.get("bot_idle", 0)) >= 4 		or s.day - int(s.flags["bot_event_day"]) > 3
 	# события по близости: сюжет первым, затем ближние; прогноз — только пока не нашлось подходящее
 	var cands: Array = []
+	var ra := FigureRules.reach_all(c, s, open)
 	for mid: String in open:
 		if MissionFlow.chapter_of(c, mid) != s.chapter or TideRules.mission_flooded(c, s, mid):
 			continue
-		var r := FigureRules.reach(c, s, mid)
+		var r := int(ra[mid])
 		if r < 0:
 			continue
 		if str(c.missions[mid]["type"]) != "onslaught" and not MapRules.revealed(c, s, str(c.missions[mid].get("location", ""))):

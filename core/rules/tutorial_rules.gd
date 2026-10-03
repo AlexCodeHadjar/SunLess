@@ -122,8 +122,10 @@ static func _terrain_events(content: Content, state: RunState) -> Array:
 static func _figure_events(content: Content, state: RunState) -> Array:
 	var out: Array = ["figure"]
 	var opt := DayPlanner.options(content, state)
-	for mid: String in MissionFlow.open_missions(state):
-		if MissionFlow.chapter_of(content, mid) == state.chapter and FigureRules.reach(content, state, mid) != 0:
+	var open := MissionFlow.open_missions(state)
+	var ra := FigureRules.reach_all(content, state, open)
+	for mid: String in open:
+		if MissionFlow.chapter_of(content, mid) == state.chapter and int(ra[mid]) != 0:
 			out.append("figure_far")
 			break
 	if (opt["today"] as Array).is_empty():

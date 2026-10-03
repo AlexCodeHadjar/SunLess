@@ -17,11 +17,18 @@ const EMERGE_MAX := 2
 
 ## Карта-план региона главы ({} — у главы старый фон).
 static func config(content: Content, chapter: String) -> Dictionary:
+	# вызывается сотни раз за обновление экрана (anchor, size_of, links…) — ответ по главе запоминается в контенте
+	var key := "map_config:" + chapter
+	if content.memo.has(key):
+		return content.memo[key]
+	var out: Dictionary = {}
 	for lid: String in content.locations:
 		var loc: Dictionary = content.locations[lid]
 		if str(loc.get("chapter", "")) == chapter:
-			return content.maps.get(str(loc.get("region", "")), {})
-	return {}
+			out = content.maps.get(str(loc.get("region", "")), {})
+			break
+	content.memo[key] = out
+	return out
 
 
 static func has_map(content: Content, chapter: String) -> bool:

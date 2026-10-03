@@ -768,13 +768,6 @@ func _discover_links() -> void:
 
 # --- мелочи ------------------------------------------------------------------------------
 
-func _squad_for(mid: String) -> Dictionary:
-	for sq: Dictionary in GameState.state.squads:
-		if sq["mission"] == mid:
-			return sq
-	return {}
-
-
 func _art(m: Dictionary, sz: Vector2 = Vector2(300, 470)) -> Control:
 	var holder := Control.new()
 	holder.custom_minimum_size = sz

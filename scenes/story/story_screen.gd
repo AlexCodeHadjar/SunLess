@@ -28,6 +28,7 @@ var _hint: Label
 var _ring: Control
 var _layer: Control
 var _veil: ColorRect
+var _title: Label        # название главы в финале (перекладывается при смене размера окна)
 
 
 ## Показывает страницы поверх parent. title — название главы для финальной заставки.
@@ -60,7 +61,32 @@ func _ready() -> void:
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_veil)
+	get_viewport().size_changed.connect(_on_resize)
 	_show_page(0)
+
+
+## Окно сменило размер (переход в полный экран во время истории — баг, найденный владельцем 03.10): экран истории
+## растягивается на всё окно и перестраивает страницу, чтобы карта под ним не проступала. Прочитанное — не печатается
+## заново.
+func _on_resize() -> void:
+	if not is_inside_tree():
+		return
+	size = get_viewport_rect().size
+	if _title != null:
+		_title.custom_minimum_size = Vector2(size.x, 0)
+		_title.size.x = size.x
+		_title.position = Vector2(0, size.y / 2 - 60)
+		return
+	if _body == null:
+		return
+	var word := _word
+	var done := _done
+	_show_page(_page)
+	if done:
+		_reveal_all()
+	elif word > 0 and word <= _ends.size():
+		_word = word
+		_body.visible_characters = _ends[word - 1]
 
 
 func _show_page(i: int) -> void:
@@ -229,6 +255,7 @@ func _finale() -> void:
 	for ch in _layer.get_children():
 		ch.queue_free()
 	var t := UITheme.label(chapter_title.to_upper(), "title_bold", 84, Palette.GOLD)
+	_title = t
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.custom_minimum_size = Vector2(size.x, 0)
 	t.position = Vector2(0, size.y / 2 - 60)

@@ -10,8 +10,9 @@ var values := {
 	"reduce_motion": false,
 	"chance_monochrome": false,
 	"tutorial": true,
-	"event_icons": true,
-	"chatter": true,      # события на карте-плане — ромбами (эксперимент), иначе — картами
+	"event_icons": true,      # события на карте-плане — ромбами (эксперимент), иначе — картами
+	"chatter": true,          # мысли и реплики героев над картами (docs/19)
+	"quests_open": true,      # задания справа развёрнуты (docs/20)
 	"canon_notes": true,
 	"vol_master": 0.9,
 	"vol_music": 0.55,

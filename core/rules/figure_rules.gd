@@ -65,6 +65,23 @@ static func reach(content: Content, state: RunState, mid: String) -> int:
 	return TravelRules.distance(content, state, lid)
 
 
+## reach для многих событий разом (экран, планировщик, бот): соседи фигуры и обход графа — один раз. {событие: шагов}.
+static func reach_all(content: Content, state: RunState, mids: Array) -> Dictionary:
+	var tg := targets(content, state)
+	var dist := TravelRules.distances(content, state, state.party_at)
+	var out := {}
+	for mid: String in mids:
+		var m: Dictionary = content.missions.get(mid, {})
+		var lid := str(m.get("location", ""))
+		if str(m.get("type", "")) == "onslaught" or lid == state.party_at:
+			out[mid] = 0
+		elif tg.has(lid):
+			out[mid] = 1
+		else:
+			out[mid] = int(dist.get(lid, -1))
+	return out
+
+
 ## Переставить фигуру на соседний участок: переход по правилам местности — полдня. {ok, error, entries}.
 static func move(content: Content, state: RunState, lid: String) -> Dictionary:
 	var why := why_not(content, state, lid)

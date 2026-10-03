@@ -5,7 +5,6 @@ extends Control
 ## ореол луны, кровавый пульс, корона затмения, дождь и молнии шторма, снег в цвет неба. Иначе рисует гравюрный перевал или город.
 ## Время суток tod: 0 ночь, 0.25 рассвет, 0.5 день, 0.75 сумерки — для процедурного фона.
 
-const TOD_NAMES := ["ночь", "рассвет", "день", "сумерки"]
 # ключевые цвета неба и оттенок гор для [ночь, рассвет, день, сумерки]
 const SKY_TOP := [Color("#07080C"), Color("#1C1B2E"), Color("#4E5A70"), Color("#150E1C")]
 const SKY_BOT := [Color("#4A5264"), Color("#B8826E"), Color("#AEB6C2"), Color("#9A5540")]
@@ -113,14 +112,6 @@ func _build_shore() -> void:
 	for i in 150:
 		_stars.append(Vector3(rng.randf() * size.x, rng.randf() * size.y * 0.4, rng.randf() * TAU))
 	queue_redraw()
-
-
-static func tod_for_week(week: int) -> float:
-	return float((maxi(week, 1) - 1) % 4) * 0.25
-
-
-static func tod_name(week: int) -> String:
-	return TOD_NAMES[(maxi(week, 1) - 1) % 4]
 
 
 ## Веса фаз [ночь, рассвет, день, сумерки]: соседние фазы плавно перетекают.

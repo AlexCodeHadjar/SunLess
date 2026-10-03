@@ -161,16 +161,6 @@ static func tick(content: Content, state: RunState) -> Array:
 	return []
 
 
-## Под водой всё, что открыто, и отрядов в деле нет — ждать отлива нечем: вода уходит сама.
-static func _stuck(content: Content, state: RunState) -> bool:
-	if not state.squads.is_empty():
-		return false
-	for mid: String in MissionFlow.open_missions(state):
-		if MissionFlow.chapter_of(content, mid) == state.chapter and not mission_flooded(content, state, mid):
-			return false
-	return true
-
-
 static func _flood(content: Content, state: RunState) -> Array:
 	state.tide["phase"] = "flood"
 	state.tide["left"] = maxi(1, int(state.tide.get("flood", FLOOD)))

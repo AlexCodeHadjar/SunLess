@@ -37,12 +37,9 @@ var _memory: MemoryChoice      # выбор Воспоминания (LootRules)
 var _tide_banner: Label
 var _shown_tide := ""     # прилив, при котором построены метки (новые проходы — перестроить)
 var _badge_timer := 0.0
-var _day_label: Label           # фаза недели и завтрашний день (DayRules)
-var _camp_label: Label          # где стоит лагерь и что там за ночь
-var _end_btn: Button            # «Закончить день»
+var _end_btn: DayIcon           # «Переждать полдня» / «до ночи» (иконка, просьба владельца 03.10)
 var _night: Control             # окно «Ночь» после конца дня
-var _plan_label: Label          # дела на сегодня (DayPlanner): миссии рядом, шаги, дела лагеря
-var _tasks_row: HBoxContainer   # дела лагеря: Разведка, Сбор, Дозор
+var _tasks_row: HBoxContainer   # дела лагеря иконками: Разведка, Сбор, Дозор
 var _travel: Control            # окно перехода к месту (щелчок по месту на карте)
 var _picker: Control            # выбор героя для дела лагеря
 var _pan_layer: Control         # метки и лавки — едут вместе с картой-планом
@@ -59,6 +56,9 @@ var _note: Control              # карточка итогов ночи пос�
 var _fire: TextureRect          # лагерь у фигуры ночью (camp_<облик> или костёр)
 var _last_task := ""            # дело лагеря этого дня (Дозор — лагерь с факелом)
 var _chatter: ChatterLayer      # мысли и реплики героев над их картами (ChatterRules)
+var _seen_key := ""             # слепок состояния для меток и воды: изменился — пересчитать (не каждый кадр)
+var _refresh_queued := false    # сигналы состояния за кадр — одно обновление экрана
+var _quests: QuestPanel         # задания справа (QuestRules, docs/20)
 var _hint: HintPopup
 
 
@@ -72,10 +72,10 @@ func _ready() -> void:
 	_build_nav()
 	_build_bottom()
 	_build_toast()
-	GameState.missions_changed.connect(_refresh)
+	GameState.missions_changed.connect(_queue_refresh)
 	get_viewport().size_changed.connect(func() -> void: _relayout_in = 0.2)
 	GameState.mission_events.connect(_on_events)
-	EventBus.state_changed.connect(_refresh)
+	EventBus.state_changed.connect(_queue_refresh)
 	EventBus.toast.connect(_show_toast)
 	AudioManager.play_music()
 	AudioManager.play_ambient()
@@ -108,15 +108,21 @@ func _process(delta: float) -> void:
 		_relayout_in -= delta
 		if _relayout_in < 0.0:
 			_relayout()
-	if not _combat_open and not GameState.story_open:
-		GameState.mission_tick(delta)
-	_update_pins()
+	if _quests != null:   # задания — на карте; открыто окно (брифинг, лавка, ночь…) — не мешают ему
+		var calm := _window == null and not is_instance_valid(_shop_window) and _night == null and _memory == null 			and _end == null and not _combat_open and not GameState.story_open
+		if _quests.visible != (calm and _quests.has_entries()):
+			_quests.visible = calm and _quests.has_entries()
 	_badge_timer -= delta
 	if _badge_timer <= 0.0:
 		_badge_timer = 0.5
 		_update_badges()
 		_update_sky()
-		_update_tide()
+		# метки событий и вода (пересборка карты-плана — до 10 мс) — только если состояние сдвинулось без сигнала
+		var key := _state_key()
+		if key != _seen_key:
+			_seen_key = key
+			_update_pins()
+			_update_tide()
 	var quiet := _end == null and _window == null and _shop_window == null and not _combat_open and _memory == null and _night == null
 	# Воспоминание-добыча: выбор 1 из 3, как только отчёт закрыт
 	if quiet and not GameState.state.game_over and not LootRules.pending(GameState.state).is_empty():
@@ -205,6 +211,8 @@ func _screen() -> Vector2:
 
 ## Окно сменило размер (F11, другое соотношение сторон): карта-план, метки и лавки — под новое окно.
 func _relayout() -> void:
+	if _quests != null:   # задания — у правого края нового окна
+		_quests.position = Vector2(_screen().x - QuestPanel.W - 28.0, 112.0)
 	if _sleeper == null:
 		return
 	_sleeper.relayout(Rect2(Vector2.ZERO, _screen()))
@@ -365,18 +373,13 @@ func _build_bottom() -> void:
 	panel.anchor_bottom = 1.0
 	panel.anchor_right = 1.0
 	panel.offset_top = -TRAY_H
-	panel.offset_right = -500   # ряд карт кончается у дневной панели (она справа, шириной 460); больше карт — прокрутка
+	panel.offset_right = -350   # ряд карт кончается у иконок дня (справа, ~320 px); больше карт — прокрутка
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(v)
 	_build_day_panel()
-	var head := _on_map_label(UITheme.label("   ГЕРОИ И УСИЛЕНИЯ · героя — на карту миссии · усиление — на героя (в кармашек) · правый щелчок — планшет карты", "sans", 15, Palette.TEXT_DIM))
-	head.add_theme_constant_override("outline_size", 6)
-	head.custom_minimum_size.y = 28
-	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	v.add_child(head)
 	var scroll := ScrollContainer.new()
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -393,60 +396,45 @@ func _build_bottom() -> void:
 	margin.add_child(_heroes_row)
 
 
-## День и лагерь (docs/16 §12): фаза недели, стоянка, «Закончить день».
+## Дела дня (docs/16 §12, docs/18) — иконками, без надписей (просьба владельца 03.10): Разведка, Сбор, Дозор и
+## «Переждать»; что делает каждая, лагерь у фигуры и что рядом — во всплывающих подсказках. День и фаза — слева сверху.
 func _build_day_panel() -> void:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.alignment = BoxContainer.ALIGNMENT_END
 	# у правого нижнего края окна при любом соотношении сторон
-	box.anchor_left = 1.0
-	box.anchor_right = 1.0
-	box.anchor_top = 1.0
-	box.anchor_bottom = 1.0
-	box.offset_left = -490
-	box.offset_right = -30
-	box.offset_top = -20
-	box.offset_bottom = -20
-	box.grow_vertical = Control.GROW_DIRECTION_BEGIN   # растёт вверх от нижнего края
-	box.custom_minimum_size = Vector2(460, 0)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(box)
-	_day_label = _on_map_label(UITheme.label("", "title", 21, Palette.TEXT))
-	_day_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_day_label.custom_minimum_size.x = 460
-	box.add_child(_day_label)
-	_camp_label = _on_map_label(UITheme.label("", "sans", 16, Palette.SILVER))
-	_camp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_camp_label.custom_minimum_size.x = 460
-	box.add_child(_camp_label)
-	_plan_label = _on_map_label(UITheme.label("", "sans_bold", 16, Palette.TEXT))
-	_plan_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_plan_label.custom_minimum_size.x = 460
-	box.add_child(_plan_label)
-	HintTargets.put("day_plan", [_plan_label])
+	row.anchor_left = 1.0
+	row.anchor_right = 1.0
+	row.anchor_top = 1.0
+	row.anchor_bottom = 1.0
+	row.offset_left = -490
+	row.offset_right = -30
+	row.offset_top = -24
+	row.offset_bottom = -24
+	row.grow_vertical = Control.GROW_DIRECTION_BEGIN   # растёт вверх от нижнего края
+	row.custom_minimum_size = Vector2(460, 0)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(row)
 	_tasks_row = HBoxContainer.new()
-	_tasks_row.add_theme_constant_override("separation", 8)
-	box.add_child(_tasks_row)
+	_tasks_row.add_theme_constant_override("separation", 10)
+	_tasks_row.alignment = BoxContainer.ALIGNMENT_END
+	_tasks_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_tasks_row)
 	for task: String in DayPlanner.TASKS:
 		var def := DayPlanner.task_def(ContentDB.data, task)
 		if def.is_empty():
 			continue
-		var tb := Button.new()
+		var tb := DayIcon.new()
 		tb.name = task
-		tb.text = str(def.get("name", task))
-		tb.tooltip_text = str(def.get("text", "")) + "\nИсполнитель тратит выход (усталость, как за миссию). Каждое дело — раз в день."
-		tb.custom_minimum_size = Vector2(148, 38)
-		tb.add_theme_font_size_override("font_size", 17)
+		tb.kind = task
 		tb.pressed.connect(_pick_task_hero.bind(task))
 		_tasks_row.add_child(tb)
 	HintTargets.put("tasks", [_tasks_row])
-	_end_btn = Button.new()
-	_end_btn.text = "ЗАКОНЧИТЬ ДЕНЬ ›"
-	_end_btn.custom_minimum_size = Vector2(460, 64)
-	_end_btn.add_theme_font_override("font", UITheme.font("caps"))
-	_end_btn.add_theme_font_size_override("font_size", 24)
-	_end_btn.tooltip_text = "Ночь в лагере: отдых, лечение на койках, починка; ночью может прийти беда. Утром — новый день недели."
+	_end_btn = DayIcon.new()
+	_end_btn.kind = "wait"
+	_end_btn.big = true
 	_end_btn.pressed.connect(_on_end_day)
-	box.add_child(_end_btn)
+	row.add_child(_end_btn)
 	HintTargets.put("end_day", [_end_btn])
 
 
@@ -617,65 +605,48 @@ func _update_day() -> void:
 	var nx := DayRules.tomorrow(c, s)
 	var more := int(ph["left"]) - 1
 	var tail := ("ещё %d %s" % [more, UITheme.plural(more, ["день", "дня", "дней"])]) if more > 0 else "последний день"
-	var half := ""
-	if FigureRules.on(c, s):
-		half = " · после полудня" if FigureRules.half(s) == 1 else " · утро"
-	_day_label.text = "День %d%s · %s — %s · завтра: %s" % [s.day, half, ph["name"], tail, nx["name"]]
-	_day_label.tooltip_text = str(ph["hint"])
-	_day_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	HintTargets.put("day_label", [_day_label])
 	var fig := FigureRules.on(c, s)
-	if fig:
-		var late := FigureRules.half(s) == 1
-		_end_btn.text = "ПЕРЕЖДАТЬ ДО НОЧИ ›" if late else "ПЕРЕЖДАТЬ ПОЛДНЯ ›"
-		_end_btn.tooltip_text = "Переждать полдня: дальше ночь у фигуры, утром новый день" if late else \
-			"Переждать полдня: наступит полдень, останется ещё полдня"
-	else:
-		_end_btn.text = "ЗАКОНЧИТЬ ДЕНЬ ›"
-		_end_btn.tooltip_text = ""
+	var late := fig and FigureRules.half(s) == 1
+	# день — слева сверху: половина дня и фаза; когда сменится фаза и что она значит — в подсказке
+	var top: Label = _top_labels["squads"]
+	top.text = "День %d%s · неделя %d · %s" % [s.day, ((" · после полудня" if late else " · утро") if fig else ""), int(ph["week"]), ph["name"]]
+	top.tooltip_text = "%s — %s · завтра: %s\n%s" % [ph["name"], tail, nx["name"], ph["hint"]]
+	top.mouse_filter = Control.MOUSE_FILTER_STOP
+	HintTargets.put("day_label", [top])
+	# «Переждать»: что будет, лагерь у фигуры, что рядом — в подсказке
 	var cp := DayRules.camp(c, s)
 	var where := str(c.locations.get(s.party_at, c.shops.get(s.party_at, {})).get("name", "—"))
-	var warn := ""
-	if TideRules.threatened(s, s.party_at):
-		warn = " · ≈ СЮДА ПРИДЁТ ВОДА"
 	var line := CampWindow._camp_line(cp).strip_edges().trim_suffix(".")
-	_camp_label.text = "Лагерь: %s · ночью психика +%d · коек %d%s%s" % [where, int(cp.get("rest", 20)), int(cp.get("beds", 0)),
-		(" · " + line.to_lower()) if line != "" else "", warn]
-	_camp_label.add_theme_color_override("font_color", Palette.REQ_MISS if warn != "" else Palette.SILVER)
-	_end_btn.disabled = DayRules.can_end(s) != ""
-	# дела на сегодня (DayPlanner, docs/17 §4)
+	var lines: Array = []
+	if fig:
+		lines.append("Переждать до ночи: дальше ночь у фигуры, утром новый день" if late else "Переждать полдня: наступит полдень, останется ещё полдня")
+	else:
+		lines.append("Закончить день: ночь в лагере — отдых, койки, починка; ночью может прийти беда")
+	lines.append("Лагерь: %s · ночью психика +%d · коек %d%s" % [where, int(cp.get("rest", 20)), int(cp.get("beds", 0)),
+		(" · " + line.to_lower()) if line != "" else ""])
+	if TideRules.threatened(s, s.party_at):
+		lines.append("≈ Сюда придёт вода — не ночуйте здесь")
 	var map_day := DayRules.restricted(c, s)
-	_plan_label.visible = map_day
+	var left := DayPlanner.tasks_left(c, s) if map_day else []
+	if map_day:
+		if MissionFlow.free_heroes(c, s).is_empty() and s.squads.is_empty():
+			lines.append("Все герои выдохлись — пора в лагерь")
+		elif (DayPlanner.options(c, s)["today"] as Array).is_empty() and left.is_empty():
+			lines.append("Рядом больше нечего делать — идите дальше или переждите")
+	_end_btn.tooltip_text = "\n".join(lines)
+	_end_btn.set_state(late or not fig, false, DayRules.can_end(s) != "")
 	_tasks_row.visible = map_day
 	if not map_day:
 		return
-	var opt := DayPlanner.options(c, s)
-	var today: Array = opt["today"]
-	var left := DayPlanner.tasks_left(c, s)
-	var steps := TravelRules.steps_left(c, s)
-	var parts: Array = ["Сегодня: миссий рядом %d" % today.size(), "переходов без усталости %d из %d" % [steps, TravelRules.free_steps(c)]]
-	if fig:
-		var here_n := today.filter(func(m: String) -> bool: return FigureRules.reach(c, s, m) == 0).size()
-		var halves := "осталось полдня до ночи" if FigureRules.half(s) == 1 else "впереди две половины дня"
-		parts = ["Сегодня: событий здесь %d, по соседству %d" % [here_n, today.size() - here_n],
-			"%s: событие, шаг фигуры, дело лагеря или ожидание — по полдня" % halves]
-	if not (opt["cut"] as Array).is_empty():
-		parts.append("за водой %d" % (opt["cut"] as Array).size())
-	var wait := MissionFlow.story_wait(c, s)   # сюжет ждёт закрытых Врат / зачищенных районов
-	if wait != "":
-		parts.append(wait.to_lower())
-	var free := MissionFlow.free_heroes(c, s)
-	if free.is_empty() and s.squads.is_empty():
-		_plan_label.text = "Все герои выдохлись — пора в лагерь: «Закончить день»"
-	elif today.is_empty() and left.is_empty():
-		_plan_label.text = "Рядом больше нечего делать — идите дальше или «Закончить день»"
-	else:
-		_plan_label.text = " · ".join(parts)
 	var done: Array = s.flags.get("tasks_done", [])
 	for tb in _tasks_row.get_children():
 		var t := str(tb.name)
-		(tb as Button).disabled = not left.has(t)
-		(tb as Button).text = str(DayPlanner.task_def(c, t).get("name", t)) + (" ✓" if done.has(t) else "")
+		var def := DayPlanner.task_def(c, t)
+		var icon := tb as DayIcon
+		icon.tooltip_text = "%s%s\n%s\n%s" % [str(def.get("name", t)), " — сегодня уже сделано" if done.has(t) else "",
+			str(def.get("text", "")), "Полдня; исполнитель тратит выход (усталость, как за событие). Каждое дело — раз в день." if fig else
+			"Исполнитель тратит выход (усталость, как за миссию). Каждое дело — раз в день."]
+		icon.set_state(false, done.has(t), not left.has(t))
 
 
 func _on_end_day() -> void:
@@ -851,7 +822,7 @@ func _night_note(ev: Array) -> void:
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(hint)
 	panel.reset_size()
-	panel.position = Vector2(_screen().x - panel.get_combined_minimum_size().x - 30.0, 120.0)
+	panel.position = Vector2(30.0, 120.0)   # слева сверху: справа — задания (docs/20)
 	move_child(_toast, get_child_count() - 1)
 	var close := func() -> void:
 		if is_instance_valid(panel):
@@ -900,6 +871,10 @@ func _build_toast() -> void:
 Незавершённые побочные и случайные миссии в затопленных местах смывает. После отлива лабиринт другой: новые проходы и новые встречи."
 	_tide_banner.visible = false
 	add_child(_tide_banner)
+	_quests = QuestPanel.new()
+	_quests.position = Vector2(_screen().x - QuestPanel.W - 28.0, 112.0)
+	_quests.show_place.connect(_quest_show)
+	add_child(_quests)
 	_chatter = ChatterLayer.new()
 	_chatter.cards_of = func() -> Dictionary: return _hero_cards
 	_chatter.can_talk = _chatter_ok
@@ -978,9 +953,28 @@ func _hint_target(name: String) -> Rect2:
 
 # --- обновление ---------------------------------------------------------------
 
+## Сигналы состояния (missions_changed и state_changed приходят парой) — одно обновление в конце кадра.
+func _queue_refresh() -> void:
+	if _refresh_queued:
+		return
+	_refresh_queued = true
+	(func() -> void:
+		_refresh_queued = false
+		if is_inside_tree():
+			_refresh()).call_deferred()
+
+
+## Слепок того, от чего зависят метки и вода: день, половина, лагерь, события, отряды, прилив.
+func _state_key() -> String:
+	var s := GameState.state
+	return "%d|%d|%s|%s|%s|%s|%d" % [s.day, int(s.flags.get("figure_half", 0)), s.party_at, str(MissionFlow.open_missions(s)),
+		str(s.squads.map(func(q: Dictionary) -> String: return "%s:%s" % [q["mission"], q["phase"]])), _tide_key(), s.completed_missions]
+
+
 func _refresh() -> void:
 	var s := GameState.state
 	var c := ContentDB.data
+	_seen_key = _state_key()
 	# обучение (Ф12): подсказки по первому появлению механики
 	GameState.tutorial("map")
 	for ev: String in TutorialRules.state_events(c, s):
@@ -988,8 +982,6 @@ func _refresh() -> void:
 	_top_labels["chapter"].text = str(c.regions.get(_region(), {}).get("arc_name", "Глава"))
 	var shards := int(s.resources.get("shards", 0))
 	_top_labels["shards"].text = "✧ %d %s душ" % [shards, UITheme.plural(shards, ["осколок", "осколка", "осколков"])]
-	var ph := DayRules.phase(c, s)
-	_top_labels["squads"].text = "День %d · неделя %d · %s" % [s.day, int(ph["week"]), ph["name"]]
 	_update_day()
 	if _tray_cards() != _shown_collection:
 		_rebuild_cards()
@@ -999,6 +991,37 @@ func _refresh() -> void:
 	_update_pins()
 	_update_tide()
 	_place_figure()
+	if _quests != null:
+		_quests.set_entries(QuestRules.goal(c, s), QuestRules.list(c, s))
+		GameState.tutorial("quests")
+
+
+## Задание (docs/20): показать, куда идти — карта подъезжает к месту, участок горит золотом, от фигуры к нему
+## золотой пунктир; ромб события вспыхивает. Сюжет ждёт (места нет) — пояснение подсказкой.
+func _quest_show(e: Dictionary) -> void:
+	var c := ContentDB.data
+	var s := GameState.state
+	var lid := str(e.get("place", ""))
+	var mid := str(e.get("id", ""))
+	if lid == "":
+		_show_toast(str(e.get("line", "")))
+		return
+	AudioManager.play("hover", -8.0, 0.8)
+	if _markers.has(mid) and is_instance_valid(_markers[mid]):
+		(_markers[mid] as MissionMarker).flash()
+	if _sleeper == null:
+		return
+	var path: Array = [s.party_at] + TravelRules.route(c, s, s.party_at, lid, false)
+	if lid == s.party_at:
+		path = [lid]
+	_sleeper.show_quest(path, lid)
+	# карта подъезжает: цель — в середину видимой части (левее заданий, выше ряда героев)
+	var from := _sleeper.pan
+	_sleeper.focus(_sleeper.center(c, s, lid), Vector2((_screen().x - QuestPanel.W) * 0.5, (_screen().y - TRAY_H) * 0.5))
+	var to := _sleeper.pan
+	_sleeper.set_pan(from)
+	var tw := create_tween()
+	tw.tween_method(_sleeper.set_pan, from, to, 0.0 if Vfx.reduced() else 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## Прилив: вода под местами, строка с отсчётом (TideRules).
@@ -1257,6 +1280,8 @@ func _add_move_buttons() -> void:
 
 func _update_pins() -> void:
 	var s := GameState.state
+	var fig := FigureRules.on(ContentDB.data, s)
+	var ra := FigureRules.reach_all(ContentDB.data, s, _markers.keys()) if fig else {}
 	for mid: String in _markers:
 		var mk: MissionMarker = _markers[mid]
 		var progress := -1.0
@@ -1278,8 +1303,8 @@ func _update_pins() -> void:
 			badge = "НАТИСК · " + badge
 		# прилив: место под водой — ждать отлива; вода идёт — успеет ли отряд
 		var under := TideRules.mission_flooded(ContentDB.data, s, mid)
-		if FigureRules.on(ContentDB.data, s) and not arrived:
-			_figure_badge(mk, mid, badge, under)
+		if fig and not arrived:
+			_figure_badge(mk, int(ra[mid]), badge, under)
 			continue
 		var far := not arrived and not DayRules.mission_reachable(ContentDB.data, s, mid)
 		var mloc := str(ContentDB.data.missions.get(mid, {}).get("location", ""))
@@ -1743,10 +1768,7 @@ func _figure_move(lid: String) -> void:
 
 
 ## Метка события в режиме фигуры: здесь — как обычно; рядом — «1 ШАГ» (полдня); дальше — «N ШАГОВ», приглушена.
-func _figure_badge(mk: MissionMarker, mid: String, badge: String, under: bool) -> void:
-	var c := ContentDB.data
-	var s := GameState.state
-	var r := FigureRules.reach(c, s, mid)
+func _figure_badge(mk: MissionMarker, r: int, badge: String, under: bool) -> void:
 	var tint := Color(1, 1, 1, 1)
 	if under:
 		badge = "ПОД ВОДОЙ"
@@ -1817,7 +1839,7 @@ func _night_cinematic(ev: Array) -> void:
 
 ## Герои говорят, только когда на экране спокойно: нет окон, ночи, подсказки, перетаскивания.
 func _chatter_ok() -> bool:
-	return _window == null and _night == null and not is_instance_valid(_shop_window) and _memory == null 		and _end == null and not _combat_open and not _dragging and not _cinema and (_hint == null or not _hint.visible) 		and not is_instance_valid(_picker) and not is_instance_valid(_travel)
+	return _window == null and _night == null and not is_instance_valid(_shop_window) and _memory == null 		and _end == null and not _combat_open and not _dragging and not _cinema and (_hint == null or not _hint.is_showing()) 		and not is_instance_valid(_picker) and not is_instance_valid(_travel)
 
 
 ## Утро: костёр гаснет.

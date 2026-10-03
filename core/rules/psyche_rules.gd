@@ -160,16 +160,6 @@ static func reset(state: RunState, cid: String, origin: String = "") -> bool:
 	return true
 
 
-## Восстановление вне миссий (кроме Фанатика). Кризисов вне миссий не бывает.
-static func decay(state: RunState, dt: float, content: Content = null) -> void:
-	for cid: String in state.characters:
-		var ch: Dictionary = state.characters[cid]
-		if content != null and GrowthRules.has(content, state, cid, "panic_no_decay"):
-			continue
-		if int(ch.get("panic", 0)) > 0 and not MissionFlow.on_mission(state, cid):
-			rest(state, cid, DECAY * dt)
-
-
 ## Отдых: психика растёт на amount (дробные доли копятся — часы тикают каждый кадр по сотым долям секунды).
 static func rest(state: RunState, cid: String, amount: float) -> void:
 	var ch := state.character(cid)

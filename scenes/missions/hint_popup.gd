@@ -82,6 +82,11 @@ func _ready() -> void:
 	EventBus.tutorial_hint.connect(push)
 
 
+## Подсказка сейчас на экране: видна и не ждёт свою цель (ждущая — прозрачна и щелчков не ловит).
+func is_showing() -> bool:
+	return visible and modulate.a > 0.05 and not (_target != "" and _missing > 0.0)
+
+
 func push(h: Dictionary) -> void:
 	_queue.append(h)
 	if not visible:

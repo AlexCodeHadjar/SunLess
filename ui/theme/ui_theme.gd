@@ -118,11 +118,6 @@ static func emblem(name: String) -> Texture2D:
 	return _emblems[name]
 
 
-static func stat_icon(stat: String) -> Texture2D:
-	var e := emblem(stat)
-	return e if e else load("res://art/ui/icon_%s.png" % stat)
-
-
 ## Русское склонение по числу: plural(2, ["осколок", "осколка", "осколков"]) → «осколка».
 static func plural(n: int, forms: Array) -> String:
 	var m10 := absi(n) % 10

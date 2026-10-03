@@ -153,14 +153,3 @@ static func temp_applies(te: Dictionary, event: Dictionary, option: Dictionary) 
 			return true
 	return false
 
-
-## Требования варианта с учётом условных модификаторов (req_mods по флагам).
-static func requirements(state: RunState, option: Dictionary) -> Dictionary:
-	var req := {}
-	for s in STATS:
-		req[s] = int(option.get("req", {}).get(s, 0))
-	for m: Dictionary in option.get("req_mods", []):
-		if state.has_flag(str(m.get("flag", ""))):
-			var s: String = m["stat"]
-			req[s] = maxi(0, int(req[s]) + int(m["delta"]))
-	return req

@@ -29,10 +29,6 @@ func discover(ids: Array) -> Array:
 	return fresh
 
 
-func known_count() -> int:
-	return discovered.size()
-
-
 func _save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f:

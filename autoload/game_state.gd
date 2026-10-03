@@ -15,10 +15,6 @@ func content() -> Content:
 	return ContentDB.data
 
 
-func has_run() -> bool:
-	return state != null
-
-
 func continue_run() -> String:
 	var r: Dictionary = SaveService.load_state(content())
 	if not r["ok"]:
@@ -91,11 +87,6 @@ func new_mission_run(seed_value: int = -1) -> void:
 	state = MissionFlow.new_run(content(), seed_value)
 	SaveService.save_state(state)
 	EventBus.state_changed.emit()
-
-
-## Часов больше нет (docs/16 §12): время идёт днями — «Закончить день». Оставлено для совместимости.
-func mission_tick(_dt: float) -> void:
-	pass
 
 
 ## «Закончить день»: ночь в лагере и новое утро. Возвращает записи ночи (для окна «Ночь»).

@@ -26,7 +26,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "chatter.json")
 
 # every — пауза между репликами (с); first — до первой; poke_chance — реплика к событию экрана; recent — не повторять
-SETTINGS = {"every": [60, 100], "first": [25, 40], "poke_chance": 0.5, "recent": 40}
+SETTINGS = {"every": [60, 100], "first": [8, 14], "poke_chance": 0.5, "recent": 40}
 
 # (герой | "*", вид, теги через пробел, текст)
 LINES = [

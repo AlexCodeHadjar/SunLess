@@ -6,13 +6,6 @@ extends RefCounted
 ## Хранятся в state.missions[id].mods; бой (CombatSession.create_for_mission) и прогноз видят их одинаково.
 
 
-static func defs(content: Content) -> Dictionary:
-	var out := {}
-	for d: Dictionary in content.modifiers.get("list", []):
-		out[str(d.get("id", ""))] = d
-	return out
-
-
 static func def(content: Content, mod_id: String) -> Dictionary:
 	for d: Dictionary in content.modifiers.get("list", []):
 		if str(d.get("id", "")) == mod_id:

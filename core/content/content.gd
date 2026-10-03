@@ -28,12 +28,14 @@ var tutorial: Dictionary = {}      # подсказки обучения: data/t
 var story: Dictionary = {}         # сюжетные окна по главам: data/story.json (StoryRules)
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
 var chatter: Dictionary = {}       # мысли и реплики героев над картами: data/chatter.json (ChatterRules)
+var quests: Dictionary = {}        # задания справа: data/quests.json (QuestRules) — {goals: {глава: цель}}
 var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
 var deck: Dictionary = {}          # колода событий глав: data/deck.json (DeckRules) — {глава: [{name, pick, min_chains, units}]}
 var days: Dictionary = {}          # дни, неделя, лагерь-стоянка: data/days.json (DayRules)
 var maps: Dictionary = {}          # карты-планы регионов: data/maps/<регион>.json (MapRules, SleeperMap) — регион -> настройки
 var modifiers: Dictionary = {}     # модификаторы миссий: data/modifiers.json (ModifierRules) — {chapters, types, two_chance, list}
 var load_errors: Array[String] = []
+var memo: Dictionary = {}          # кэш производного из данных (контент после загрузки не меняется): MapRules.config…
 
 
 static func load_from(dir: String = "res://data") -> Content:
@@ -111,6 +113,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.psyche_lines = pl
 		else:
 			c.load_errors.append("data/psyche.json: ожидается словарь реплик")
+	if FileAccess.file_exists(dir + "/quests.json"):
+		var qs: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/quests.json"))
+		if qs is Dictionary:
+			c.quests = qs
+		else:
+			c.load_errors.append("data/quests.json: ожидается словарь {goals}")
 	if FileAccess.file_exists(dir + "/chatter.json"):
 		var ct: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/chatter.json"))
 		if ct is Dictionary:
