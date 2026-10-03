@@ -733,22 +733,28 @@ func _draw_over() -> void:
 		var cw := cf.get_string_size(ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 		_over.draw_string_outline(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 5, Color(0, 0, 0, 0.9))
 		_over.draw_string(cf, cc + Vector2(-cw / 2.0, -22.0), ct, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.8, 0.5))
-	# подписи открытых мест (в сцене лагеря — без подписей: камера близко)
+	# подписи открытых мест — светятся серебром (просьба владельца 03.10): мягкий ореол, тёмная кромка, светлый текст
 	var f := UITheme.font("title")
 	var feet: Dictionary = _info.get("feet", {})
 	var names: Dictionary = _info.get("names", {})
+	var breath := 0.85 + 0.15 * sin(_t * 1.4)
 	for lid: String in feet:
 		var fp: Vector2 = feet[lid]
 		var text: String = names[lid]
-		var fs := 17
+		var fs := 21
 		var tw := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var p := fp + Vector2(-tw / 2.0, 22.0)
-		var col := Color(0.6, 0.8, 1.0) if _info["flooded"].has(lid) else Palette.SILVER
-		_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color(0, 0, 0, 0.85))
+		var p := fp + Vector2(-tw / 2.0, 24.0)
+		var wet: bool = _info["flooded"].has(lid)
+		var glow := Color(0.55, 0.78, 1.0) if wet else Color(0.82, 0.86, 0.95)
+		var col := Color(0.72, 0.88, 1.0) if wet else Color(0.93, 0.95, 1.0)
+		for k in 5:   # ореол: от широкого и бледного к узкому и яркому
+			_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 26 - k * 5,
+				Color(glow.r, glow.g, glow.b, (0.07 + 0.07 * k) * breath))
+		_over.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(0.02, 0.02, 0.04, 0.9))
 		_over.draw_string(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
 
-## Фигура: кольца участков при перетаскивании; ночью — фигура у костра на своём участке (наезд камеры).
+## Фигура: причина «нельзя» над участком при перетаскивании.
 func _draw_figure_marks(centers: Dictionary, sizes: Dictionary) -> void:
 	for lid: String in drag_blocked:
 		if not centers.has(lid):
