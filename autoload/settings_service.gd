@@ -10,7 +10,8 @@ var values := {
 	"reduce_motion": false,
 	"chance_monochrome": false,
 	"tutorial": true,
-	"event_icons": true,      # события на карте-плане — ромбами (эксперимент), иначе — картами
+	"event_icons": true,
+	"chatter": true,      # события на карте-плане — ромбами (эксперимент), иначе — картами
 	"canon_notes": true,
 	"vol_master": 0.9,
 	"vol_music": 0.55,

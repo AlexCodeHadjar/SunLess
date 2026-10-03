@@ -27,6 +27,7 @@ var onslaught: Dictionary = {}     # натиск Кошмара по глава
 var tutorial: Dictionary = {}      # подсказки обучения: data/tutorial.json (TutorialRules)
 var story: Dictionary = {}         # сюжетные окна по главам: data/story.json (StoryRules)
 var psyche_lines: Dictionary = {}  # реплики героев в кризисе психики: data/psyche.json (PsycheRules)
+var chatter: Dictionary = {}       # мысли и реплики героев над картами: data/chatter.json (ChatterRules)
 var loot: Dictionary = {}          # Воспоминания-добыча: data/loot.json (LootRules)
 var deck: Dictionary = {}          # колода событий глав: data/deck.json (DeckRules) — {глава: [{name, pick, min_chains, units}]}
 var days: Dictionary = {}          # дни, неделя, лагерь-стоянка: data/days.json (DayRules)
@@ -110,6 +111,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.psyche_lines = pl
 		else:
 			c.load_errors.append("data/psyche.json: ожидается словарь реплик")
+	if FileAccess.file_exists(dir + "/chatter.json"):
+		var ct: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/chatter.json"))
+		if ct is Dictionary:
+			c.chatter = ct
+		else:
+			c.load_errors.append("data/chatter.json: ожидается словарь {settings, lines, dialogs}")
 	return c
 
 

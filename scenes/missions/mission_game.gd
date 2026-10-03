@@ -58,6 +58,8 @@ var _night_after_event := false # событие проведено — посл
 var _note: Control              # карточка итогов ночи после перехода фигуры
 var _fire: TextureRect          # лагерь у фигуры ночью (camp_<облик> или костёр)
 var _last_task := ""            # дело лагеря этого дня (Дозор — лагерь с факелом)
+var _chatter: ChatterLayer      # мысли и реплики героев над их картами (ChatterRules)
+var _hint: HintPopup
 
 
 func _ready() -> void:
@@ -762,6 +764,7 @@ func _show_night(ev: Array) -> void:
 		if _cinema:
 			_end_cinema()
 		_refresh()
+		_chatter.poke("after_night")
 		# обучение: смена фазы недели, местные встречи
 		if ev.any(func(e: Dictionary) -> bool: return str(e.get("kind", "")) == "phase"):
 			GameState.tutorial("phase")
@@ -795,6 +798,7 @@ func _after_half(ev: Array, scene: bool) -> void:
 	_refresh()
 	if not FigureRules.is_night(ev):
 		_night_note(ev)
+		_chatter.poke("midday")
 		return
 	AudioManager.play("bell", -6.0, 0.5)
 	if scene:
@@ -896,7 +900,12 @@ func _build_toast() -> void:
 Незавершённые побочные и случайные миссии в затопленных местах смывает. После отлива лабиринт другой: новые проходы и новые встречи."
 	_tide_banner.visible = false
 	add_child(_tide_banner)
-	add_child(HintPopup.new())
+	_chatter = ChatterLayer.new()
+	_chatter.cards_of = func() -> Dictionary: return _hero_cards
+	_chatter.can_talk = _chatter_ok
+	add_child(_chatter)
+	_hint = HintPopup.new()
+	add_child(_hint)
 	HintTargets.resolver = _hint_target
 
 
@@ -1728,6 +1737,7 @@ func _figure_move(lid: String) -> void:
 		return
 	AudioManager.play("place", -4.0, 0.8)
 	_refresh()
+	_chatter.poke("move")
 	await get_tree().create_timer(0.7 if not Vfx.reduced() else 0.0).timeout
 	_after_half(r["events"], false)
 
@@ -1763,6 +1773,10 @@ func _after_event_window() -> void:
 	for mid: String in outs:
 		if str(outs[mid]) == "success" and _markers.has(mid) and is_instance_valid(_markers[mid]):
 			await _shatter(_markers[mid])
+	if outs.values().has("success"):
+		_chatter.poke("after_win")
+	elif outs.values().has("failure") or outs.values().has("retreat"):
+		_chatter.poke("after_loss")
 	_refresh()
 	if FigureRules.on(ContentDB.data, GameState.state) and GameState.state.flags.has("event_done"):
 		_night_after_event = true
@@ -1799,6 +1813,11 @@ func _night_cinematic(ev: Array) -> void:
 	_last_task = ""
 	GameState.tutorial("figure_camp")
 	_show_night(ev)
+
+
+## Герои говорят, только когда на экране спокойно: нет окон, ночи, подсказки, перетаскивания.
+func _chatter_ok() -> bool:
+	return _window == null and _night == null and not is_instance_valid(_shop_window) and _memory == null 		and _end == null and not _combat_open and not _dragging and not _cinema and (_hint == null or not _hint.visible) 		and not is_instance_valid(_picker) and not is_instance_valid(_travel)
 
 
 ## Утро: костёр гаснет.

@@ -8,6 +8,7 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var chatter_shots := false   # --mshots-from=chatter: мысли и реплики героев над картами, полдень, шаг к событию
 var icons_shots := false   # --mshots-from=icons: события ромбами — поле, наведение (круг загрузки), карта события, фигура рядом
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
@@ -28,6 +29,8 @@ func _ready() -> void:
 			labels_shots = true
 		if a == "--mshots-from=icons":
 			icons_shots = true
+		if a == "--mshots-from=chatter":
+			chatter_shots = true
 		if a == "--nohints":
 			# чистые кадры: подсказки выключены только на этот запуск (настройки игрока не сохраняются)
 			SettingsService.values["tutorial"] = false
@@ -101,6 +104,10 @@ func _run() -> void:
 		return
 	if icons_shots:
 		await _icons()
+		get_tree().quit()
+		return
+	if chatter_shots:
+		await _chatter()
 		get_tree().quit()
 		return
 	await _wait(0.6)
@@ -745,8 +752,8 @@ func _figure() -> void:
 	if not targets.is_empty():
 		game.call("_on_figure_drop", sl.center(c, GameState.state, str(targets[0])) + sl.pan)
 	await _wait(1.6)
-	await _shot("f03_move_note")   # после перехода — карточка итогов ночи, лагерь не открывается
-	game.call("_on_end_day")        # «Переждать день» — сцена лагеря
+	await _shot("f03_move_note")   # шаг — полдня: карточка полудня, лагерь не открывается
+	game.call("_on_end_day")        # «Переждать до ночи» — сцена лагеря
 	await _wait(2.6)
 	await _shot("f03_camp_scene")
 	# утро: камера отъехала
@@ -767,14 +774,65 @@ func _figure() -> void:
 	await _wait(0.35)
 	await _shot("f05_shatter")
 	await _wait(1.2)
-	# прыжок к событию на соседнем участке: фигура перескакивает, брифинг открывается в тот же день
+	# событие на соседнем участке: окно шага фигуры (полдня), событие — во вторую половину
 	var cs := GameState.state
 	for mid: String in MissionFlow.open_missions(cs):
 		if FigureRules.reach(c, cs, mid) == 1:
 			game.call("_open_mission", mid)
 			break
-	await _wait(1.6)
-	await _shot("f06_jump_brief")
+	await _wait(1.0)
+	await _shot("f06_step_to_event")
+
+
+# --- мысли и реплики героев, половины дня (03.10) ---------------------------------------------------------------------
+
+func _chatter() -> void:
+	var c := ContentDB.data
+	var s := MissionFlow.new_run(c, 77, "shore")
+	EffectApplier.add_card(c, s, "P02")
+	EffectApplier.add_card(c, s, "P03")
+	var card := ""
+	for k: String in c.enhancements:
+		if not Dictionary(c.enhancements[k].get("memory", {})).is_empty():
+			card = k
+			break
+	EffectApplier.add_card(c, s, card)
+	s.character("P01")["pocket"] = [card]
+	_reveal_all(c, s, "shore")
+	s.party_at = "coral_maze"
+	await _open_map(s, "shore", true)
+	var game := get_tree().current_scene
+	var ch: ChatterLayer = game.get("_chatter")
+	# сама: что скажут здесь и сейчас (место, сюжет, кармашек)
+	ch.set("_next", 0.0)
+	await _wait(1.4)
+	await _shot("c01_line")
+	await _wait(9.0)
+	# диалог о Воспоминании в кармашке, мысль о месте, высказывание
+	ch.call("_bubble", "P02", "say", "Что за Воспоминание ты бережёшь?")
+	await _wait(1.0)
+	var use := ChatterRules.use_phrase(c, card)
+	ch.call("_bubble", "P01", "say", "«%s». %s." % [c.card_name(card), use.left(1).to_upper() + use.substr(1)])
+	ch.call("_bubble", "P03", "thought", "Багровый лабиринт звучит иначе, чем вчерашнее место. Тише… или осторожнее.")
+	await _wait(0.8)
+	await _shot("c02_dialog")
+	await _wait(8.0)
+	ch.call("_bubble", "P03", "wisdom", "Будущее похоже на реку: его можно услышать, но не остановить.")
+	await _wait(0.8)
+	await _shot("c03_wisdom")
+	await _wait(6.0)
+	# полдень: «Переждать полдня»
+	game.call("_on_end_day")
+	await _wait(1.2)
+	await _shot("c04_midday")
+	# событие на соседнем участке: окно шага фигуры
+	var cs := GameState.state
+	for mid: String in MissionFlow.open_missions(cs):
+		if FigureRules.reach(c, cs, mid) == 1:
+			game.call("_open_mission", mid)
+			break
+	await _wait(1.0)
+	await _shot("c05_step_to_event")
 
 
 # --- события ромбами (эксперимент 03.10) ------------------------------------------------------------------------------
