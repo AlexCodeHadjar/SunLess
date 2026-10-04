@@ -3,11 +3,11 @@ extends Control
 ## Бродячий босс на карте-плане (WanderRules, docs/22): фишка-диорама на месте, где он стоит.
 ## Кадры — 4 ракурса (просьба владельца 03.10): art/map/wanderers/<босс>_1…_4 (.webp/.png) — босс смотрит
 ## 1 — вниз-влево, 2 — вниз-вправо, 3 — вверх-вправо, 4 — вверх-влево (камера та же, тварь повёрнута на своей
-## подставке). Смена ракурса — через прозрачность (FADE). Идёт на новое место — поворачивается по направлению пути и
-## плавно идёт, покачиваясь; стоит — изредка оглядывается (соседний ракурс). Картинок нет — тёмный силуэт с глазами.
+## подставке). Ракурс меняется только при переходе на другое место (уточнение владельца 04.10): фишка поворачивается
+## по направлению пути (новый кадр проступает через прозрачность, FADE) и плавно идёт, покачиваясь; стоя — не
+## поворачивается. Картинок нет — тёмный силуэт с глазами.
 
 const FADE := 0.8
-const LOOK := Vector2(5.0, 9.0)   # стоит: оглядывается раз в столько секунд
 const EYES := {"W1": Color(1.0, 0.35, 0.25), "W2": Color(1.0, 0.6, 0.2), "W3": Color(0.7, 0.85, 1.0), "W4": Color(0.6, 1.0, 0.95)}
 
 var wid := ""
@@ -16,9 +16,7 @@ var _a: TextureRect         # текущий ракурс
 var _b: TextureRect         # следующий — проступает поверх
 var _face := 0              # индекс текущего ракурса
 var _t := 0.0
-var _look_in := 6.0
 var _walk := 0.0            # 0..1 — идёт к новому месту (покачивание)
-var _rng := RandomNumberGenerator.new()
 
 
 static func make(boss: String, side: float) -> WanderToken:
@@ -43,8 +41,6 @@ static func _art(key: String) -> Texture2D:
 
 
 func _ready() -> void:
-	_rng.randomize()
-	_look_in = _rng.randf_range(LOOK.x, LOOK.y)
 	if frames.is_empty():
 		return
 	for k in 2:
@@ -97,31 +93,26 @@ func walk_to(p: Vector2) -> void:
 	tw.tween_callback(func() -> void:
 		_walk = 0.0
 		rotation = 0.0
-		remove_meta("walking")
-		_look_in = _rng.randf_range(LOOK.x, LOOK.y))
+		remove_meta("walking"))
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	if _walk > 0.0:
 		rotation = sin(_t * 9.0) * 0.06
-	elif frames.size() > 1 and not Vfx.reduced():
-		_look_in -= delta
-		if _look_in <= 0.0:   # стоит: оглядывается на соседний ракурс, чаще — лицом к зрителю
-			_look_in = _rng.randf_range(LOOK.x, LOOK.y)
-			var front := [0, 1].filter(func(k: int) -> bool: return k < frames.size() and k != _face)
-			var next: int = front[0] if not front.is_empty() and _rng.randf() < 0.75 else (_face + 1) % frames.size()
-			turn_to(next)
 	queue_redraw()   # ореол дышит; без картинок — силуэт
 
 
 func _draw() -> void:
 	if not frames.is_empty():
-		# под фишкой — мягкий фиолетовый ореол (цвет бродячих боссов): видно на любой карте
+		# под фишкой — тень у ног (подставки у картинок нет — tools/clean_wanderer_tokens.py) и мягкий фиолетовый
+		# ореол (цвет бродячих боссов): видно на любой карте
 		var g := 0.75 + 0.25 * sin(_t * 1.7)
-		draw_set_transform(size / 2.0 + Vector2(0, size.y * 0.16), 0.0, Vector2(1.0, 0.45))
+		draw_set_transform(size / 2.0 + Vector2(0, size.y * 0.2), 0.0, Vector2(1.0, 0.42))
 		for k in 4:
-			draw_circle(Vector2.ZERO, size.x * (0.46 - k * 0.07), Color(0.62, 0.42, 1.0, 0.07 * g))
+			draw_circle(Vector2.ZERO, size.x * (0.4 - k * 0.07), Color(0.0, 0.0, 0.02, 0.12))
+		for k2 in 3:
+			draw_circle(Vector2.ZERO, size.x * (0.48 - k2 * 0.06), Color(0.62, 0.42, 1.0, 0.05 * g))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var c := size / 2.0

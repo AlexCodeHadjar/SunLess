@@ -28,31 +28,34 @@ ANGLES = [
 	("вверх-влево", "faces the UPPER-LEFT of the frame: three-quarter BACK view, we see its back/shell and the back of the head, it walks away to the left"),
 ]
 
-TOKEN_COMMON = """Use case: map token for SunLess, a dark-fantasy card game. The token stands on a painted isometric map of small
-diorama-like places, seen from above at about 35–40 degrees (see the attached map pieces and tokens — match their
-style, materials, camera and light).
-SUBJECT: one giant creature (described below) standing on a small irregular patch of its own ground — the patch is part
-of the token, like a tabletop miniature base.
+TOKEN_COMMON = """Use case: map token for SunLess, a dark-fantasy card game. The token is placed ON TOP of a painted isometric map
+of small diorama-like places, seen from above at about 35–40 degrees (see the attached map pieces and tokens — match
+their style, camera and light). The map itself is the ground under the creature.
+SUBJECT: ONLY the creature itself (described below). NO ground, NO base, NO platform, NO patch of sand / ash / stones /
+cobbles / asphalt / rubble / water under it, no scenery pieces around it — the creature stands on nothing, on a fully
+transparent background, cut out cleanly along its own silhouette. Allowed under its feet: at most a very soft, faint,
+small contact shadow (or none) — the game draws the shadow and the ground.
 CAMERA: fixed isometric three-quarter top-down view, 35–40° above the horizon. The CAMERA NEVER CHANGES between the four
-angles — only the creature (together with its ground patch) is rotated on the spot.
+angles — only the creature is rotated on the spot.
 LIGHT: key light always from the UPPER-LEFT of the image (screen space, does not rotate with the creature), cool ambient
-fill, contact shadows inside the ground patch; one accent glow (stated below), subtle, readable at 120 px.
-SCALE AND FRAMING: identical in all four angles — the token is centred, fills about 75% of the frame, the ground patch
-sits in the lower half, same size every time.
+fill; one accent glow (stated below), subtle, readable at 120 px.
+SCALE AND FRAMING: identical in all four angles — the creature is centred, fills about 75% of the frame, its lowest point
+(feet / coils / legs) at about 85% of the frame height, same size every time.
 STYLE: painterly realistic dark fantasy like the attached map pieces, detailed but readable silhouette at 120–160 px, rich
 materials, muted palette with one accent colour, no outlines, no cartoon.
-OUTPUT: 1024×1024 PNG, TRANSPARENT background (no sky, horizon, frame or vignette); if transparency is impossible — flat
-solid #FF00FF background. No text, letters, logos, UI, no other creatures."""
+OUTPUT: 1024×1024 PNG, TRANSPARENT background (no sky, horizon, floor, frame or vignette); if transparency is impossible —
+flat solid #FF00FF background with NO ground and NO shadow. No text, letters, logos, UI, no other creatures."""
 
-TOKEN_NEXT = """Use the previous image as the exact reference for the creature and its ground patch: the same creature (same
-proportions, colours, materials, damage, accessories), the same ground patch, the same size in the frame, the same
-camera height and the same light from the upper-left of the image. Rotate ONLY the creature with its ground patch on the
-spot so that it now {angle}. Nothing else changes."""
+TOKEN_NEXT = """Use the previous image as the exact reference for the creature: the same creature (same proportions, colours,
+materials, damage, accessories), the same size in the frame, the same camera height and the same light from the
+upper-left of the image, still with NO ground, NO base and NO platform under it — transparent background. Rotate ONLY
+the creature on the spot so that it now {angle}. Nothing else changes."""
 
 SHEET_TIP = """Alternative (better consistency): generate all four angles at once as a 2×2 turnaround sheet, 2048×2048, each cell
 1024×1024 on transparent background, order: top-left — lower-left facing, top-right — lower-right facing, bottom-right —
-upper-right facing (back view), bottom-left — upper-left facing (back view). Same creature, same ground patch, same scale,
-same camera, light always from the upper-left. No grid lines, no labels."""
+upper-right facing (back view), bottom-left — upper-left facing (back view). Same creature, same scale, same camera,
+light always from the upper-left. ONLY the creature in every cell — NO ground, NO base, NO platform under it.
+No grid lines, no labels."""
 
 CARD_COMMON = """Use case: stylized-concept. Edit the attached EMPTY SunLess card as a locked template (and follow the attached
 template settings text). Exactly ONE separate {kind} card, vertical 7:12, frontal, all four edges visible, filling the
@@ -73,7 +76,7 @@ BOSSES = [
 			"свечение в глубине раковины.",
 		"subject": "CREATURE: a colossal ancient crimson hermit crab: a towering spiral shell made of broken red coral, bleached bones and "
 			"clusters of barnacles; heavy spiked claws crusted with barnacles; wet glossy dark-crimson chitin; small stalked eyes. "
-			"GROUND: a patch of dark wet sand with black pebbles, small tide pools and red coral sprigs. ACCENT GLOW: a dim "
+			"ACCENT GLOW: a dim "
 			"ember-red glow deep inside the shell opening.",
 		"enemy_card": "a colossal ancient hermit crab rising from a tide pool at night on the Forgotten Shore: a spiral shell of broken red "
 			"coral and bleached bones crusted with barnacles, barnacle-covered claws raised, a dim ember-red glow inside the shell, black "
@@ -94,7 +97,7 @@ BOSSES = [
 			"костяная, рогатая; тело уходит в пепел кольцами. Акцент — оранжевое тление в швах чешуи и в глазах.",
 		"subject": "CREATURE: a colossal serpent emerging from ash: the head and two coils of its body rise above a patch of grey ash, the "
 			"rest disappears under it; armour of charcoal-black scales with smouldering orange edges, a heavy bony horned head, ash "
-			"pouring off it. GROUND: a patch of grey ash dune with half-buried bones and small smoking cracks. ACCENT GLOW: "
+			"pouring off it. ACCENT GLOW: "
 			"smouldering orange light in the seams between scales and in the eyes.",
 		"enemy_card": "the Ash Serpent bursting from a grey ash dune under a dark sky: charcoal scales with smouldering orange edges, ash "
 			"pouring off its horned bony skull, embers in the air; one creature only, no people.",
@@ -114,7 +117,7 @@ BOSSES = [
 			"холодный бледно-голубой свет фонаря.",
 		"subject": "CREATURE: a very tall gaunt hunter (about three times human height) in a long tattered black cloak, the face hidden by a "
 			"hood and a cracked bone mask; long thin arms; a cage-lantern on the belt with writhing shadow shapes trapped inside; a "
-			"coiled net over one shoulder. GROUND: a patch of broken cobblestones with a fallen roof tile and a rusted gate fragment. "
+			"coiled net over one shoulder. "
 			"ACCENT GLOW: cold pale-blue light from the cage-lantern.",
 		"enemy_card": "the Shadow Catcher on a ruined rooftop of the Dark City at night: gaunt and very tall, tattered cloak, cracked bone "
 			"mask, raising a cage-lantern full of trapped writhing shadows, pale-blue light on wet stone; one figure only.",
@@ -135,7 +138,7 @@ BOSSES = [
 			"отблеск в стекле.",
 		"subject": "CREATURE: a monstrous insect-like queen as long as a bus: a segmented many-legged body armoured with shards of broken "
 			"glass, shop-window panes and cracked car headlights; a crown of sharp glass spikes on its head; a few tiny glass "
-			"crawlers by its legs. GROUND: a patch of cracked asphalt with a broken kerb, scattered glass and a bent street-lamp base. "
+			"crawlers by its legs. "
 			"ACCENT GLOW: cold teal reflections inside the glass armour.",
 		"enemy_card": "the Glass Queen in an abandoned city street at night: armoured in shattered shop windows and car headlights, glass "
 			"crown flared, a glittering swarm of tiny glass crawlers around her, broken streetlights; one creature with its swarm, no people.",
@@ -299,7 +302,8 @@ RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 def build():
 	d = Doc()
 	d.para(d.run("SunLess — бродячие боссы: промты для ChatGPT"), "Title")
-	d.text("Четыре исполинские твари бродят по картам глав, встают в стороне от пути отряда и ждут там как особое событие "
+	d.text("ВАЖНО: фишка — только тело твари, без земли и подставки (землю даёт карта; у первого комплекта подставки срезаны скриптом tools/clean_wanderer_tokens.py). "
+		"Четыре исполинские твари бродят по картам глав, встают в стороне от пути отряда и ждут там как особое событие "
 		"с особой наградой (docs/22). Для каждой: фишка на карте в 4 ракурсах, карта противника, карта награды-Воспоминания. "
 		"Образцы для ChatGPT — прямо здесь картинками, ссылки ведут к файлам проекта (щелчок по ссылке открывает файл).")
 
