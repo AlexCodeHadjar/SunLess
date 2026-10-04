@@ -141,6 +141,23 @@ func test_squad_support_becomes_ally() -> void:
 	check(cs.allies.has("P08"), "Ауро в бою как союзник")
 
 
+## Решение владельца 04.10: поддержка участвует всеми тегами в полную силу — теги героя, оружие и кармашек.
+func test_support_brings_all_tags() -> void:
+	var c := content()
+	var s := _state(c)
+	EffectApplier.add_card(c, s, "P02")
+	EffectApplier.add_card(c, s, "U16")
+	s.character("P02")["pocket"] = ["U16"]
+	var alone := _session(c, s, KING)
+	var cs := _session(c, s, KING, [], ["P02"])
+	var ht: Array = cs._hero_tags({})
+	for t: String in MissionFlow.hero_tags(c, cs.state, "P02"):
+		check(ht.has(t), "тег поддержки «%s» в бою" % t)
+	for t2: String in c.enhancements["U16"].get("tags", []):
+		check(ht.has(t2), "тег Воспоминания из кармашка поддержки «%s» в бою" % t2)
+	check(float(cs.ledger({})["hero"]) > float(alone.ledger({})["hero"]), "с поддержкой отряд сильнее")
+
+
 func test_enemy_intent_chosen_and_negated() -> void:
 	var c := content()
 	var cs := _session(c, _state(c), LARVAE)

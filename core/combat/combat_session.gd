@@ -342,8 +342,8 @@ func _hero_tags(tactic: Dictionary) -> Array:
 	for card: String in enh:
 		for t: String in content.enhancements.get(card, {}).get("tags", []):
 			_add_unique(out, t)
-	for a: String in allies:
-		for t: String in content.characters.get(a, {}).get("support_tags", []):
+	for a: String in allies:   # поддержка — все теги в полную силу (решение владельца 04.10)
+		for t: String in ally_tags(a):
 			_add_unique(out, t)
 	for t: String in hero_extra_tags:
 		_add_unique(out, t)
@@ -351,6 +351,16 @@ func _hero_tags(tactic: Dictionary) -> Array:
 		_add_unique(out, t)
 	if bool(tactic.get("take_field_tag", false)) and not Array(field.get("tags", [])).is_empty():
 		_add_unique(out, str(field["tags"][0]))
+	return out
+
+
+## Теги героя поддержки (решение владельца 04.10: все — в полную силу, как у ведущего): оружие, теги стадии с развитием
+## тегов и теги Воспоминаний в его кармашке (MissionFlow.hero_tags). Раньше шли только два «тега поддержки».
+func ally_tags(a: String) -> Array:
+	var out: Array = []
+	_add_unique(out, str(Strikes.hero_weapon(content, state, a).get("id", "Без оружия")))
+	for t: String in MissionFlow.hero_tags(content, state, a):
+		_add_unique(out, t)
 	return out
 
 

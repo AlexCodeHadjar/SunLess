@@ -648,9 +648,8 @@ func _info_text() -> String:
 			if s and s.is_alive(card_id) and EdgeRules.on_edge(s, card_id):
 				out.append(_h("На грани смерти") + "[color=#B65F63]☠ Следующее поражение — смерть с шансом [b]%d%%[/b].[/color] В бою −%d%%. Грань снимут лагерь или удачная миссия." % [
 					EdgeRules.death_chance(c, s, card_id), int(EdgeRules.COMBAT_PENALTY * 100)])
-			var sup: Array = d.get("support_tags", [])
-			if not sup.is_empty():
-				out.append(_h("В бою в поддержке") + "Встаёт рядом с исполнителем и добавляет теги: " + ", ".join(sup))
+			out.append(_h("В бою в поддержке") + "Встаёт рядом с ведущим: все его теги, оружие и Воспоминания из кармашка "
+				+ "участвуют в бою в полную силу и складываются в связи с тегами ведущего.")
 		"enhancement":
 			out.append(_h("Эффект") + str(d.get("text", "")))
 			out.append(_memory_text(d))

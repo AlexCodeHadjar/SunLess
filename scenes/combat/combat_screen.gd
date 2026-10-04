@@ -488,10 +488,12 @@ func _layout(cs: CombatSession) -> void:
 		right += _side_card(e, ContentDB.data.enhancements.get(e, {}).get("tags", []), right, enh_compact) + 20.0
 	var left := hero_x - 24.0
 	var ally_compact := cs.allies.size() > 2
+	if not cs.allies.is_empty():
+		GameState.tutorial("combat_squad")
 	for ai in cs.allies.size():
 		var a: String = cs.allies[ai]
 		left -= _side_block_width(ally_compact)
-		var atags: Array = [str(Strikes.hero_weapon(ContentDB.data, cs.state, a).get("id", "Без оружия"))] + Array(ContentDB.data.characters.get(a, {}).get("support_tags", []))
+		var atags: Array = cs.ally_tags(a)   # поддержка — все теги в бою (оружие, теги героя, кармашек)
 		_side_card(a, atags, left, ally_compact, "hero:%d" % (ai + 1))
 		left -= 20.0
 	_fill_field(cs.field)
