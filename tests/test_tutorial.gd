@@ -71,6 +71,6 @@ func test_hint_events_exist() -> void:
 		"day", "phase", "travel", "camp_place", "tasks", "planner", "emerge", "fatigue", "far",
 		"breach_signal", "breach", "swarm", "repair", "gate_omen", "gate_open", "wave", "panic", "scar",
 		"mover", "hunters", "zone_charm", "zone_wrath", "territory", "ash_storm", "fragile", "water", "tribute", "rubble",
-		"figure", "figure_drag", "figure_camp", "figure_far", "figure_half", "figure_wait", "shatter", "traces", "event_place", "quests", "wanderer", "combat_squad"]
+		"figure", "figure_drag", "figure_camp", "figure_far", "figure_half", "figure_wait", "shatter", "traces", "event_place", "quests", "wanderer", "combat_squad", "tray"]
 	for hid: String in c.tutorial:
 		check(known.has(str(c.tutorial[hid]["event"])), "событие подсказки %s известно" % hid)

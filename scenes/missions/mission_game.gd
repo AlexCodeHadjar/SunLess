@@ -59,6 +59,9 @@ var _chatter: ChatterLayer      # мысли и реплики героев на
 var _seen_key := ""             # слепок состояния для меток и воды: изменился — пересчитать (не каждый кадр)
 var _refresh_queued := false    # сигналы состояния за кадр — одно обновление экрана
 var _quests: QuestPanel         # задания справа (QuestRules, docs/20)
+var _tray_parts: Array = []     # ряд героев и его затемнение — уезжают вниз кнопкой (просьба владельца 04.10)
+var _tray_btn: Button
+var _tray_open := true
 var _hint: HintPopup
 
 
@@ -366,6 +369,7 @@ func _build_bottom() -> void:
 	shade.anchor_right = 1.0
 	shade.offset_top = -(TRAY_H + 60)
 	add_child(shade)
+	_tray_parts.append(shade)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -373,6 +377,7 @@ func _build_bottom() -> void:
 	panel.anchor_bottom = 1.0
 	panel.anchor_right = 1.0
 	panel.offset_top = -TRAY_H
+	_tray_parts.append(panel)
 	panel.offset_right = -350   # ряд карт кончается у иконок дня (справа, ~320 px); больше карт — прокрутка
 	add_child(panel)
 	var v := VBoxContainer.new()
@@ -380,6 +385,7 @@ func _build_bottom() -> void:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(v)
 	_build_day_panel()
+	_build_tray_toggle()
 	var scroll := ScrollContainer.new()
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -394,6 +400,55 @@ func _build_bottom() -> void:
 	_heroes_row.add_theme_constant_override("separation", 14)
 	_heroes_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(_heroes_row)
+
+
+## Кнопка «спрятать карты»: ряд героев и усилений уезжает вниз, открывая карту (просьба владельца 04.10). Состояние
+## запоминается (настройка tray_open). Перетащить героя на событие можно, когда ряд открыт.
+func _build_tray_toggle() -> void:
+	_tray_btn = Button.new()
+	_tray_btn.flat = true
+	_tray_btn.focus_mode = Control.FOCUS_NONE
+	_tray_btn.add_theme_font_override("font", UITheme.font("caps"))
+	_tray_btn.add_theme_font_size_override("font_size", 15)
+	_tray_btn.add_theme_color_override("font_color", Palette.SILVER)
+	_tray_btn.add_theme_color_override("font_hover_color", Palette.TEXT)
+	_tray_btn.add_theme_constant_override("outline_size", 6)
+	_tray_btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_tray_btn.anchor_top = 1.0
+	_tray_btn.anchor_bottom = 1.0
+	_tray_btn.offset_left = 44
+	_tray_btn.offset_right = 230
+	_tray_btn.pressed.connect(func() -> void: _set_tray(not _tray_open, true))
+	add_child(_tray_btn)
+	HintTargets.put("tray_toggle", [_tray_btn])
+	_set_tray(bool(SettingsService.values.get("tray_open", true)), false)
+
+
+func _set_tray(on: bool, animate: bool) -> void:
+	_tray_open = on
+	SettingsService.values["tray_open"] = on
+	if animate:
+		SettingsService.save_settings()
+		AudioManager.play("fan", -12.0)
+	var shift := 0.0 if on else TRAY_H + 12.0
+	for part: Control in _tray_parts:
+		var base: float = part.get_meta("base_top", part.offset_top)
+		part.set_meta("base_top", base)
+		var to_top := base + shift
+		var to_bottom := shift
+		if animate and not Vfx.reduced():
+			var tw := part.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw.tween_property(part, "offset_top", to_top, 0.3)
+			tw.tween_property(part, "offset_bottom", to_bottom, 0.3)
+		else:
+			part.offset_top = to_top
+			part.offset_bottom = to_bottom
+	_tray_btn.text = "▾ СПРЯТАТЬ КАРТЫ" if on else "▴ ПОКАЗАТЬ КАРТЫ"
+	_tray_btn.tooltip_text = "Карты героев и усилений уезжают вниз — карту видно целиком" if on else "Вернуть ряд героев и усилений"
+	_tray_btn.offset_top = -TRAY_H - 30.0 if on else -40.0
+	_tray_btn.offset_bottom = _tray_btn.offset_top + 30.0
+	if on:
+		GameState.tutorial("tray")
 
 
 ## Дела дня (docs/16 §12, docs/18) — иконками, без надписей (просьба владельца 03.10): Разведка, Сбор, Дозор и

@@ -48,6 +48,7 @@ var _over: Control
 var _labels: Control         # подписи мест — свой слой: перерисовка только при смене карты (sync), не каждый кадр
 var _wander_layer: Control   # бродячие боссы (docs/22): фишки на местах, где стоят
 var _wanderers := {}         # босс -> {token, at}
+var _soft := {}              # путь текстуры -> она же с растворёнными краями (_feathered)
 var _threat: Control
 var _weather: Control
 var _sprites := {}        # место -> TextureRect
@@ -1044,6 +1045,36 @@ func _draw_quest_path(centers: Dictionary) -> void:
 	_over.draw_arc(tc, 40.0 + 10.0 * pulse, 0.0, TAU, 48, Color(GOLDEN, 0.8 * fade), 3.0, true)
 
 
+## Текстура с растворёнными краями (просьба владельца 04.10: туман «обрезан» — у полос бури резкие прямоугольные края):
+## прозрачность к краям плавно уходит в ноль. Считается один раз (уменьшенная копия, до 512 px), дальше — из кэша.
+func _feathered(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return null
+	var key := tex.resource_path
+	if _soft.has(key):
+		return _soft[key]
+	var img := tex.get_image()
+	if img == null:
+		return tex
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var w := mini(img.get_width(), 512)
+	img.resize(w, maxi(1, int(img.get_height() * w / float(img.get_width()))), Image.INTERPOLATE_BILINEAR)
+	var iw := img.get_width()
+	var ih := img.get_height()
+	for y in ih:
+		var fy := smoothstep(0.0, 0.42, minf(y, ih - 1 - y) / float(ih))
+		for x in iw:
+			var fx := smoothstep(0.0, 0.3, minf(x, iw - 1 - x) / float(iw))
+			var col := img.get_pixel(x, y)
+			col.a *= fx * fy
+			img.set_pixel(x, y, col)
+	var out := ImageTexture.create_from_image(img)
+	_soft[key] = out
+	return out
+
+
 ## Подписи открытых мест: стиль — label_style (варианты для выбора владельцем, docs/коллажи карт/5 …).
 func _draw_labels() -> void:
 	var feet: Dictionary = _info.get("feet", {})
@@ -1228,7 +1259,7 @@ func _draw_weather() -> void:
 	if glow != null:   # отсвет Шпиля с северо-запада
 		var gs := view.size.x * 0.5
 		_weather.draw_texture_rect(glow, Rect2(Vector2.ZERO, Vector2(gs, gs)), false, Color(1, 1, 1, 0.65 + 0.15 * sin(_t * 0.8)))
-	var band := _load(str(air.get("storm_band", "")))
+	var band := _feathered(_load(str(air.get("storm_band", ""))))
 	if band != null:   # пепельная буря: полосы пепла несёт по карте
 		for k in 3:
 			var bw := view.size.x * 0.5

@@ -8,6 +8,7 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var fog_shots := false      # --mshots-from=fog: туман и «воздух» (буря, дымка) — проверка резких краёв
 var boss_shots := false     # --mshots-from=bosses: бродячие боссы на картах глав (docs/22)
 var live_chatter := false   # --mshots-from=live: мысли героев вживую (с подсказками, обычные сроки)
 var mods_shots := false     # --mshots-from=mods: значки модификаторов над ромбами
@@ -47,6 +48,8 @@ func _ready() -> void:
 			live_chatter = true
 		if a == "--mshots-from=bosses":
 			boss_shots = true
+		if a == "--mshots-from=fog":
+			fog_shots = true
 		if a == "--mshots-from=resize":
 			resize_shots = true
 		if a == "--nohints":
@@ -146,6 +149,10 @@ func _run() -> void:
 		return
 	if boss_shots:
 		await _bosses()
+		get_tree().quit()
+		return
+	if fog_shots:
+		await _fog_check()
 		get_tree().quit()
 		return
 	if resize_shots:
@@ -826,6 +833,27 @@ func _figure() -> void:
 
 
 # --- бродячие боссы на карте (docs/22) --------------------------------------------------------------------------------
+
+func _fog_check() -> void:
+	var c := ContentDB.data
+	var first := true
+	for spec: Array in [["tree", 5], ["tree", 2], ["shore", 13]]:
+		var s := MissionFlow.new_run(c, 93, str(spec[0]))
+		for i in int(spec[1]) - 1:
+			DayRules.end_day(c, s)
+		await _open_map(s, str(spec[0]), first)
+		first = false
+		await _wait(2.0)
+		await _shot("fog_%s_d%d" % [spec[0], spec[1]])
+	# кнопка «Спрятать карты»
+	var game := get_tree().current_scene
+	game.call("_set_tray", false, true)
+	await _wait(0.8)
+	await _shot("tray_hidden")
+	game.call("_set_tray", true, true)
+	await _wait(0.8)
+	await _shot("tray_shown")
+
 
 func _bosses() -> void:
 	var c := ContentDB.data
