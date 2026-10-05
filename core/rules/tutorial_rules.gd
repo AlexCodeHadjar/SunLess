@@ -136,6 +136,10 @@ static func _figure_events(content: Content, state: RunState) -> Array:
 		out.append("figure_half")
 	if not WanderRules.active(content, state).is_empty():
 		out.append("wanderer")
+	if int(state.resources.get("shards", 0)) >= int(CoreRules.COST[0][0]) and not MissionFlow.heroes(content, state).is_empty():
+		out.append("core")   # осколков хватает на уровень ядра (docs/23)
+	if MissionFlow.open_missions(state).any(func(x: String) -> bool: return CoreRules.is_trial(content, x)):
+		out.append("core_trial")
 	if str(state.flags.get("start", "")) != "":
 		out.append("start_pick")   # начали с Берега (StartRules)
 	if (opt["today"] as Array).size() < DayPlanner.min_options(content) and not DayPlanner.tasks_left(content, state).is_empty():

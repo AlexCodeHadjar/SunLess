@@ -55,7 +55,7 @@ static func targets(content: Content, state: RunState) -> Array:
 ## участке, дальше — путь, -1 — пути нет.
 static func reach(content: Content, state: RunState, mid: String) -> int:
 	var m: Dictionary = content.missions.get(mid, {})
-	if str(m.get("type", "")) == "onslaught":
+	if str(m.get("type", "")) == "onslaught" or m.has("trial"):   # Натиск и испытание души приходят к фигуре
 		return 0
 	var lid := str(m.get("location", ""))
 	if lid == state.party_at:
@@ -73,7 +73,7 @@ static func reach_all(content: Content, state: RunState, mids: Array) -> Diction
 	for mid: String in mids:
 		var m: Dictionary = content.missions.get(mid, {})
 		var lid := str(m.get("location", ""))
-		if str(m.get("type", "")) == "onslaught" or lid == state.party_at:
+		if str(m.get("type", "")) == "onslaught" or m.has("trial") or lid == state.party_at:
 			out[mid] = 0
 		elif tg.has(lid):
 			out[mid] = 1

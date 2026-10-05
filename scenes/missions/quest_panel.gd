@@ -100,7 +100,7 @@ func _row(e: Dictionary, fresh: bool) -> Control:
 	col_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(col_box)
 	var group := str(e.get("group", ""))
-	if kind == "story":
+	if kind == "story" and group == "":
 		group = "Сюжет"
 	elif kind == "threat":
 		group = "Угроза"

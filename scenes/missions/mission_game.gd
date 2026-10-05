@@ -1001,6 +1001,8 @@ func _hint_target(name: String) -> Rect2:
 					ok = GateRules.mission_ids(c, s).has(mid)
 				"marker_wander":
 					ok = m.has("wander")
+				"marker_trial":
+					ok = m.has("trial")
 			var mk: Variant = _markers[mid]
 			if ok and is_instance_valid(mk) and (mk as MissionMarker).is_visible_in_tree():
 				return (mk as MissionMarker).body_global_rect()
@@ -1281,7 +1283,7 @@ func _rebuild_markers() -> void:
 	_markers.clear()
 	var by_loc := {}
 	for mid: String in _shown_missions:
-		var lid := str(c.missions[mid].get("location", ""))
+		var lid := MissionFlow.place_of(c, GameState.state, mid)
 		if not by_loc.has(lid):
 			by_loc[lid] = []
 		by_loc[lid].append(mid)
@@ -1419,7 +1421,7 @@ func _on_events(events: Array) -> void:
 			"breach", "breach_signal", "swarm", "damage", "gate_omen", "gate_open", "wave", "gate_close", "mover":
 				AudioManager.play("bell", -3.0, 0.6)
 				_show_toast(str(e["text"]))
-			"zone", "terrain":
+			"zone", "terrain", "core", "core_trial":
 				_show_toast(str(e["text"]))
 			"onslaught":
 				AudioManager.play("bell", -2.0, 0.7)

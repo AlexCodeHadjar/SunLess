@@ -233,6 +233,8 @@ func _build_info() -> void:
 	var is_hero := kind == "character" and GameState.state != null and GameState.state.characters.has(card_id)
 	if is_hero:
 		y = _build_stats(y)
+		if GameState.state.is_alive(card_id):
+			y = _build_core(y)
 	y = _build_tags(y)
 	var pocket_h := 300.0 if is_hero and GameState.state.is_alive(card_id) else 0.0
 	_add_text(_info_text(), y + 6.0, _content.size.y - y - 6.0 - pocket_h)
@@ -305,6 +307,64 @@ func _build_stats(y: float) -> float:
 				ends.append("%+d" % int(top[side][0]["value"]))
 		_life_box(row, "trust", "  ".join(ends) if not ends.is_empty() else "—", "Доверие", Palette.SILVER, SquadLifeUI.trust_hint(card_id))
 	return y + 92.0
+
+
+## Ядро души (CoreRules, docs/23): ранг, 5 делений насыщения, «Впитать N осколков», выбор +1 к характеристике
+## за уровень; полное ядро — напоминание об испытании.
+func _build_core(y: float) -> float:
+	var s := GameState.state
+	var c := ContentDB.data
+	var row := HBoxContainer.new()
+	row.position = Vector2(0, y)
+	row.add_theme_constant_override("separation", 14)
+	_content.add_child(row)
+	row.add_child(UITheme.label("ЯДРО ДУШИ", "caps", 17, Palette.GOLD))
+	row.add_child(UITheme.label(CoreRules.rank_name(c, s, card_id), "title", 22, Palette.TEXT))
+	var bar := Control.new()
+	bar.custom_minimum_size = Vector2(5 * 30 + 4, 26)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var lvl := CoreRules.level(s, card_id)
+	bar.draw.connect(func() -> void:
+		for i in CoreRules.LEVELS:
+			var r := Rect2(Vector2(i * 30, 3), Vector2(24, 20))
+			var on := i < lvl
+			bar.draw_rect(r, Palette.GOLD if on else Color(0.12, 0.13, 0.17), true)
+			bar.draw_rect(r, Palette.GOLD.darkened(0.2), false, 1.5))
+	row.add_child(bar)
+	var pend := CoreRules.pending(s, card_id)
+	if pend > 0:
+		row.add_child(UITheme.label("+1 к:", "sans_bold", 17, Palette.STAT_UP))
+		for st: String in CoreRules.STATS:
+			var b := Button.new()
+			b.text = "+1 %s" % Palette.STAT_NAMES.get(st, st)
+			b.add_theme_font_size_override("font_size", 16)
+			b.pressed.connect(func() -> void:
+				var err := GameState.core_pick(card_id, st)
+				if err != "":
+					_show_hint(err)
+				AudioManager.play("place", -6.0))
+			row.add_child(b)
+	elif CoreRules.full(s, card_id):
+		var t := "ядро полно — испытание души ждёт на карте" if int(CoreRules.core(s, card_id).get("rank", 0)) < CoreRules.MAX_RANK else "высший ранг"
+		row.add_child(UITheme.label(t, "serif_italic", 18, Palette.SILVER))
+	else:
+		var cost := CoreRules.next_cost(s, card_id)
+		var b2 := Button.new()
+		b2.text = "Впитать %d ✧" % cost
+		b2.add_theme_font_size_override("font_size", 17)
+		b2.tooltip_text = "Осколки душ уходят в ядро %s: уровень %d → %d, и +1 к характеристике на выбор. У вас ✧ %d." % [
+			c.card_name(card_id), lvl, lvl + 1, int(s.resources.get("shards", 0))]
+		b2.disabled = int(s.resources.get("shards", 0)) < cost
+		b2.pressed.connect(func() -> void:
+			var err := GameState.core_absorb(card_id)
+			if err != "":
+				_show_hint(err)
+			else:
+				AudioManager.play("open", -4.0, 0.8))
+		row.add_child(b2)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.tooltip_text = "Ядро души: осколки, впитанные героем. Пять уровней — по +1 к характеристике; полное ядро — испытание души и новый ранг (враги этого ранга станут равны)."
+	return y + 40.0
 
 
 ## Значок «живого отряда» (паника / доверие) в строке характеристик; наведение — подробности.

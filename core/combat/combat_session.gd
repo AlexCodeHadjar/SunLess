@@ -322,7 +322,7 @@ func _lose_fight(rec: Dictionary) -> void:
 func hero_rank() -> int:
 	var c: Dictionary = content.characters.get(hero, {})
 	var stage: String = state.character(hero).get("stage", "")
-	return int(c.get("stages", {}).get(stage, {}).get("rank", c.get("rank", 0)))
+	return maxi(int(c.get("stages", {}).get(stage, {}).get("rank", c.get("rank", 0))), CoreRules.rank(content, state, hero))   # ядро души (docs/23)
 
 
 func _enemy_base(e: Dictionary) -> float:

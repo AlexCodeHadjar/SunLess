@@ -136,6 +136,9 @@ static func apply(content: Content, state: RunState, e: Dictionary, executor: St
 			return [{"kind": "info", "text": "%s: износ сброшен до %d%%" % [content.card_name(worst), WearRules.START]}]
 		"text":
 			return [{"kind": "story", "text": str(e["text"])}]
+		"core_rank":
+			# испытание души пройдено (CoreRules, docs/23): новый ранг героя
+			return CoreRules.ascend(content, state, str(e.get("character", executor)))
 		"tide":
 			# прилив Забытого Берега (TideRules): предупреждение → вода → отлив с новыми проходами
 			return TideRules.schedule(content, state, int(e.get("warn", TideRules.WARN)), int(e.get("flood", TideRules.FLOOD)), str(e.get("text", "")))

@@ -49,6 +49,10 @@ static func list(content: Content, state: RunState) -> Array:
 		if typ == "story":
 			e["kind"] = "story"
 			story.append(e)
+		elif m.has("trial"):
+			e["kind"] = "story"
+			e["group"] = "Испытание души"
+			story.append(e)
 		elif m.has("wander"):
 			e["kind"] = "boss"
 			e["group"] = "Бродячий босс"
@@ -83,7 +87,7 @@ static func list(content: Content, state: RunState) -> Array:
 ## Одно задание: где событие и что сделать, чтобы его провести.
 static func entry(content: Content, state: RunState, mid: String, ra: Dictionary = {}, on_site: bool = false) -> Dictionary:
 	var m: Dictionary = content.missions.get(mid, {})
-	var lid := str(m.get("location", ""))
+	var lid := MissionFlow.place_of(content, state, mid)
 	var place := str(content.locations.get(lid, content.shops.get(lid, {})).get("name", lid))
 	var fig := FigureRules.on(content, state)
 	var steps := 0

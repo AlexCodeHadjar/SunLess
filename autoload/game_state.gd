@@ -89,6 +89,28 @@ func new_mission_run(seed_value: int = -1) -> void:
 	EventBus.state_changed.emit()
 
 
+## Ядро души (CoreRules, docs/23): впитать осколки — следующий уровень. "" — сделано, иначе причина.
+func core_absorb(cid: String) -> String:
+	var r := CoreRules.absorb(content(), state, cid)
+	if not r["ok"]:
+		return str(r["error"])
+	SaveService.save_state(state)
+	missions_changed.emit()
+	EventBus.state_changed.emit()
+	mission_events.emit(r["entries"])
+	return ""
+
+
+## Ядро души: +1 к характеристике за уровень.
+func core_pick(cid: String, stat: String) -> String:
+	var r := CoreRules.pick(content(), state, cid, stat)
+	if not r["ok"]:
+		return str(r["error"])
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+	return ""
+
+
 ## Новая игра с выбранным стартом «разбитое стекло» (StartRules): с Забытого Берега.
 func new_start_run(start_id: String, seed_value: int = -1) -> void:
 	if seed_value < 0:

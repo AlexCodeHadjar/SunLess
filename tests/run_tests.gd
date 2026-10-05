@@ -40,6 +40,7 @@ const SUITES := [
 	"res://tests/test_quests.gd",
 	"res://tests/test_wanderers.gd",
 	"res://tests/test_starts.gd",
+	"res://tests/test_core.gd",
 ]
 
 

@@ -859,9 +859,27 @@ func _start_check() -> void:
 	await _wait(0.6)
 	await _shot("s3_cassie")
 	GameState.new_start_run("sunny")
+	StoryRules.mark_seen(GameState.state, "shore")
 	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
 	await _wait(3.0)
 	await _shot("s4_sunny_shore")
+	# ядро души: впитать, выбор характеристики, полное ядро
+	GameState.state.resources["shards"] = 80
+	var insp := CardInspector.open_for(get_tree().current_scene, "P01")
+	await _wait(0.6)
+	await _shot("c1_core")
+	GameState.core_absorb("P01")
+	await _wait(0.6)
+	await _shot("c2_core_pick")
+	GameState.core_pick("P01", "will")
+	for i in 4:
+		GameState.core_absorb("P01")
+		GameState.core_pick("P01", "power")
+	await _wait(0.6)
+	await _shot("c3_core_full")
+	insp.queue_free()
+	await _wait(1.0)
+	await _shot("c4_trial_map")
 
 
 func _fog_check() -> void:
