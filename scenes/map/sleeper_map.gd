@@ -393,8 +393,9 @@ func _sync_wanderers(content: Content, state: RunState, revealed: Array) -> void
 				tw.tween_callback(old.queue_free)
 	for wid2: String in now:
 		var lid: String = now[wid2]
-		var side := _sprite_size(content, state, lid) * 0.85
-		var p := center(content, state, lid) - view.position + Vector2(-side * 0.98, -side * 0.62)   # на левом краю места, левее ромба
+		var psz := _sprite_size(content, state, lid)
+		var side := psz * 0.46   # тварь, а не место (просьба владельца 05.10): примерно половина участка
+		var p := center(content, state, lid) - view.position + Vector2(-psz * 0.36 - side * 0.5, -side * 0.78)   # левее ромба события
 		if not _wanderers.has(wid2):
 			var tk := WanderToken.make(wid2, side)
 			tk.position = p

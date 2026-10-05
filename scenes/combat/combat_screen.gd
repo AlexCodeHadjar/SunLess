@@ -520,19 +520,20 @@ func _side_card(id: String, tags: Array, x: float, compact: bool, key: String = 
 
 
 ## Теги карты: столбцом справа (beside) или рядом под ней, не ниже max_y.
-## Не влезают — шрифт мельче, в крайнем случае только иконки.
+## Не влезают — столбец продолжается ниже карты, затем шрифт мельче; теги всегда словами (просьба владельца 05.10:
+## у героя поддержки с кармашком тегов много — раньше они сворачивались в иконки).
 func _place_tags(card: Control, tags: Array, side: String, beside: bool, width: float, fs0: int, max_y: float) -> void:
 	var pos: Vector2
 	var max_h: float
 	if beside:
 		pos = card.position + Vector2(card.size.x + 16.0, 2.0)
-		max_h = card.size.y - 2.0
+		max_h = maxf(card.size.y - 2.0, max_y - pos.y)
 	else:
 		pos = Vector2(card.position.x + card.size.x / 2.0 - width / 2.0, card.position.y + card.size.y + 4.0)
 		max_h = max_y - pos.y
 	var fs := fs0
 	var icon_only := false
-	for opt: Array in [[fs0, false], [fs0 - 1, false], [fs0 - 2, false], [fs0 - 3, false], [18, true]]:
+	for opt: Array in [[fs0, false], [fs0 - 1, false], [fs0 - 2, false], [fs0 - 3, false], [fs0 - 4, false], [maxi(11, fs0 - 5), false]]:
 		fs = opt[0]
 		icon_only = opt[1]
 		if _rows_needed(tags, width, fs, icon_only) * (fs + 9) <= max_h + 3:

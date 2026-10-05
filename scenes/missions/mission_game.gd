@@ -405,19 +405,19 @@ func _build_bottom() -> void:
 ## Кнопка «спрятать карты»: ряд героев и усилений уезжает вниз, открывая карту (просьба владельца 04.10). Состояние
 ## запоминается (настройка tray_open). Перетащить героя на событие можно, когда ряд открыт.
 func _build_tray_toggle() -> void:
-	_tray_btn = Button.new()
+	_tray_btn = Button.new()   # иконка (просьба владельца 05.10): стопка карт и стрелка вниз/вверх
 	_tray_btn.flat = true
 	_tray_btn.focus_mode = Control.FOCUS_NONE
-	_tray_btn.add_theme_font_override("font", UITheme.font("caps"))
-	_tray_btn.add_theme_font_size_override("font_size", 15)
-	_tray_btn.add_theme_color_override("font_color", Palette.SILVER)
-	_tray_btn.add_theme_color_override("font_hover_color", Palette.TEXT)
-	_tray_btn.add_theme_constant_override("outline_size", 6)
-	_tray_btn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_tray_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for st: String in ["normal", "hover", "pressed", "focus"]:
+		_tray_btn.add_theme_stylebox_override(st, StyleBoxEmpty.new())
 	_tray_btn.anchor_top = 1.0
 	_tray_btn.anchor_bottom = 1.0
 	_tray_btn.offset_left = 44
-	_tray_btn.offset_right = 230
+	_tray_btn.offset_right = 44 + 48
+	_tray_btn.draw.connect(_draw_tray_icon)
+	_tray_btn.mouse_entered.connect(_tray_btn.queue_redraw)
+	_tray_btn.mouse_exited.connect(_tray_btn.queue_redraw)
 	_tray_btn.pressed.connect(func() -> void: _set_tray(not _tray_open, true))
 	add_child(_tray_btn)
 	HintTargets.put("tray_toggle", [_tray_btn])
@@ -443,12 +443,34 @@ func _set_tray(on: bool, animate: bool) -> void:
 		else:
 			part.offset_top = to_top
 			part.offset_bottom = to_bottom
-	_tray_btn.text = "▾ СПРЯТАТЬ КАРТЫ" if on else "▴ ПОКАЗАТЬ КАРТЫ"
-	_tray_btn.tooltip_text = "Карты героев и усилений уезжают вниз — карту видно целиком" if on else "Вернуть ряд героев и усилений"
-	_tray_btn.offset_top = -TRAY_H - 30.0 if on else -40.0
-	_tray_btn.offset_bottom = _tray_btn.offset_top + 30.0
+	_tray_btn.text = ""
+	_tray_btn.tooltip_text = "Спрятать карты: ряд героев и усилений уедет вниз — карту видно целиком" if on else "Показать карты героев и усилений"
+	_tray_btn.offset_top = -TRAY_H - 46.0 if on else -54.0
+	_tray_btn.offset_bottom = _tray_btn.offset_top + 44.0
+	_tray_btn.queue_redraw()
 	if on:
 		GameState.tutorial("tray")
+
+
+## Иконка кнопки ряда: круг, две карты веером и стрелка (вниз — спрятать, вверх — показать).
+func _draw_tray_icon() -> void:
+	var b := _tray_btn
+	var c := b.size / 2.0
+	var hot := b.is_hovered()
+	var col := Color(0.97, 0.98, 1.0)
+	var r := 19.0
+	b.draw_circle(c, r + 4.0, Color(col.r, col.g, col.b, 0.18 if hot else 0.07))
+	b.draw_circle(c, r, Color(0.02, 0.022, 0.035, 0.94))
+	b.draw_arc(c, r, 0.0, TAU, 48, col if hot else col.darkened(0.2), 2.4, true)
+	for k in 2:   # две карты веером
+		var o := Vector2(-4.0 + k * 6.0, -2.0 - k * 2.0)
+		var rect := Rect2(c + o + Vector2(-6, -8), Vector2(11, 15))
+		b.draw_rect(rect, Color(0.08, 0.09, 0.12, 1.0))
+		b.draw_rect(rect, col, false, 1.6)
+	var down := _tray_open
+	var y := c.y + (9.0 if down else -13.0)
+	var tip := 3.5 if down else -3.5
+	b.draw_polyline(PackedVector2Array([Vector2(c.x - 5, y - tip * 0.5), Vector2(c.x, y + tip), Vector2(c.x + 5, y - tip * 0.5)]), Palette.GOLD, 2.2, true)
 
 
 ## Дела дня (docs/16 §12, docs/18) — иконками, без надписей (просьба владельца 03.10): Разведка, Сбор, Дозор и
