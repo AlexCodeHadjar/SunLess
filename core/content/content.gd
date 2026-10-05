@@ -10,6 +10,7 @@ var tags: Dictionary = {}
 # бой
 var combat_tags: Dictionary = {}
 var weapons: Dictionary = {}          # удары в бою: оружие, природное оружие врагов, броня, опасности (Strikes)
+var skirmish: Dictionary = {}         # пошаговый бой «Схватка» (docs/24): навыки, свойства тегов, враги, свет — tools/gen_skirmish.py
 var synergies: Dictionary = {}
 var conflicts: Dictionary = {}
 var fields: Dictionary = {}
@@ -60,6 +61,12 @@ static func load_from(dir: String = "res://data") -> Content:
 			c.weapons = wp
 		else:
 			c.load_errors.append("data/combat/weapons.json: ожидается объект")
+	if FileAccess.file_exists(dir + "/combat/skirmish.json"):
+		var skd: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + "/combat/skirmish.json"))
+		if skd is Dictionary:
+			c.skirmish = skd
+		else:
+			c.load_errors.append("data/combat/skirmish.json: ожидается объект")
 	c.lore = c._load_map(dir + "/lore.json")
 	if FileAccess.file_exists(dir + "/locations.json"):
 		c.locations = c._load_map(dir + "/locations.json")

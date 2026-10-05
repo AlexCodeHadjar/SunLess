@@ -1,0 +1,1039 @@
+{
+ "_doc": "Пошаговый бой «Схватка» (docs/24). Генерирует tools/gen_skirmish.py — не править руками.",
+ "skills": {
+  "W_SWORD": {
+   "id": "W_SWORD",
+   "name": "Рубящий удар",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "vs": {
+    "Мягкое тело": 1.2,
+    "Человек": 1.2
+   },
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "W_DAGGER": {
+   "id": "W_DAGGER",
+   "name": "Укол",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 95,
+   "mult": 1.0,
+   "crit": 8,
+   "vs": {
+    "Мягкое тело": 1.3
+   },
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "W_SPEAR": {
+   "id": "W_SPEAR",
+   "name": "Выпад копьём",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "vs": {
+    "Гигант": 1.25,
+    "Летучий": 1.25
+   },
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "W_HEAVY": {
+   "id": "W_HEAVY",
+   "name": "Сокрушить",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 75,
+   "mult": 1.0,
+   "ignore_prot": 0.5,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 30
+    }
+   ],
+   "vs": {
+    "Камень": 1.25,
+    "Конструкт": 1.25,
+    "Кость": 1.15
+   },
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "W_BOW": {
+   "id": "W_BOW",
+   "name": "Выстрел",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "ranged": true,
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "W_FIST": {
+   "id": "W_FIST",
+   "name": "Удар",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1
+   ],
+   "acc": 90,
+   "mult": 1.0,
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "N_CLAWS": {
+   "id": "N_CLAWS",
+   "name": "Рвущий удар",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 1,
+     "turns": 3,
+     "chance": 60
+    }
+   ],
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "N_FANGS": {
+   "id": "N_FANGS",
+   "name": "Укус",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "crit": 5,
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "N_STING": {
+   "id": "N_STING",
+   "name": "Ужалить",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "effects": [
+    {
+     "type": "poison",
+     "power": 2,
+     "turns": 3,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Колющий",
+    "Яд"
+   ]
+  },
+  "N_ACID": {
+   "id": "N_ACID",
+   "name": "Плевок кислотой",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 80,
+   "mult": 1.0,
+   "ranged": true,
+   "effects": [
+    {
+     "type": "debuff",
+     "stat": "prot",
+     "value": -0.1,
+     "turns": 3,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Кислота"
+   ]
+  },
+  "N_TENTACLE": {
+   "id": "N_TENTACLE",
+   "name": "Захват",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "effects": [
+    {
+     "type": "pull",
+     "n": 1,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Удушение"
+   ]
+  },
+  "N_SLAM": {
+   "id": "N_SLAM",
+   "name": "Сокрушить",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "aoe": true,
+   "acc": 75,
+   "mult": 1.0,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 60
+    },
+    {
+     "type": "push",
+     "n": 1,
+     "chance": 60
+    }
+   ],
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "N_THROW": {
+   "id": "N_THROW",
+   "name": "Метнуть",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "ranged": true,
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "N_BLADE": {
+   "id": "N_BLADE",
+   "name": "Выпад",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "N_SWARM": {
+   "id": "N_SWARM",
+   "name": "Налететь роем",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 80,
+   "mult": 1.0,
+   "tags": [
+    "Рой"
+   ]
+  },
+  "N_RUSH": {
+   "id": "N_RUSH",
+   "name": "Натиск",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "T_GAZE": {
+   "id": "T_GAZE",
+   "name": "Взгляд бездны",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 90,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": -12,
+     "chance": 100
+    }
+   ],
+   "tags": [
+    "Ментальное давление"
+   ]
+  },
+  "T_SHADOW_STRIKE": {
+   "id": "T_SHADOW_STRIKE",
+   "name": "Удар из мрака",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 1.3,
+   "effects": [
+    {
+     "type": "stealth",
+     "turns": 1,
+     "chance": 100,
+     "self": true
+    }
+   ],
+   "tags": [
+    "Тень"
+   ]
+  },
+  "T_COMMAND": {
+   "id": "T_COMMAND",
+   "name": "Приказ",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dmg",
+     "value": 0.15,
+     "turns": 2,
+     "chance": 100
+    }
+   ],
+   "cooldown": 2
+  },
+  "T_HUNT_MARK": {
+   "id": "T_HUNT_MARK",
+   "name": "Взять след",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 95,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "mark",
+     "turns": 3,
+     "chance": 100
+    }
+   ]
+  },
+  "T_DUEL": {
+   "id": "T_DUEL",
+   "name": "Стойка дуэлянта",
+   "side": "self",
+   "from": [
+    1,
+    2
+   ],
+   "to": [],
+   "effects": [
+    {
+     "type": "riposte",
+     "turns": 2,
+     "chance": 100
+    }
+   ],
+   "cooldown": 2
+  },
+  "T_VOLLEY": {
+   "id": "T_VOLLEY",
+   "name": "Град метательных",
+   "side": "enemy",
+   "from": [
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "aoe": true,
+   "acc": 75,
+   "mult": 0.6,
+   "ranged": true
+  },
+  "T_NET": {
+   "id": "T_NET",
+   "name": "Сеть",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 80,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "debuff",
+     "stat": "speed",
+     "value": -3,
+     "turns": 2,
+     "chance": 90
+    },
+    {
+     "type": "pull",
+     "n": 1,
+     "chance": 50
+    }
+   ]
+  },
+  "T_STONE_GAZE": {
+   "id": "T_STONE_GAZE",
+   "name": "Окаменяющий взгляд",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 80,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 50
+    }
+   ]
+  },
+  "T_DIVE": {
+   "id": "T_DIVE",
+   "name": "Пикирование",
+   "side": "enemy",
+   "from": [
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 80,
+   "mult": 1.2,
+   "self_move": 3
+  },
+  "T_GUARD_SELF": {
+   "id": "T_GUARD_SELF",
+   "name": "Сомкнуться",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "prot",
+     "value": 0.25,
+     "turns": 2,
+     "chance": 100
+    }
+   ],
+   "cooldown": 2
+  },
+  "STEP": {
+   "id": "STEP",
+   "name": "Шаг",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "kind": "step"
+  },
+  "PASS": {
+   "id": "PASS",
+   "name": "Пропуск",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "kind": "pass"
+  }
+ },
+ "weapons": {
+  "Меч": {
+   "dmg": [
+    4,
+    8
+   ],
+   "skill": "W_SWORD"
+  },
+  "Кинжал": {
+   "dmg": [
+    3,
+    6
+   ],
+   "skill": "W_DAGGER"
+  },
+  "Копьё": {
+   "dmg": [
+    4,
+    7
+   ],
+   "skill": "W_SPEAR"
+  },
+  "Тяжёлое оружие": {
+   "dmg": [
+    6,
+    11
+   ],
+   "skill": "W_HEAVY"
+  },
+  "Лук": {
+   "dmg": [
+    3,
+    7
+   ],
+   "skill": "W_BOW"
+  },
+  "Без оружия": {
+   "dmg": [
+    1,
+    3
+   ],
+   "skill": "W_FIST"
+  }
+ },
+ "natural": {
+  "Когти": {
+   "dmg": [
+    3,
+    6
+   ],
+   "skill": "N_CLAWS"
+  },
+  "Клыки": {
+   "dmg": [
+    3,
+    7
+   ],
+   "skill": "N_FANGS"
+  },
+  "Жало": {
+   "dmg": [
+    2,
+    4
+   ],
+   "skill": "N_STING"
+  },
+  "Кислота": {
+   "dmg": [
+    2,
+    5
+   ],
+   "skill": "N_ACID"
+  },
+  "Щупальца": {
+   "dmg": [
+    2,
+    4
+   ],
+   "skill": "N_TENTACLE"
+  },
+  "Тяжёлый удар": {
+   "dmg": [
+    5,
+    9
+   ],
+   "skill": "N_SLAM"
+  },
+  "Дальний удар": {
+   "dmg": [
+    3,
+    6
+   ],
+   "skill": "N_THROW"
+  },
+  "Клинок": {
+   "dmg": [
+    4,
+    7
+   ],
+   "skill": "N_BLADE"
+  },
+  "Рой": {
+   "dmg": [
+    1,
+    3
+   ],
+   "skill": "N_SWARM"
+  },
+  "Натиск": {
+   "dmg": [
+    3,
+    5
+   ],
+   "skill": "N_RUSH"
+  }
+ },
+ "tag_skills": [
+  {
+   "tags": [
+    "Кошмарное существо",
+    "Ментальное давление",
+    "Многоглазый"
+   ],
+   "skill": "T_GAZE"
+  },
+  {
+   "tags": [
+    "Скрытность",
+    "Тень",
+    "Тьма"
+   ],
+   "skill": "T_SHADOW_STRIKE"
+  },
+  {
+   "tags": [
+    "Командование",
+    "Предводитель"
+   ],
+   "skill": "T_COMMAND"
+  },
+  {
+   "tags": [
+    "Выслеживание",
+    "Охота"
+   ],
+   "skill": "T_HUNT_MARK"
+  },
+  {
+   "tags": [
+    "Дуэль"
+   ],
+   "skill": "T_DUEL"
+  },
+  {
+   "tags": [
+    "Метание"
+   ],
+   "skill": "T_VOLLEY"
+  },
+  {
+   "tags": [
+    "Ловушка",
+    "Сети"
+   ],
+   "skill": "T_NET"
+  },
+  {
+   "tags": [
+    "Взгляд"
+   ],
+   "skill": "T_STONE_GAZE"
+  },
+  {
+   "tags": [
+    "Пикирование"
+   ],
+   "skill": "T_DIVE"
+  },
+  {
+   "tags": [
+    "Оборона",
+    "Регенерация"
+   ],
+   "skill": "T_GUARD_SELF"
+  }
+ ],
+ "tag_props": {
+  "Панцирь": {
+   "prot": 0.25
+  },
+  "Броня": {
+   "prot": 0.2
+  },
+  "Хитин": {
+   "prot": 0.15
+  },
+  "Чешуя": {
+   "prot": 0.15
+  },
+  "Камень": {
+   "prot": 0.3,
+   "immune": [
+    "bleed"
+   ],
+   "res": {
+    "stun": 30
+   }
+  },
+  "Конструкт": {
+   "immune": [
+    "bleed",
+    "poison"
+   ],
+   "res": {
+    "stun": 30
+   }
+  },
+  "Сталь": {
+   "prot": 0.1
+  },
+  "Мягкое тело": {
+   "res": {
+    "bleed": -25
+   }
+  },
+  "Нежить": {
+   "immune": [
+    "poison"
+   ]
+  },
+  "Кость": {
+   "immune": [
+    "bleed"
+   ]
+  },
+  "Бесформенный": {
+   "immune": [
+    "bleed"
+   ],
+   "no_corpse": true
+  },
+  "Скорость": {
+   "speed": 2,
+   "dodge": 5
+  },
+  "Первый удар": {
+   "speed": 1,
+   "first": 8
+  },
+  "Гигант": {
+   "size": 2,
+   "dodge": -10,
+   "hp": 0.5,
+   "speed": -2,
+   "res": {
+    "move": 50
+   }
+  },
+  "Летучий": {
+   "dodge": 10
+  },
+  "Скрытность": {
+   "dodge": 5,
+   "stealth_start": true
+  },
+  "Стойкость": {
+   "res": {
+    "stun": 20,
+    "move": 20
+   }
+  },
+  "Слабое тело": {
+   "hp": -0.2,
+   "speed": -1,
+   "res": {
+    "bleed": -10
+   }
+  },
+  "Разумный": {
+   "smart": true
+  },
+  "Регенерация": {
+   "regen": 2
+  }
+ },
+ "kinds": {
+  "normal": {
+   "hp": 14,
+   "speed": 4,
+   "acc": 0,
+   "dodge": 5,
+   "res": 20,
+   "dmg": 1.0,
+   "crit": 5
+  },
+  "elite": {
+   "hp": 30,
+   "speed": 5,
+   "acc": 5,
+   "dodge": 10,
+   "res": 30,
+   "dmg": 1.15,
+   "crit": 6
+  },
+  "boss": {
+   "hp": 70,
+   "speed": 4,
+   "acc": 10,
+   "dodge": 5,
+   "res": 40,
+   "dmg": 1.3,
+   "crit": 8
+  }
+ },
+ "light": {
+  "bright": {
+   "name": "Яркий",
+   "hero_dodge": 5,
+   "hero_crit": 0,
+   "enemy_acc": 0,
+   "enemy_dmg": 0.0,
+   "enemy_crit": 0,
+   "psyche": 0,
+   "loot": 0.0
+  },
+  "dim": {
+   "name": "Тусклый",
+   "hero_dodge": 0,
+   "hero_crit": 0,
+   "enemy_acc": 0,
+   "enemy_dmg": 0.0,
+   "enemy_crit": 1,
+   "psyche": -1,
+   "loot": 0.1
+  },
+  "dusk": {
+   "name": "Сумрак",
+   "hero_dodge": 0,
+   "hero_crit": 2,
+   "enemy_acc": 5,
+   "enemy_dmg": 0.1,
+   "enemy_crit": 0,
+   "psyche": -2,
+   "loot": 0.25
+  },
+  "dark": {
+   "name": "Тьма",
+   "hero_dodge": 0,
+   "hero_crit": 3,
+   "enemy_acc": 10,
+   "enemy_dmg": 0.2,
+   "enemy_crit": 3,
+   "psyche": -3,
+   "loot": 0.5
+  }
+ },
+ "ranged_tags": [
+  "Дальний удар",
+  "Метание",
+  "Кислота",
+  "Ментальное давление",
+  "Призыв",
+  "Предводитель",
+  "Командование",
+  "Сети"
+ ]
+}
