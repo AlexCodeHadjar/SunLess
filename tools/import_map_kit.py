@@ -5,7 +5,8 @@
 Запуск: python tools/import_map_kit.py <комплект> [папка комплектов]
   комплекты: academy · real_city · ash_path · dark_city · shore_events (места, облики и метки событий Берега,
   лагерь отряда → art/map/figure/camp_<облик>)
-По умолчанию комплекты лежат в C:/Users/alast/Documents/Codex/2026-09-28/new-chat/outputs.
+По умолчанию комплекты лежат в проекте: docs/assets/kits/ (исходники PNG, ~600 МБ; в git не входят — .gitignore,
+Godot их не импортирует — docs/.gdignore). Новый комплект — сначала положить туда.
 """
 import os
 import shutil
@@ -14,7 +15,7 @@ import sys
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
-KITS = r"C:/Users/alast/Documents/Codex/2026-09-28/new-chat/outputs"
+KITS = os.path.join(ROOT, "docs", "assets", "kits")
 
 SIZES = {"base": (3072, 1536), "place": (512, 512), "decal": (256, 256), "strip": (512, 128), "tile": (512, 512), "tech": (1024, 512),
 	"big": (512, 512)}
