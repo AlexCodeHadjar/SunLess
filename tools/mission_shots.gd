@@ -8,6 +8,7 @@ var from_ch4 := false   # --mshots-from=ch4: снять только Главу 
 var labels_shots := false   # --mshots-from=labels: подписи мест в разных стилях (коллаж для выбора)
 var events_shots := false   # --mshots-from=events: места и следы событий Берега, картинки пака Главы 4
 var figure_shots := false   # --mshots-from=figure: фигура (docs/18) — поле, перетаскивание, сцена лагеря, разрыв карты
+var start_shots := false    # --mshots-from=start: экран «разбитое стекло» и старт с Берега
 var fog_shots := false      # --mshots-from=fog: туман и «воздух» (буря, дымка) — проверка резких краёв
 var boss_shots := false     # --mshots-from=bosses: бродячие боссы на картах глав (docs/22)
 var live_chatter := false   # --mshots-from=live: мысли героев вживую (с подсказками, обычные сроки)
@@ -50,6 +51,8 @@ func _ready() -> void:
 			boss_shots = true
 		if a == "--mshots-from=fog":
 			fog_shots = true
+		if a == "--mshots-from=start":
+			start_shots = true
 		if a == "--mshots-from=resize":
 			resize_shots = true
 		if a == "--nohints":
@@ -153,6 +156,10 @@ func _run() -> void:
 		return
 	if fog_shots:
 		await _fog_check()
+		get_tree().quit()
+		return
+	if start_shots:
+		await _start_check()
 		get_tree().quit()
 		return
 	if resize_shots:
@@ -833,6 +840,29 @@ func _figure() -> void:
 
 
 # --- бродячие боссы на карте (docs/22) --------------------------------------------------------------------------------
+
+func _start_check() -> void:
+	get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")
+	await _wait(1.2)
+	var menu := get_tree().current_scene
+	menu.call("_on_new")
+	await _wait(0.8)
+	await _shot("s1_shards")
+	var sc: StartScreen
+	for ch in menu.get_children():
+		if ch is StartScreen:
+			sc = ch
+	sc.call("_pick", "nephis")
+	await _wait(0.6)
+	await _shot("s2_nephis")
+	sc.call("_pick", "cassie")
+	await _wait(0.6)
+	await _shot("s3_cassie")
+	GameState.new_start_run("sunny")
+	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	await _wait(3.0)
+	await _shot("s4_sunny_shore")
+
 
 func _fog_check() -> void:
 	var c := ContentDB.data

@@ -210,6 +210,8 @@ static func squad_tags(content: Content, state: RunState, heroes_ids: Array) -> 
 static func has_scout(content: Content, state: RunState, heroes_ids: Array) -> bool:
 	if BondRules.reveals(content, state, heroes_ids) or GrowthRules.reveals(content, state, heroes_ids):
 		return true
+	if StartRules.reveals(state, content):   # старт «Касси»: скрытое в событиях видно сразу
+		return true
 	var tags := squad_tags(content, state, heroes_ids)
 	for t: String in SCOUT_TAGS:
 		if tags.has(t):

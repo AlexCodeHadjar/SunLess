@@ -89,6 +89,15 @@ func new_mission_run(seed_value: int = -1) -> void:
 	EventBus.state_changed.emit()
 
 
+## Новая игра с выбранным стартом «разбитое стекло» (StartRules): с Забытого Берега.
+func new_start_run(start_id: String, seed_value: int = -1) -> void:
+	if seed_value < 0:
+		seed_value = randi()
+	state = StartRules.new_run(content(), seed_value, start_id)
+	SaveService.save_state(state)
+	EventBus.state_changed.emit()
+
+
 ## «Закончить день»: ночь в лагере и новое утро. Возвращает записи ночи (для окна «Ночь»).
 func end_day() -> Array:
 	var why := DayRules.can_end(state)

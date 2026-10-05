@@ -136,6 +136,8 @@ static func _figure_events(content: Content, state: RunState) -> Array:
 		out.append("figure_half")
 	if not WanderRules.active(content, state).is_empty():
 		out.append("wanderer")
+	if str(state.flags.get("start", "")) != "":
+		out.append("start_pick")   # начали с Берега (StartRules)
 	if (opt["today"] as Array).size() < DayPlanner.min_options(content) and not DayPlanner.tasks_left(content, state).is_empty():
 		out.append("tasks")
 	return out

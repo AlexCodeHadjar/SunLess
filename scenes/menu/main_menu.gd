@@ -70,10 +70,18 @@ func _on_continue() -> void:
 	get_tree().change_scene_to_file(MISSIONS)
 
 
+## «Новая игра» — экран «разбитое стекло» (StartRules, решение владельца 05.10: выбор доступен сразу).
 func _on_new() -> void:
 	AudioManager.play("shuffle")
-	GameState.new_mission_run()
-	get_tree().change_scene_to_file(MISSIONS)
+	var sc := StartScreen.new()
+	add_child(sc)
+	sc.chosen.connect(func(id: String) -> void:
+		GameState.new_start_run(id)
+		get_tree().change_scene_to_file(MISSIONS))
+	sc.from_beginning.connect(func() -> void:
+		GameState.new_mission_run()
+		get_tree().change_scene_to_file(MISSIONS))
+	sc.back.connect(sc.queue_free)
 
 
 
