@@ -15,7 +15,7 @@
   ],
   "kind": "normal",
   "shards": 1,
-  "art": "res://art/cards/M01.png",
+  "art": "res://art/cards/M01.webp",
   "power": 0.55
  },
  {
@@ -70,7 +70,7 @@
   ],
   "kind": "elite",
   "shards": 4,
-  "art": "res://art/cards/M04.png",
+  "art": "res://art/cards/M04.webp",
   "power": 1.7
  },
  {
@@ -86,7 +86,7 @@
   ],
   "kind": "elite",
   "shards": 6,
-  "art": "res://art/cards/M05.png"
+  "art": "res://art/cards/M05.webp"
  },
  {
   "id": "M06",
@@ -101,7 +101,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M06.png"
+  "art": "res://art/cards/M06.webp"
  },
  {
   "id": "M07",
@@ -115,7 +115,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M07.png",
+  "art": "res://art/cards/M07.webp",
   "power": 1.9
  },
  {
@@ -131,7 +131,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M08.png"
+  "art": "res://art/cards/M08.webp"
  },
  {
   "id": "M09",
@@ -146,7 +146,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M09.png",
+  "art": "res://art/cards/M09.webp",
   "power": 1.4
  },
  {
@@ -162,7 +162,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M10.png"
+  "art": "res://art/cards/M10.webp"
  },
  {
   "id": "M11",
@@ -176,7 +176,7 @@
   ],
   "kind": "elite",
   "shards": 20,
-  "art": "res://art/cards/M11.png"
+  "art": "res://art/cards/M11.webp"
  },
  {
   "id": "M12",
@@ -190,7 +190,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M12.png",
+  "art": "res://art/cards/M12.webp",
   "power": 1.1
  },
  {
@@ -205,7 +205,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M15.png"
+  "art": "res://art/cards/M15.webp"
  },
  {
   "id": "M16",
@@ -221,7 +221,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M16.png"
+  "art": "res://art/cards/M16.webp"
  },
  {
   "id": "M17",
@@ -257,7 +257,7 @@
   ],
   "kind": "normal",
   "shards": 3,
-  "art": "res://art/cards/M18.png"
+  "art": "res://art/cards/M18.webp"
  },
  {
   "id": "M19",
@@ -272,7 +272,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M19.png"
+  "art": "res://art/cards/M19.webp"
  },
  {
   "id": "M20",
@@ -286,7 +286,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M20.png"
+  "art": "res://art/cards/M20.webp"
  },
  {
   "id": "M21",
@@ -300,7 +300,7 @@
   ],
   "kind": "elite",
   "shards": 6,
-  "art": "res://art/cards/M21.png"
+  "art": "res://art/cards/M21.webp"
  },
  {
   "id": "M23",
@@ -314,7 +314,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M23.png"
+  "art": "res://art/cards/M23.webp"
  },
  {
   "id": "M24",
@@ -328,7 +328,7 @@
   ],
   "kind": "normal",
   "shards": 3,
-  "art": "res://art/cards/M24.png"
+  "art": "res://art/cards/M24.webp"
  },
  {
   "id": "M25",
@@ -343,7 +343,7 @@
   ],
   "kind": "elite",
   "shards": 12,
-  "art": "res://art/cards/M25.png"
+  "art": "res://art/cards/M25.webp"
  },
  {
   "id": "M26",
@@ -358,7 +358,7 @@
   ],
   "kind": "boss",
   "shards": 15,
-  "art": "res://art/cards/M26.png"
+  "art": "res://art/cards/M26.webp"
  },
  {
   "id": "M27",
@@ -373,7 +373,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M27.png"
+  "art": "res://art/cards/M27.webp"
  },
  {
   "id": "M28",
@@ -387,7 +387,7 @@
   ],
   "kind": "normal",
   "shards": 3,
-  "art": "res://art/cards/M28.png"
+  "art": "res://art/cards/M28.webp"
  },
  {
   "id": "M29",
@@ -402,7 +402,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M29.png"
+  "art": "res://art/cards/M29.webp"
  },
  {
   "id": "M30",
@@ -417,7 +417,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M30.png"
+  "art": "res://art/cards/M30.webp"
  },
  {
   "id": "M31",
@@ -432,7 +432,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M31.png"
+  "art": "res://art/cards/M31.webp"
  },
  {
   "id": "M32",
@@ -446,7 +446,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M32.png"
+  "art": "res://art/cards/M32.webp"
  },
  {
   "id": "M33",
@@ -460,7 +460,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M33.png"
+  "art": "res://art/cards/M33.webp"
  },
  {
   "id": "M34",
@@ -475,7 +475,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M34.png"
+  "art": "res://art/cards/M34.webp"
  },
  {
   "id": "M35",
@@ -490,7 +490,7 @@
   ],
   "kind": "elite",
   "shards": 6,
-  "art": "res://art/cards/M35.png"
+  "art": "res://art/cards/M35.webp"
  },
  {
   "id": "M36",
@@ -505,7 +505,7 @@
   ],
   "kind": "normal",
   "shards": 4,
-  "art": "res://art/cards/M36.png"
+  "art": "res://art/cards/M36.webp"
  },
  {
   "id": "M37",
@@ -521,7 +521,7 @@
   ],
   "kind": "boss",
   "shards": 18,
-  "art": "res://art/cards/M37.png"
+  "art": "res://art/cards/M37.webp"
  },
  {
   "id": "M38",
@@ -536,7 +536,7 @@
   ],
   "kind": "normal",
   "shards": 2,
-  "art": "res://art/cards/M38.png"
+  "art": "res://art/cards/M38.webp"
  },
  {
   "id": "H_AURO",

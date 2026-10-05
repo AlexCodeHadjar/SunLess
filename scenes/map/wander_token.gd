@@ -105,10 +105,10 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	if not frames.is_empty():
-		# под фишкой — тень у ног (подставки у картинок нет — tools/clean_wanderer_tokens.py) и мягкий фиолетовый
+		# под фишкой — тень у ног (картинки без подставки, линия земли — 92% высоты, tools/import_wanderers.py) и мягкий фиолетовый
 		# ореол (цвет бродячих боссов): видно на любой карте
 		var g := 0.75 + 0.25 * sin(_t * 1.7)
-		draw_set_transform(size / 2.0 + Vector2(0, size.y * 0.2), 0.0, Vector2(1.0, 0.42))
+		draw_set_transform(size / 2.0 + Vector2(0, size.y * 0.38), 0.0, Vector2(1.0, 0.36))
 		for k in 4:
 			draw_circle(Vector2.ZERO, size.x * (0.4 - k * 0.07), Color(0.0, 0.0, 0.02, 0.12))
 		for k2 in 3:

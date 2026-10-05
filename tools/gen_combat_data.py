@@ -260,6 +260,14 @@ for c in conflicts:
         c["value"] = 1.0
 
 # --- противники: data/combat/enemies.json ------------------------------------------
+
+
+def _card_art(eid):
+    """Картинка противника — тот файл, что есть в проекте (WebP, иначе PNG)."""
+    for ext in ("webp", "png"):
+        if os.path.exists(os.path.join(ROOT, "art", "cards", "%s.%s" % (eid, ext))):
+            return "res://art/cards/%s.%s" % (eid, ext)
+    return "res://art/cards/%s.webp" % eid
 ECHO = {"M03": ("U12", 0.25), "M17": ("P27", 0.05)}
 TRAUMA_POOL = {"Очарование": "mental", "Ментальное давление": "mental", "Холод": "environment"}
 enemies = []
@@ -277,7 +285,7 @@ for e in carriers["enemies"]:
         kind = "boss" if e["class"] >= 5 else ("elite" if "Элита" in e["tags"] or e["class"] >= 3 else "normal")
         ent = {"id": eid, "name": e["name"], "rank": e["rank"], "class": e["class"], "tags": e["tags"],
                "kind": kind, "shards": (e["rank"] + 1) * e["class"],
-               "art": "res://art/cards/%s.png" % eid}
+               "art": _card_art(eid)}
         if eid in ECHO:
             ent["echo"] = {"card": ECHO[eid][0], "chance": ECHO[eid][1]}
         enemies.append(ent)
