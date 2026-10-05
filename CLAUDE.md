@@ -2,6 +2,17 @@
 
 Карточная игра на Godot 4.7.2 по «Shadow Slave» (фанатская, некоммерческая). **Ветка `gameplay/figure` — экспериментальное передвижение фигурой (docs/18); откат — ветка `gameplay/missions`.** Владелец пишет по-русски, решения по механике принимает сам (спрашивать вариантами), после каждой фазы — коммит и push в `gameplay/missions` (GitHub AlexCodeHadjar/SunLess). Контекст владельца и история — `HANDOFF.md`; механика миссий — `docs/15`; план текущих фаз — `docs/16`.
 
+## Карты-планы — через редактор карт (решение владельца 05.10)
+
+Любая работа с картой главы (`data/maps/<регион>.json`, места региона в `locations.json`, `art/map/<регион>/`) —
+**через редактор карт** `../SunLessMapEditor` (репозиторий AlexCodeHadjar/sunless-map-editor), а не правкой JSON и
+не скриптами: он проверяет карту правилами `content_validator.gd`, считает маршруты как игра, пишет файлы в формате игры
+(только изменённое, с резервной копией) и не даёт занять код места другого региона.
+Агенту — команда `cli-anything-sunless-map --json …` (skill `.claude/skills/cli-anything-sunless-map/SKILL.md`):
+`project open-game --region R -o R.mapproj` → `place/path/socket/map …` или `batch ops.json` → `check` →
+`preview capture --recipe overview` (посмотреть PNG) → `export --dry-run` → `export --reimport` → `game-shot` (карту рисует игра).
+Карты, которые генерируют скрипты `tools/gen_*.py`, после правки в редакторе перегенерировать нельзя без переноса правок в скрипт — сначала спросить владельца.
+
 ## Как работать экономно
 
 - **Сначала этот файл, потом `python tools/ctx.py …`** — справки по данным без чтения JSON целиком:
