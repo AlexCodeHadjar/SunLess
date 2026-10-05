@@ -6,15 +6,13 @@
 к промтам карт — шаблон карты docs/assets/cards/templates (пустая обложка и её настройки) и готовые карты-образцы.
 Правило на будущее (CLAUDE.md): промты артов карт — всегда с шаблоном и настройками.
 
-Word собирается без сторонних библиотек (WordprocessingML в zip, картинки — уменьшенные PNG внутри документа).
+Word собирается без сторонних библиотек (tools/docx_lib.py: WordprocessingML в zip, картинки внутри документа).
     python tools/gen_boss_prompts.py
 """
 import io
 import os
-import zipfile
-from xml.sax.saxutils import escape
 
-from PIL import Image
+from docx_lib import Doc
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "Бродячие боссы — промты ChatGPT.docx")
@@ -153,150 +151,6 @@ BOSSES = [
 ]
 
 TOKEN_REFS = ["art/map/ash_path/decal_token_demon.webp", "art/map/dark_city/decal_token_hunter.webp", "art/map/figure/sunny.webp"]
-
-
-# --- Word (WordprocessingML): абзацы, ссылки, картинки --------------------------------------------------------------------
-
-class Doc:
-	def __init__(self):
-		self.body = []
-		self.rels = []      # (id, type, target, external)
-		self.media = []     # (name, bytes)
-		self.pic = 0
-
-	def rel(self, typ, target, external=False):
-		rid = "rId%d" % (len(self.rels) + 10)
-		self.rels.append((rid, typ, target, external))
-		return rid
-
-	def run(self, text, bold=False, italic=False, mono=False, size=None, color=None, under=False):
-		pr = ""
-		if mono:
-			pr += '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas"/>'
-		if bold:
-			pr += "<w:b/>"
-		if italic:
-			pr += "<w:i/>"
-		if color:
-			pr += '<w:color w:val="%s"/>' % color
-		if under:
-			pr += '<w:u w:val="single"/>'
-		if size:
-			pr += '<w:sz w:val="%d"/>' % int(size * 2)
-		out = []
-		for i, part in enumerate(text.split("\n")):
-			if i:
-				out.append("<w:r><w:br/></w:r>")
-			out.append('<w:r><w:rPr>%s</w:rPr><w:t xml:space="preserve">%s</w:t></w:r>' % (pr, escape(part)))
-		return "".join(out)
-
-	def para(self, runs, style=None, shade=None, after=120, keep=False):
-		ppr = ""
-		if style:
-			ppr += '<w:pStyle w:val="%s"/>' % style
-		if keep:
-			ppr += "<w:keepNext/>"
-		if shade:
-			ppr += '<w:shd w:val="clear" w:color="auto" w:fill="%s"/>' % shade
-		ppr += '<w:spacing w:after="%d"/>' % after
-		self.body.append("<w:p><w:pPr>%s</w:pPr>%s</w:p>" % (ppr, runs))
-
-	def h(self, level, t):
-		self.para(self.run(t), "Heading%d" % level)
-
-	def text(self, t, **kw):
-		self.para(self.run(t, **kw))
-
-	def code(self, t):
-		self.para(self.run(t, mono=True, size=8.5), shade="F2F2F2")
-
-	def link(self, rel_path, label=None):
-		"""Ссылка на файл проекта (кликабельная, file:///)."""
-		# кириллица — как есть (Word читает %-кодировку как cp1252 и ломает путь), пробелы — %20, разделители — «\»
-		abs_path = os.path.normpath(os.path.join(ROOT, rel_path))
-		url = "file:///" + abs_path.replace(" ", "%20")
-		rid = self.rel("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", url, True)
-		return '<w:hyperlink r:id="%s" w:history="1">%s</w:hyperlink>' % (rid, self.run(label or rel_path, color="0563C1", under=True, size=9.5))
-
-	def image(self, rel_path, height_cm=3.6):
-		"""Картинка-образец внутри документа (уменьшенная PNG)."""
-		p = os.path.join(ROOT, rel_path)
-		im = Image.open(p).convert("RGBA")
-		h = 360
-		w = max(1, int(im.width * h / im.height))
-		im = im.resize((w, h), Image.LANCZOS)
-		bg = Image.new("RGBA", im.size, (40, 40, 48, 255))   # прозрачные фишки — на тёмном, как на карте
-		bg.alpha_composite(im)
-		buf = io.BytesIO()
-		bg.convert("RGB").save(buf, "PNG", optimize=True)
-		self.pic += 1
-		name = "ref%d.png" % self.pic
-		self.media.append((name, buf.getvalue()))
-		rid = self.rel("http://schemas.openxmlformats.org/officeDocument/2006/relationships/image", "media/" + name)
-		cy = int(height_cm * 360000)
-		cx = int(cy * w / h)
-		return ('<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="72000"><wp:extent cx="%d" cy="%d"/>'
-			'<wp:docPr id="%d" name="Образец %d"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
-			'<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-			'<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="%d" name="%s"/>'
-			'<pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="%s"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-			'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="%d" cy="%d"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-			'</pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'
-			% (cx, cy, self.pic, self.pic, self.pic, name, rid, cx, cy))
-
-	def refs(self, title, paths, height_cm=3.6):
-		"""Блок «Образцы»: картинки рядом и под ними ссылки на файлы."""
-		self.para(self.run(title, bold=True, color="5B2A86"), after=40, keep=True)
-		self.para("".join(self.image(p, height_cm) for p in paths), after=40, keep=True)
-		for p in paths:
-			self.para(self.run("• ") + self.link(p), after=20)
-		self.para("", after=80)
-
-	def save(self, path):
-		doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-			'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
-			'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
-			'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>%s'
-			'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" '
-			'w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>') % "".join(self.body)
-		rels = ['<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>']
-		for rid, typ, target, ext in self.rels:
-			rels.append('<Relationship Id="%s" Type="%s" Target="%s"%s/>' % (rid, typ, escape(target, {'"': "&quot;"}),
-				' TargetMode="External"' if ext else ""))
-		with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-			z.writestr("[Content_Types].xml", CT)
-			z.writestr("_rels/.rels", RELS)
-			z.writestr("word/_rels/document.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-				'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">%s</Relationships>' % "".join(rels))
-			z.writestr("word/document.xml", doc)
-			z.writestr("word/styles.xml", STYLES)
-			for name, data in self.media:
-				z.writestr("word/media/" + name, data)
-
-
-STYLES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault></w:docDefaults>
-<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
-<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="40"/><w:color w:val="5B2A86"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:pageBreakBefore/><w:spacing w:before="120" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:sz w:val="32"/><w:color w:val="5B2A86"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="80"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="27"/><w:color w:val="333333"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="60"/><w:outlineLvl w:val="2"/></w:pPr><w:rPr><w:b/><w:sz w:val="23"/><w:color w:val="555555"/></w:rPr></w:style>
-</w:styles>"""
-
-CT = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Default Extension="png" ContentType="image/png"/>
-<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-</Types>"""
-
-RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>"""
 
 
 def build():
