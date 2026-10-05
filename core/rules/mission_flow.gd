@@ -103,6 +103,14 @@ static func open(content: Content, state: RunState, mission_id: String, force: b
 	return [{"kind": "mission", "text": "Новая миссия: %s%s" % [content.missions[mission_id].get("title", mission_id), extra], "card": mission_id}]
 
 
+## Где событие на карте: испытание души — там, где стоит отряд (приходит к фигуре); остальные — их место.
+static func place_of(content: Content, state: RunState, mid: String) -> String:
+	var m: Dictionary = content.missions.get(mid, {})
+	if m.has("trial") and state.party_at != "" and DayRules.restricted(content, state):
+		return state.party_at
+	return str(m.get("location", ""))
+
+
 static func open_missions(state: RunState) -> Array:
 	var out: Array = []
 	for mid: String in _sorted(state.missions):
@@ -142,12 +150,9 @@ static func on_mission(state: RunState, cid: String) -> bool:
 
 
 ## Кармашек героя на миссии не меняется: ни его, ни усилений, которые ушли с другим отрядом.
-static func pocket_lock(content: Content, state: RunState, cid: String, card: String) -> String:
-	if on_mission(state, cid):
-		return "%s на миссии — кармашек не поменять" % content.card_name(cid)
-	for other: String in state.characters:
-		if other != cid and on_mission(state, other) and Array(state.characters[other].get("pocket", [])).has(card):
-			return "%s сейчас на миссии у героя %s" % [content.card_name(card), content.card_name(other)]
+## Кармашек можно менять всегда, в том числе у отряда на месте события (решение владельца 05.10: без условий, кроме боя;
+## бой в игре проходит целиком за одно действие, менять посреди него нечего). Оставлено как точка проверки.
+static func pocket_lock(_content: Content, _state: RunState, _cid: String, _card: String) -> String:
 	return ""
 
 

@@ -83,10 +83,10 @@ static func has_service(content: Content, state: RunState, service: String) -> b
 
 
 ## Переснарядиться (кармашки) можно только в лагере со службой equip; без карты-плана — везде.
-static func can_equip(content: Content, state: RunState) -> String:
-	if not restricted(content, state) or has_service(content, state, "equip"):
-		return ""
-	return "Переснарядиться можно только в лагере с укрытием — там, где есть «снаряжение»"
+## Переснарядиться можно где угодно (решение владельца 05.10: карты усиления меняются без условий, кроме боя —
+## бой идёт сам и мгновенно, во время просмотра боя окна закрыты). Раньше — только в лагере со «снаряжением».
+static func can_equip(_content: Content, _state: RunState) -> String:
+	return ""
 
 
 ## Движение по тропам ограничено только на карте-плане.
@@ -104,7 +104,7 @@ static func reachable(content: Content, state: RunState, lid: String) -> bool:
 ## Миссия в досягаемости отряда. Натиск приходит сам — до него дойти можно всегда.
 static func mission_reachable(content: Content, state: RunState, mid: String) -> bool:
 	var m: Dictionary = content.missions.get(mid, {})
-	if str(m.get("type", "")) == "onslaught":
+	if str(m.get("type", "")) == "onslaught" or m.has("trial"):
 		return true
 	return reachable(content, state, str(m.get("location", "")))
 
@@ -248,6 +248,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 	out.append_array(DayPlanner.ensure(content, state))
 	# бродячие боссы — последними: встают на место, где уже ничего нет (docs/22)
 	out.append_array(WanderRules.night(content, state, rng))
+	out.append_array(CoreRules.ensure_trials(content, state))   # полное ядро — испытание в новой главе тоже (docs/23)
 	return out
 
 

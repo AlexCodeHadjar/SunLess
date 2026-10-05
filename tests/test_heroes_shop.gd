@@ -108,7 +108,8 @@ func test_one_mission_at_a_time() -> void:
 	check(b["ok"], "теперь второй выход: %s" % b.get("error", ""))
 
 
-func test_pocket_lock_on_mission() -> void:
+## Решение владельца 05.10: карты усиления меняются где угодно и когда угодно, кроме самого боя (он мгновенный).
+func test_pocket_free_anywhere() -> void:
 	var c := content()
 	var s := _run()
 	EffectApplier.add_card(c, s, "P09")
@@ -117,8 +118,8 @@ func test_pocket_lock_on_mission() -> void:
 	eq(MissionFlow.pocket_owner(s, "K02"), "P01", "K02 у Санни:")
 	eq(MissionFlow.pocket_lock(c, s, "P09", "K02"), "", "пока Санни дома — можно переложить")
 	MissionFlow.launch(c, s, "MS02", ["P01"])
-	check(MissionFlow.pocket_lock(c, s, "P01", "K02") != "", "кармашек героя на миссии не меняется")
-	check(MissionFlow.pocket_lock(c, s, "P09", "K02") != "", "усиление, ушедшее с отрядом, не забрать")
+	eq(MissionFlow.pocket_lock(c, s, "P01", "K02"), "", "кармашек героя на месте события меняется:")
+	eq(DayRules.can_equip(c, s), "", "переснарядиться можно не только в лагере:")
 	check(MissionFlow.hero_tags(c, s, "P01").has("Выслеживание"), "теги кармашка идут с героем")
 
 
