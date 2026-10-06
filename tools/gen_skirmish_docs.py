@@ -1,6 +1,7 @@
 """Пошаговый бой «Схватка» (docs/24): Word-документы для владельца.
 
-1) ТЗ — из Markdown docs/24 → «docs/ТЗ — Пошаговый бой «Схватка».docx» (Markdown — главный текст, Word собирается из него).
+1) ТЗ — из Markdown docs/24 → «docs/ТЗ — Пошаговый бой «Схватка».docx» (Markdown — главный текст, Word собирается из него);
+   английская версия — из «docs/24 — Turn-based combat Skirmish (EN).md» → «docs/Design spec — Turn-based combat Skirmish (EN).docx».
 2) Промты артов для ChatGPT → «docs/Пошаговый бой — промты ChatGPT.docx»: фигуры героев (позы-кадры), Эхо, врагов,
    трупы, фоны боя по полям регионов, рамки интерфейса, значки состояний и света, иконки своих навыков, карты событий
    поля (по шаблону карты), эффекты ударов. К каждому промту — образцы из проекта картинками и ссылками на файлы
@@ -15,6 +16,8 @@ from docx_lib import ROOT, Doc, md_to_doc
 
 TZ_MD = "docs/24 — Пошаговый бой «Схватка».md"
 TZ_OUT = "docs/ТЗ — Пошаговый бой «Схватка».docx"
+TZ_MD_EN = "docs/24 — Turn-based combat Skirmish (EN).md"
+TZ_OUT_EN = "docs/Design spec — Turn-based combat Skirmish (EN).docx"
 PR_OUT = "docs/Пошаговый бой — промты ChatGPT.docx"
 TEMPLATE = "docs/assets/cards/templates/SunLess-blank-card-front-7x12.png"
 TEMPLATE_TXT = "docs/assets/cards/templates/SunLess-blank-card-prompt.txt"
@@ -601,11 +604,11 @@ def build_prompts():
 	return d
 
 
-def build_tz():
-	md = io.open(os.path.join(ROOT, TZ_MD), encoding="utf-8").read()
+def build_tz(src: str = TZ_MD, out: str = TZ_OUT):
+	md = io.open(os.path.join(ROOT, src), encoding="utf-8").read()
 	d = Doc()
 	md_to_doc(md, d, base="docs")
-	d.save(os.path.join(ROOT, TZ_OUT))
+	d.save(os.path.join(ROOT, out))
 	return d
 
 
@@ -616,5 +619,7 @@ if __name__ == "__main__":
 	assert not missing, missing
 	t = build_tz()
 	print("ТЗ:", TZ_OUT, "· картинок:", len(t.media), "· ссылок:", sum(1 for r in t.rels if r[3]))
+	te = build_tz(TZ_MD_EN, TZ_OUT_EN)
+	print("ТЗ (англ.):", TZ_OUT_EN, "· картинок:", len(te.media), "· ссылок:", sum(1 for r in te.rels if r[3]))
 	p = build_prompts()
 	print("промты:", PR_OUT, "· картинок:", len(p.media), "· вставок:", p.pic, "· ссылок:", sum(1 for r in p.rels if r[3]))
