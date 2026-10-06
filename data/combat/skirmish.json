@@ -668,6 +668,1858 @@
    ],
    "to": [],
    "kind": "pass"
+  },
+  "E_CLAWS": {
+   "id": "E_CLAWS",
+   "name": "Клешни",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "dmg": [
+    3,
+    6
+   ],
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 1,
+     "turns": 3,
+     "chance": 60
+    }
+   ],
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "E_SHELL": {
+   "id": "E_SHELL",
+   "name": "Панцирный заслон",
+   "side": "ally",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "owner": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 2
+    },
+    {
+     "type": "block",
+     "charges": 1,
+     "self": true
+    }
+   ]
+  },
+  "E_SICKLE": {
+   "id": "E_SICKLE",
+   "name": "Серповидный выпад",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "dmg": [
+    4,
+    8
+   ],
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "E_LEGION": {
+   "id": "E_LEGION",
+   "name": "Строй Легиона",
+   "side": "ally",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "adjacent": true,
+   "not_self": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 1
+    },
+    {
+     "type": "riposte",
+     "turns": 2,
+     "self": true
+    }
+   ]
+  },
+  "ECHO_RECALL": {
+   "id": "ECHO_RECALL",
+   "name": "Отозвать",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "kind": "recall"
+  },
+  "C_A01": {
+   "id": "C_A01",
+   "name": "Тень-разведчик",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "foresight",
+     "turns": 2,
+     "chance": 100
+    },
+    {
+     "type": "debuff",
+     "stat": "dodge",
+     "value": -10,
+     "turns": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "C_A02": {
+   "id": "C_A02",
+   "name": "Тень крепнет",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 3,
+   "need": {
+    "light_not": [
+     "bright"
+    ]
+   },
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dmg",
+     "value": 0.25,
+     "turns": 3,
+     "dark_double": true
+    },
+    {
+     "type": "buff",
+     "stat": "acc",
+     "value": 10,
+     "turns": 3,
+     "dark_double": true
+    }
+   ]
+  },
+  "C_A03": {
+   "id": "C_A03",
+   "name": "Вспышка пламени",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "once": true,
+   "cost": {
+    "psyche": -8
+   },
+   "effects": [
+    {
+     "type": "heal_pct",
+     "value": 0.35
+    },
+    {
+     "type": "cleanse",
+     "types": [
+      "bleed",
+      "poison"
+     ]
+    },
+    {
+     "type": "ignite",
+     "turns": 2
+    }
+   ]
+  },
+  "C_A04": {
+   "id": "C_A04",
+   "name": "Видение",
+   "side": "ally",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "sure",
+     "turns": 2,
+     "crit": 15
+    }
+   ]
+  },
+  "C_A05": {
+   "id": "C_A05",
+   "name": "Рывок",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "once": true,
+   "effects": [
+    {
+     "type": "extra_turn"
+    }
+   ]
+  },
+  "C_A06": {
+   "id": "C_A06",
+   "name": "Тени не оставят",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "dodge",
+     "charges": 2
+    }
+   ]
+  },
+  "C_A07": {
+   "id": "C_A07",
+   "name": "Кровь зовёт",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 1.5,
+   "lifesteal": 0.5,
+   "cooldown": 2,
+   "need": {
+    "hp_below": 0.5
+   },
+   "tags": [
+    "Кровь"
+   ]
+  },
+  "C_U01": {
+   "id": "C_U01",
+   "name": "Место становится оружием",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 75,
+   "mult": 1.0,
+   "ignore_prot": 0.5,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 30
+    }
+   ],
+   "vs": {
+    "Камень": 1.25,
+    "Конструкт": 1.25,
+    "Кость": 1.15
+   },
+   "tags": [
+    "Дробящий"
+   ],
+   "dmg": [
+    8,
+    14
+   ],
+   "weapon": "Тяжёлое оружие"
+  },
+  "C_U02": {
+   "id": "C_U02",
+   "name": "Дальний звон",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "debuff",
+     "stat": "dmg",
+     "value": -0.2,
+     "turns": 2,
+     "chance": 100
+    },
+    {
+     "type": "push",
+     "n": 1,
+     "chance": 100,
+     "if_not_tag": [
+      "Разумный"
+     ]
+    }
+   ],
+   "tags": [
+    "Звук"
+   ]
+  },
+  "C_U06": {
+   "id": "C_U06",
+   "name": "Покров",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "dodge",
+     "charges": 1
+    },
+    {
+     "type": "block",
+     "charges": 1
+    }
+   ]
+  },
+  "C_K01": {
+   "id": "C_K01",
+   "name": "Знание Заклинания",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "remove_buffs"
+    },
+    {
+     "type": "foresight",
+     "turns": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "C_K02": {
+   "id": "C_K02",
+   "name": "Горы на вашей стороне",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dodge",
+     "value": 5,
+     "turns": 2
+    }
+   ]
+  },
+  "C_K03": {
+   "id": "C_K03",
+   "name": "Раскрыть Аспект",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "empower",
+     "turns": 3
+    }
+   ]
+  },
+  "C_K04": {
+   "id": "C_K04",
+   "name": "Знаешь, куда бить",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "need": {
+    "target_rank_above": true
+   },
+   "effects": [
+    {
+     "type": "mark",
+     "turns": 2,
+     "chance": 100
+    },
+    {
+     "type": "debuff",
+     "stat": "dodge",
+     "value": -10,
+     "turns": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "C_K05": {
+   "id": "C_K05",
+   "name": "Знание Царства Снов",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "foresight",
+     "turns": 1,
+     "chance": 100
+    }
+   ]
+  },
+  "C_K06": {
+   "id": "C_K06",
+   "name": "Предчувствие",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dodge",
+     "value": 10,
+     "turns": 1
+    }
+   ]
+  },
+  "C_K07": {
+   "id": "C_K07",
+   "name": "Удар в сустав",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 1.1,
+   "crit": 10,
+   "cooldown": 1,
+   "ignore_prot_vs": [
+    "Панцирь",
+    "Хитин"
+   ],
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "C_K08": {
+   "id": "C_K08",
+   "name": "Знаешь, где дно",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "adjacent": true,
+   "not_self": true,
+   "effects": [
+    {
+     "type": "swap"
+    },
+    {
+     "type": "dodge",
+     "charges": 1,
+     "self": true
+    }
+   ]
+  },
+  "C_U14": {
+   "id": "C_U14",
+   "name": "Тысяча ударов",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 100,
+   "mult": 1.1,
+   "once": true,
+   "effects": [
+    {
+     "type": "riposte",
+     "turns": 1,
+     "self": true
+    }
+   ],
+   "tags": [
+    "Дуэль",
+    "Режущий"
+   ]
+  },
+  "C_U15": {
+   "id": "C_U15",
+   "name": "Уроки Юлия",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "cleanse",
+     "types": [
+      "bleed",
+      "poison",
+      "debuff",
+      "blind"
+     ]
+    },
+    {
+     "type": "heal",
+     "min": 3,
+     "max": 3
+    }
+   ]
+  },
+  "C_U07": {
+   "id": "C_U07",
+   "name": "Удар в сочленение",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.05,
+   "vs": {
+    "Мягкое тело": 1.2,
+    "Человек": 1.2
+   },
+   "tags": [
+    "Режущий"
+   ],
+   "dmg": [
+    6,
+    11
+   ],
+   "weapon": "Меч",
+   "ignore_prot": 1.0
+  },
+  "C_U11": {
+   "id": "C_U11",
+   "name": "Верёвка",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "not_self": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "swap"
+    },
+    {
+     "type": "steady",
+     "turns": 2
+    }
+   ]
+  },
+  "C_U12": {
+   "id": "C_U12",
+   "name": "Призвать Эхо",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "once": true,
+   "effects": [
+    {
+     "type": "summon",
+     "card": "U12"
+    }
+   ]
+  },
+  "C_U16": {
+   "id": "C_U16",
+   "name": "Сомкнуть щит",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "adjacent": true,
+   "not_self": true,
+   "once": true,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 1
+    },
+    {
+     "type": "block",
+     "charges": 2,
+     "self": true
+    }
+   ]
+  },
+  "C_L01": {
+   "id": "C_L01",
+   "name": "Укол хитином",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 95,
+   "mult": 1.0,
+   "crit": 8,
+   "vs": {
+    "Мягкое тело": 1.3
+   },
+   "tags": [
+    "Колющий"
+   ],
+   "dmg": [
+    4,
+    8
+   ],
+   "weapon": "Кинжал"
+  },
+  "C_L02": {
+   "id": "C_L02",
+   "name": "Слиться с тенью",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "effects": [
+    {
+     "type": "stealth",
+     "turns": 1,
+     "dark_double": true
+    }
+   ]
+  },
+  "C_L03": {
+   "id": "C_L03",
+   "name": "Держать страх",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "effects": [
+    {
+     "type": "psyche",
+     "value": 6
+    },
+    {
+     "type": "cleanse",
+     "types": [
+      "fear"
+     ]
+    }
+   ]
+  },
+  "C_L04": {
+   "id": "C_L04",
+   "name": "Зацепить",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "dmg": [
+    2,
+    4
+   ],
+   "effects": [
+    {
+     "type": "pull",
+     "n": 1,
+     "chance": 90
+    }
+   ]
+  },
+  "C_L05": {
+   "id": "C_L05",
+   "name": "Глоток",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "uses": 2,
+   "effects": [
+    {
+     "type": "heal",
+     "min": 3,
+     "max": 5
+    }
+   ]
+  },
+  "C_L06": {
+   "id": "C_L06",
+   "name": "Бесконечный родник",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "heal",
+     "min": 4,
+     "max": 6
+    },
+    {
+     "type": "psyche",
+     "value": 3
+    }
+   ]
+  },
+  "C_L07": {
+   "id": "C_L07",
+   "name": "Принять на наруч",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "block",
+     "charges": 2
+    }
+   ]
+  },
+  "C_L08": {
+   "id": "C_L08",
+   "name": "Ядовитый укол",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 95,
+   "mult": 1.0,
+   "crit": 8,
+   "vs": {
+    "Мягкое тело": 1.3
+   },
+   "tags": [
+    "Колющий"
+   ],
+   "dmg": [
+    4,
+    8
+   ],
+   "weapon": "Кинжал",
+   "effects": [
+    {
+     "type": "poison",
+     "power": 2,
+     "turns": 3,
+     "chance": 80
+    }
+   ]
+  },
+  "C_L09": {
+   "id": "C_L09",
+   "name": "Хлыст",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    2,
+    3
+   ],
+   "acc": 85,
+   "dmg": [
+    2,
+    5
+   ],
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "pull",
+     "n": 1,
+     "chance": 80
+    },
+    {
+     "type": "debuff",
+     "stat": "speed",
+     "value": -2,
+     "turns": 2,
+     "chance": 80
+    }
+   ]
+  },
+  "C_L10": {
+   "id": "C_L10",
+   "name": "Глаз глубин",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 1,
+   "pierce_stealth": true,
+   "effects": [
+    {
+     "type": "foresight",
+     "turns": 2,
+     "chance": 100
+    },
+    {
+     "type": "unstealth_all"
+    }
+   ]
+  },
+  "C_L11": {
+   "id": "C_L11",
+   "name": "Клинок режет своих",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.05,
+   "vs": {
+    "Мягкое тело": 1.2,
+    "Человек": 1.2
+   },
+   "tags": [
+    "Режущий"
+   ],
+   "dmg": [
+    6,
+    11
+   ],
+   "weapon": "Меч",
+   "ignore_prot_vs": [
+    "Панцирь",
+    "Хитин"
+   ]
+  },
+  "C_L12": {
+   "id": "C_L12",
+   "name": "Щит Легиона",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "adjacent": true,
+   "not_self": true,
+   "once": true,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 2
+    },
+    {
+     "type": "block",
+     "charges": 1,
+     "self": true
+    }
+   ]
+  },
+  "C_L13": {
+   "id": "C_L13",
+   "name": "Удар Легиона",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 1.0,
+   "vs": {
+    "Гигант": 1.25,
+    "Летучий": 1.25
+   },
+   "tags": [
+    "Колющий"
+   ],
+   "dmg": [
+    5,
+    10
+   ],
+   "weapon": "Копьё"
+  },
+  "C_L14": {
+   "id": "C_L14",
+   "name": "Сердце бури",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "dmg": [
+    4,
+    8
+   ],
+   "ranged": true,
+   "once": true,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 25
+    }
+   ],
+   "tags": [
+    "Молния"
+   ]
+  },
+  "C_L15": {
+   "id": "C_L15",
+   "name": "Клинок пьёт темноту",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.1,
+   "vs": {
+    "Мягкое тело": 1.2,
+    "Человек": 1.2
+   },
+   "tags": [
+    "Режущий"
+   ],
+   "dmg": [
+    6,
+    11
+   ],
+   "weapon": "Меч",
+   "dark_bonus": {
+    "mult": 0.25,
+    "crit": 10
+   }
+  },
+  "C_L16": {
+   "id": "C_L16",
+   "name": "Призвать Эхо Центуриона",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "once": true,
+   "effects": [
+    {
+     "type": "summon",
+     "card": "L16"
+    }
+   ]
+  },
+  "C_L17": {
+   "id": "C_L17",
+   "name": "За мной!",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "once": true,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dmg",
+     "value": 0.15,
+     "turns": 2
+    },
+    {
+     "type": "buff",
+     "stat": "acc",
+     "value": 10,
+     "turns": 2
+    },
+    {
+     "type": "psyche",
+     "value": 5
+    }
+   ]
+  },
+  "C_LW1": {
+   "id": "C_LW1",
+   "name": "Уйти в раковину",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "once": true,
+   "effects": [
+    {
+     "type": "block",
+     "charges": 3
+    },
+    {
+     "type": "buff",
+     "stat": "prot",
+     "value": 0.25,
+     "turns": 2
+    },
+    {
+     "type": "riposte",
+     "turns": 2
+    }
+   ]
+  },
+  "C_LW2": {
+   "id": "C_LW2",
+   "name": "Удар из-под земли",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 95,
+   "mult": 1.2,
+   "once": true,
+   "ignore_prot": 1.0,
+   "pierce_stealth": true,
+   "tags": [
+    "Пепел"
+   ]
+  },
+  "C_LW3": {
+   "id": "C_LW3",
+   "name": "Высветить",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "once": true,
+   "pierce_stealth": true,
+   "effects": [
+    {
+     "type": "unstealth"
+    },
+    {
+     "type": "mark",
+     "turns": 2,
+     "chance": 100
+    },
+    {
+     "type": "light_ward",
+     "rounds": 3,
+     "self": true
+    }
+   ],
+   "tags": [
+    "Свет"
+   ]
+  },
+  "C_LW4": {
+   "id": "C_LW4",
+   "name": "Звон осколка",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 90,
+   "dmg": [
+    3,
+    5
+   ],
+   "ranged": true,
+   "once": true,
+   "vs": {
+    "Рой": 2.0,
+    "Стая": 2.0
+   },
+   "effects": [
+    {
+     "type": "debuff",
+     "stat": "dmg",
+     "value": -0.15,
+     "turns": 2,
+     "chance": 100,
+     "if_tag": [
+      "Рой",
+      "Стая"
+     ]
+    }
+   ],
+   "tags": [
+    "Стекло",
+    "Звук"
+   ]
+  },
+  "H_P01_1": {
+   "id": "H_P01_1",
+   "name": "Удар из тени",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 1.0,
+   "crit": 10,
+   "from_stealth": {
+    "mult": 1.5,
+    "crit": 100
+   },
+   "tags": [
+    "Тень",
+    "Колющий"
+   ]
+  },
+  "H_P01_2": {
+   "id": "H_P01_2",
+   "name": "Раствориться в тени",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "self_move": 1,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "stealth",
+     "turns": 2,
+     "light_not": [
+      "bright"
+     ]
+    },
+    {
+     "type": "dodge",
+     "charges": 1,
+     "light_only": [
+      "bright"
+     ]
+    }
+   ]
+  },
+  "H_P02_1": {
+   "id": "H_P02_1",
+   "name": "Удар Меняющейся Звезды",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 1.15,
+   "vs": {
+    "Тьма": 1.25,
+    "Тень": 1.25,
+    "Нежить": 1.25
+   },
+   "tags": [
+    "Свет",
+    "Режущий"
+   ]
+  },
+  "H_P02_2": {
+   "id": "H_P02_2",
+   "name": "Вызов",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "taunt",
+     "turns": 2
+    },
+    {
+     "type": "riposte",
+     "turns": 2
+    }
+   ],
+   "tags": [
+    "Дуэль"
+   ]
+  },
+  "H_P03_1": {
+   "id": "H_P03_1",
+   "name": "Пророчество",
+   "side": "enemy",
+   "from": [
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "foresight",
+     "turns": 3,
+     "chance": 100
+    },
+    {
+     "type": "mark",
+     "turns": 3,
+     "chance": 100
+    }
+   ]
+  },
+  "H_P03_2": {
+   "id": "H_P03_2",
+   "name": "Голос во тьме",
+   "side": "ally",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": 10
+    },
+    {
+     "type": "cleanse",
+     "types": [
+      "fear"
+     ]
+    }
+   ]
+  },
+  "H_P04_1": {
+   "id": "H_P04_1",
+   "name": "Молниеносный выпад",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 95,
+   "mult": 0.85,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "speed",
+     "value": 3,
+     "turns": 1,
+     "self": true
+    }
+   ],
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "H_P04_2": {
+   "id": "H_P04_2",
+   "name": "Первая кровь",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 1.4,
+   "need": {
+    "first": true
+   },
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 2,
+     "turns": 3,
+     "chance": 100
+    }
+   ],
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "H_P08_1": {
+   "id": "H_P08_1",
+   "name": "Удар Девяти",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.3,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 50
+    }
+   ],
+   "tags": [
+    "Режущий"
+   ]
+  },
+  "H_P08_2": {
+   "id": "H_P08_2",
+   "name": "Стальная стена",
+   "side": "ally",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "not_self": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 2
+    },
+    {
+     "type": "block",
+     "charges": 1,
+     "self": true
+    }
+   ]
+  },
+  "H_P09_1": {
+   "id": "H_P09_1",
+   "name": "Найти слабину",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 95,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "effects": [
+    {
+     "type": "mark",
+     "turns": 3,
+     "chance": 100
+    },
+    {
+     "type": "reveal"
+    }
+   ]
+  },
+  "H_P09_2": {
+   "id": "H_P09_2",
+   "name": "Выследить",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 95,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "pierce_stealth": true,
+   "effects": [
+    {
+     "type": "unstealth"
+    },
+    {
+     "type": "debuff",
+     "stat": "dodge",
+     "value": -10,
+     "turns": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "H_P10_1": {
+   "id": "H_P10_1",
+   "name": "Грязный приём",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 90,
+   "mult": 0.6,
+   "self_move": 1,
+   "effects": [
+    {
+     "type": "blind",
+     "turns": 2,
+     "chance": 80
+    }
+   ]
+  },
+  "H_P10_2": {
+   "id": "H_P10_2",
+   "name": "Ложная тревога",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 90,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "fear",
+     "turns": 2,
+     "chance": 70
+    }
+   ]
   }
  },
  "weapons": {
@@ -951,6 +2803,11 @@
   "Разумный": {
    "smart": true
   },
+  "Слепота": {
+   "immune": [
+    "blind"
+   ]
+  },
   "Регенерация": {
    "regen": 2
   }
@@ -1035,5 +2892,113 @@
   "Предводитель",
   "Командование",
   "Сети"
- ]
+ ],
+ "heroes": {
+  "P01": [
+   "H_P01_1",
+   "H_P01_2"
+  ],
+  "P02": [
+   "H_P02_1",
+   "H_P02_2"
+  ],
+  "P03": [
+   "H_P03_1",
+   "H_P03_2"
+  ],
+  "P04": [
+   "H_P04_1",
+   "H_P04_2"
+  ],
+  "P08": [
+   "H_P08_1",
+   "H_P08_2"
+  ],
+  "P09": [
+   "H_P09_1",
+   "H_P09_2"
+  ],
+  "P10": [
+   "H_P10_1",
+   "H_P10_2"
+  ]
+ },
+ "cards": {
+  "A01": "C_A01",
+  "A02": "C_A02",
+  "A03": "C_A03",
+  "A04": "C_A04",
+  "A05": "C_A05",
+  "A06": "C_A06",
+  "A07": "C_A07",
+  "U01": "C_U01",
+  "U02": "C_U02",
+  "U06": "C_U06",
+  "K01": "C_K01",
+  "K02": "C_K02",
+  "K03": "C_K03",
+  "K04": "C_K04",
+  "K05": "C_K05",
+  "K06": "C_K06",
+  "K07": "C_K07",
+  "K08": "C_K08",
+  "U14": "C_U14",
+  "U15": "C_U15",
+  "U07": "C_U07",
+  "U11": "C_U11",
+  "U12": "C_U12",
+  "U16": "C_U16",
+  "L01": "C_L01",
+  "L02": "C_L02",
+  "L03": "C_L03",
+  "L04": "C_L04",
+  "L05": "C_L05",
+  "L06": "C_L06",
+  "L07": "C_L07",
+  "L08": "C_L08",
+  "L09": "C_L09",
+  "L10": "C_L10",
+  "L11": "C_L11",
+  "L12": "C_L12",
+  "L13": "C_L13",
+  "L14": "C_L14",
+  "L15": "C_L15",
+  "L16": "C_L16",
+  "L17": "C_L17",
+  "LW1": "C_LW1",
+  "LW2": "C_LW2",
+  "LW3": "C_LW3",
+  "LW4": "C_LW4"
+ },
+ "card_passive": {
+  "L07": {
+   "prot": 0.1
+  },
+  "U16": {
+   "prot": 0.15
+  },
+  "L13": {
+   "first": 8
+  }
+ },
+ "echoes": {
+  "U12": {
+   "base": "M03",
+   "name": "Эхо Падальщика",
+   "skills": [
+    "E_CLAWS",
+    "E_SHELL",
+    "ECHO_RECALL"
+   ]
+  },
+  "L16": {
+   "base": "M04",
+   "name": "Эхо Центуриона",
+   "skills": [
+    "E_SICKLE",
+    "E_LEGION",
+    "ECHO_RECALL"
+   ]
+  }
+ }
 }

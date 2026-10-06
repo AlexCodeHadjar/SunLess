@@ -103,8 +103,12 @@ static func hero(content: Content, state: RunState, cid: String) -> SkFighter:
 	var w := Strikes.hero_weapon(content, state, cid)
 	var wd: Dictionary = _data(content).get("weapons", {}).get(str(w.get("id", "")), _data(content).get("weapons", {}).get("Без оружия", {}))
 	f.dmg = wd.get("dmg", [1, 3]).duplicate()
-	f.skills = [skill(content, str(wd.get("skill", "W_FIST")))]
-	f.skills.append_array(_generic(content))
+	f.skills = hero_skills(content, state, cid, wd)
+	var passive: Dictionary = _data(content).get("card_passive", {})
+	for card: String in MissionFlow.pocket(state, cid):
+		var cp: Dictionary = passive.get(card, {})
+		f.prot = minf(PROT_MAX, maxf(f.prot, float(cp.get("prot", 0.0))))
+		f.first_strike += int(cp.get("first", 0))
 	f.pref = _pref(f)
 	var ch := state.character(cid)
 	f.hp = clampi(int(ch.get("hp", f.hp_max)), 0, f.hp_max)
@@ -113,6 +117,60 @@ static func hero(content: Content, state: RunState, cid: String) -> SkFighter:
 		f.hp = 0
 	elif f.hp <= 0:
 		f.hp = 1
+	return f
+
+
+## Навыки героя (docs/24 §5): два своих (бьют текущим оружием), оружие (карты-оружие в кармашке, без них —
+## своё), карты способностей, остальные карты кармашка, «Шаг», «Пропуск». wd — данные текущего оружия.
+static func hero_skills(content: Content, state: RunState, cid: String, wd: Dictionary) -> Array:
+	var out: Array = []
+	var d := _data(content)
+	for id: String in d.get("heroes", {}).get(cid, []):
+		out.append(skill(content, id))
+	var pocket := MissionFlow.pocket(state, cid)
+	var cards: Dictionary = d.get("cards", {})
+	var weapon_cards := pocket.filter(func(x: String) -> bool: return str(content.enhancements.get(x, {}).get("weapon", "")) != "" and cards.has(x))
+	if weapon_cards.is_empty():
+		out.append(skill(content, str(wd.get("skill", "W_FIST"))))
+	for x: String in weapon_cards:
+		out.append(_card_skill(content, x))
+	for aid: String in state.character(cid).get("abilities", []):
+		if cards.has(aid):
+			out.append(_card_skill(content, aid))
+	for x2: String in pocket:
+		if cards.has(x2) and not weapon_cards.has(x2):
+			out.append(_card_skill(content, x2))
+	out.append_array(_generic(content))
+	return out.filter(func(x: Dictionary) -> bool: return not x.is_empty())
+
+
+## Навык карты (с id карты в поле card — для экрана: миниатюра карты на кнопке).
+static func _card_skill(content: Content, card: String) -> Dictionary:
+	var s := skill(content, str(_data(content).get("cards", {}).get(card, "")))
+	if s.is_empty():
+		return s
+	s = s.duplicate()
+	s["card"] = card
+	return s
+
+
+## Эхо (docs/24 §4.13): существо из данных врага (base), на стороне героя; 2 навыка и «Отозвать»; психики и грани нет.
+static func echo(content: Content, state: RunState, card: String, owner: String) -> SkFighter:
+	var ed: Dictionary = _data(content).get("echoes", {}).get(card, {})
+	var f := enemy(content, str(ed.get("base", "")))
+	f.side = "hero"
+	f.echo = true
+	f.owner = owner
+	f.card = card
+	f.name = str(ed.get("name", content.card_name(card)))
+	f.smart = false
+	f.size = 1
+	f.skills = []
+	for id: String in ed.get("skills", []):
+		f.skills.append(skill(content, id))
+	f.skills.append_array(_generic(content))
+	f.pref = _pref(f)
+	f.hp = clampi(int(state.flags.get("echo_hp", {}).get(card, f.hp_max)), 1, f.hp_max)
 	return f
 
 

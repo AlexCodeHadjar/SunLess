@@ -38,6 +38,11 @@ var squad: Array = []         # id героев отряда (для психи�
 var shielded := {}            # щиты карт грани, сработавшие в этом бою
 var result := {"edge": [], "death": {}}
 var entries: Array = []       # записи для отчёта (грань, гибель, кризисы)
+var first_uid := ""           # кто ходит первым в этом раунде («Первая кровь»)
+var bonus_turn := ""          # «Рывок»: этот боец сразу ходит ещё раз
+var ward_rounds := 0          # «Высветить»: столько раундов тьма не бьёт по психике
+var lost_echoes: Array = []   # карты Эха, рассыпавшиеся в этом бою
+var _xn := 0
 
 
 ## spec: {heroes: [id в порядке строя], enemies: [id], field, light, ambush, power, no_retreat}
@@ -59,6 +64,17 @@ static func create(p_content: Content, state_in: RunState, spec: Dictionary) -> 
 			f.uid = "h%d" % heroes.size()
 			heroes.append(f)
 			sk.squad.append(cid)
+	# Эхо из кармашков героев — в свободные позиции (docs/24 §4.13)
+	var used := 0
+	for h: SkFighter in heroes:
+		used += h.size
+	for h2: SkFighter in heroes.duplicate():
+		for card: String in MissionFlow.pocket(sk.state, h2.card):
+			if p_content.skirmish.get("echoes", {}).has(card) and used < SkFormation.SIZE:
+				var ec := SkBuild.echo(p_content, sk.state, card, h2.card)
+				ec.uid = sk._next_echo_uid()
+				heroes.append(ec)
+				used += 1
 	if sk.ambush == "heroes":
 		heroes.shuffle()    # застигнутый отряд теряет строй
 	SkFormation.place(heroes)
@@ -69,9 +85,23 @@ static func create(p_content: Content, state_in: RunState, spec: Dictionary) -> 
 			e.uid = "e%d" % foes.size()
 			foes.append(e)
 	SkFormation.place(foes)
+	# Отражение (испытание души): навыки и оружие героя испытания
+	var mirror := str(spec.get("mirror", ""))
+	if mirror != "" and sk.state.is_alive(mirror):
+		var src := SkBuild.hero(p_content, sk.state, mirror)
+		for e2: SkFighter in foes:
+			if e2.tags.has("Зеркало"):
+				e2.skills = src.skills.filter(func(x: Dictionary) -> bool: return not x.has("card") and str(x.get("kind", "")) != "recall")
+				e2.dmg = src.dmg.duplicate()
+				e2.pref = src.pref.duplicate()
 	sk.fighters = heroes + foes
 	sk.fighters = sk.fighters.filter(func(f: SkFighter) -> bool: return not f.removed)
 	return sk
+
+
+func _next_echo_uid() -> String:
+	_xn += 1
+	return "x%d" % _xn
 
 
 # --- чтение -----------------------------------------------------------------------------------------------------------
@@ -112,6 +142,12 @@ func light_mod(f: SkFighter, key: String) -> float:
 ## Следующий боец, который ходит сейчас (состояния начала хода уже сработали); null — бой окончен.
 func turn() -> SkFighter:
 	var guard := 0
+	if bonus_turn != "" and outcome == "":
+		var fb := by_uid(bonus_turn)
+		bonus_turn = ""
+		if fb != null and fb.alive():
+			log.append({"kind": "turn", "who": fb.uid, "bonus": true})
+			return fb
 	while outcome == "" and guard < 200:
 		guard += 1
 		if queue.is_empty():
@@ -137,7 +173,9 @@ func _begin_round() -> void:
 		return
 	log.append({"kind": "round", "n": round_no})
 	var lp := int(content.skirmish.get("light", {}).get(light, {}).get("psyche", 0))
-	if lp != 0:
+	if ward_rounds > 0:
+		ward_rounds -= 1
+	elif lp != 0:
 		for h: SkFighter in heroes_alive():
 			log.append_array(psyche(h, lp, "тьма давит"))
 	var order: Array = []
@@ -154,6 +192,7 @@ func _begin_round() -> void:
 		order.append(f)
 	order.sort_custom(_before)
 	queue = order.map(func(f: SkFighter) -> String: return f.uid)
+	first_uid = str(queue[0]) if not queue.is_empty() else ""
 	log.append({"kind": "queue", "order": queue.duplicate()})
 
 
@@ -199,6 +238,9 @@ func _start_turn(f: SkFighter) -> bool:
 	if bool(tk["stunned"]):
 		log.append({"kind": "stunned", "who": f.uid})
 		return false
+	if f.has_status("fear") and not f.has_status("steady") and rng.randi_range(1, 100) <= 50:
+		if SkFormation.move(fighters, f, 1) != 0:
+			log.append({"kind": "fear", "who": f.uid, "pos": f.pos})
 	return true
 
 
@@ -216,6 +258,31 @@ func usable_why(f: SkFighter, s: Dictionary) -> String:
 		return "раз за бой"
 	if int(s.get("uses", 0)) > 0 and int(f.used.get(id, 0)) >= int(s["uses"]):
 		return "уже применён"
+	var need: Dictionary = s.get("need", {})
+	if bool(need.get("first", false)) and round_no > 1 and first_uid != f.uid:
+		return "только первым ударом"
+	if need.has("hp_below") and float(f.hp) >= f.hp_max * float(need["hp_below"]):
+		return "только раненым"
+	if need.has("light_not") and Array(need["light_not"]).has(light):
+		return "не при таком свете"
+	for e: Dictionary in s.get("effects", []):
+		if str(e["type"]) == "summon":
+			var why := _summon_why(f, str(e.get("card", "")))
+			if why != "":
+				return why
+	return ""
+
+
+func _summon_why(f: SkFighter, card: String) -> String:
+	if lost_echoes.has(card):
+		return "Эхо рассыпалось"
+	if fighters.any(func(x: SkFighter) -> bool: return x.echo and x.card == card and x.alive()):
+		return "Эхо уже в бою"
+	var used := 0
+	for x2: SkFighter in SkFormation.line(fighters, f.side):
+		used += x2.size
+	if used >= SkFormation.SIZE:
+		return "нет места в строю"
 	return ""
 
 
@@ -239,14 +306,26 @@ func targets(f: SkFighter, s: Dictionary) -> Array:
 	var pool: Array = []
 	if side == "ally":
 		pool = living(f.side).filter(func(x: SkFighter) -> bool: return to.is_empty() or x.positions().any(func(p: int) -> bool: return to.has(p)))
+		if bool(s.get("not_self", false)):
+			pool = pool.filter(func(x: SkFighter) -> bool: return x != f)
+		if bool(s.get("adjacent", false)):
+			pool = pool.filter(func(x: SkFighter) -> bool: return x.pos + x.size == f.pos or f.pos + f.size == x.pos)
+		if bool(s.get("owner", false)):
+			pool = pool.filter(func(x: SkFighter) -> bool: return x.card == f.owner)
 	else:
 		pool = SkFormation.line(fighters, other(f.side)).filter(func(x: SkFighter) -> bool: return x.positions().any(func(p: int) -> bool: return to.has(p)))
-		# скрытного нельзя выбрать целью, пока есть другие цели (кроме ударов «по всем»)
-		var open := pool.filter(func(x: SkFighter) -> bool: return not x.has_status("stealth"))
-		if not bool(s.get("aoe", false)) and not open.is_empty():
-			pool = open
-		elif not bool(s.get("aoe", false)):
-			pool = []
+		if bool(s.get("need", {}).get("target_rank_above", false)):
+			pool = pool.filter(func(x: SkFighter) -> bool: return x.rank > f.rank)
+		if not bool(s.get("aoe", false)):
+			# скрытного нельзя выбрать целью, пока есть другие цели (кроме ударов «по всем» и сквозь тень)
+			if not bool(s.get("pierce_stealth", false)):
+				var open := pool.filter(func(x: SkFighter) -> bool: return not x.has_status("stealth"))
+				if not open.is_empty():
+					pool = open
+			# Приманка: если её носитель — среди целей, бить можно только его
+			var bait := pool.filter(func(x: SkFighter) -> bool: return x.has_status("taunt") and x.alive())
+			if not bait.is_empty():
+				pool = bait
 	if pool.is_empty():
 		return []
 	if bool(s.get("aoe", false)):
@@ -285,10 +364,17 @@ func act(f: SkFighter, skill_id: String, target_uid: String) -> Array:
 		return [{"kind": "error", "who": f.uid, "skill": skill_id, "target": target_uid}]
 	ev.append({"kind": "skill", "who": f.uid, "skill": skill_id, "name": str(s.get("name", "")), "target": target_uid})
 	var kind := str(s.get("kind", ""))
+	var cost: Dictionary = s.get("cost", {})
+	if int(cost.get("psyche", 0)) != 0:
+		ev.append_array(psyche(f, int(cost["psyche"]), "цена навыка"))
 	if kind == "step":
 		var t := by_uid(target_uid)
 		SkFormation.move(fighters, f, 1 if t.pos > f.pos else -1)
 		ev.append({"kind": "move", "who": f.uid, "pos": f.pos})
+	elif kind == "recall":
+		f.removed = true
+		ev.append({"kind": "recall", "who": f.uid})
+		SkFormation.relayout(fighters, f.side)
 	elif kind != "pass":
 		var hostile := str(s.get("side", "enemy")) == "enemy"
 		var list := _hit_list(f, s, target_uid)
@@ -334,11 +420,30 @@ func _strike(a: SkFighter, s: Dictionary, t: SkFighter) -> Array:
 	var ev: Array = []
 	var pv := SkStrike.preview(self, a, s, t)
 	var r := SkStrike.roll(self, pv)
+	var hostile := str(s.get("side", "enemy")) == "enemy"
+	# Уклон (жетон): тратится на любой удар по бойцу; попадание — 50% промаха (как в Darkest Dungeon II)
+	if hostile and t.has_status("dodge") and not a.has_status("sure") and SkStatus.spend(t, "dodge") and bool(r["hit"]):
+		if rng.randi_range(1, 100) <= 50:
+			r["hit"] = false
+			r["effects"] = []
+			ev.append({"kind": "dodge", "who": t.uid})
+	if hostile:
+		SkStatus.remove(a, "sure")
 	if not bool(r["hit"]):
 		ev.append({"kind": "miss", "who": a.uid, "to": t.uid})
 	elif int(r["dmg"]) > 0:
-		ev.append({"kind": "hit", "who": a.uid, "to": t.uid, "dmg": int(r["dmg"]), "crit": bool(r["crit"])})
-		ev.append_array(hurt(t, int(r["dmg"]), a, "hit"))
+		var dmg := int(r["dmg"])
+		if t.has_status("block"):
+			SkStatus.spend(t, "block")
+			dmg = int(ceil(dmg * 0.5))
+			ev.append({"kind": "block", "who": t.uid})
+		SkStatus.remove(a, "empower")
+		ev.append({"kind": "hit", "who": a.uid, "to": t.uid, "dmg": dmg, "crit": bool(r["crit"])})
+		ev.append_array(hurt(t, dmg, a, "hit"))
+		if float(s.get("lifesteal", 0.0)) > 0.0 and a.alive():
+			ev.append_array(heal(a, int(floor(dmg * float(s["lifesteal"])))))
+		if a.has_status("ignite") and t.alive():
+			ev.append_array(apply_effect(a, t, {"type": "burn", "power": 2, "turns": 2}))
 		if bool(r["crit"]):
 			ev.append_array(_on_crit(a, t))
 	var effs: Array = s.get("effects", [])
@@ -353,6 +458,10 @@ func _strike(a: SkFighter, s: Dictionary, t: SkFighter) -> Array:
 
 ## Эффект навыка (уже прошедший бросок и сопротивление).
 func apply_effect(a: SkFighter, t: SkFighter, e: Dictionary, crit: bool = false) -> Array:
+	if bool(e.get("dark_double", false)) and light in SkStrike.DARK:
+		e = e.duplicate()
+		e["value"] = float(e.get("value", 0)) * 2.0
+		e["turns"] = int(e.get("turns", 1)) * 2 if str(e["type"]) == "stealth" else int(e.get("turns", 1))
 	var et := str(e["type"])
 	var ev: Array = []
 	match et:
@@ -378,14 +487,94 @@ func apply_effect(a: SkFighter, t: SkFighter, e: Dictionary, crit: bool = false)
 			if SkStatus.add(t, {"type": et, "stat": str(e.get("stat", "dmg")), "value": float(e.get("value", 0)), "turns": int(e.get("turns", 2))}):
 				ev.append({"kind": "status", "to": t.uid, "type": et, "stat": str(e.get("stat", ""))})
 		"push", "pull":
+			if t.has_status("steady"):
+				return []
 			var n := int(e.get("n", 1)) * (1 if et == "push" else -1)
 			if SkFormation.move(fighters, t, n) != 0:
 				ev.append({"kind": "move", "who": t.uid, "pos": t.pos})
 		"heal":
 			ev.append_array(heal(t, rng.randi_range(int(e.get("min", 2)), int(e.get("max", 4)))))
 		"psyche":
-			ev.append_array(psyche(t, int(e.get("value", 0)), "удар по рассудку"))
+			var pv2 := int(e.get("value", 0))
+			ev.append_array(psyche(t, pv2, "удар по рассудку" if pv2 < 0 else "слова поддержки"))
+		"burn":
+			if t.corpse:
+				return []
+			if SkStatus.add(t, {"type": "burn", "power": int(e.get("power", 2)) + (1 if crit else 0), "turns": int(e.get("turns", 2))}):
+				SkStatus.remove(t, "stealth")
+				ev.append({"kind": "status", "to": t.uid, "type": "burn"})
+		"dodge", "block":
+			SkStatus.add(t, {"type": et, "charges": int(e.get("charges", 1))})
+			ev.append({"kind": "status", "to": t.uid, "type": et})
+		"taunt", "foresight", "blind", "fear", "ignite", "steady", "empower":
+			if t.corpse:
+				return []
+			var turns := int(e.get("turns", 2))
+			if SkStatus.add(t, {"type": et, "turns": turns}):
+				ev.append({"kind": "status", "to": t.uid, "type": et})
+		"sure":
+			SkStatus.add(t, {"type": "sure", "turns": int(e.get("turns", 2)), "crit": int(e.get("crit", 0))})
+			ev.append({"kind": "status", "to": t.uid, "type": "sure"})
+		"heal_pct":
+			ev.append_array(heal(t, int(ceil(t.hp_max * float(e.get("value", 0.25))))))
+		"cleanse":
+			var gone: Array = []
+			for ct: String in e.get("types", []):
+				if t.has_status(ct):
+					SkStatus.remove(t, ct)
+					gone.append(ct)
+			if not gone.is_empty():
+				ev.append({"kind": "cleanse", "who": t.uid, "types": gone})
+		"remove_buffs":
+			for bt: String in SkStatus.BUFFS:
+				SkStatus.remove(t, bt)
+			ev.append({"kind": "strip", "who": t.uid})
+		"unstealth":
+			if t.has_status("stealth"):
+				SkStatus.remove(t, "stealth")
+				ev.append({"kind": "reveal", "who": t.uid})
+		"unstealth_all":
+			for x: SkFighter in living(t.side):
+				if x.has_status("stealth"):
+					SkStatus.remove(x, "stealth")
+					ev.append({"kind": "reveal", "who": x.uid})
+		"reveal":
+			ev.append({"kind": "know", "who": t.uid, "tags": t.tags.duplicate()})
+		"swap":
+			if t != a and t.side == a.side and t.alive() and not t.has_status("steady"):
+				var ln := SkFormation.line(fighters, a.side)
+				var ia := ln.find(a)
+				var it := ln.find(t)
+				SkFormation.move(fighters, a, it - ia)
+				ev.append({"kind": "swap", "who": a.uid, "with": t.uid})
+		"extra_turn":
+			bonus_turn = t.uid
+			ev.append({"kind": "extra_turn", "who": t.uid})
+		"summon":
+			ev.append_array(_summon(a, str(e.get("card", ""))))
+		"light_ward":
+			ward_rounds = maxi(ward_rounds, int(e.get("rounds", 3)))
+			ev.append({"kind": "ward", "rounds": ward_rounds})
 	return ev
+
+
+## Призвать Эхо карты на свободную позицию в конце строя.
+func _summon(owner: SkFighter, card: String) -> Array:
+	if _summon_why(owner, card) != "":
+		return []
+	var old: SkFighter = null
+	for x: SkFighter in fighters:
+		if x.echo and x.card == card:
+			old = x
+	var ec := old
+	if ec == null:
+		ec = SkBuild.echo(content, state, card, owner.card)
+		ec.uid = _next_echo_uid()
+		fighters.append(ec)
+	ec.removed = false
+	ec.pos = 99
+	SkFormation.relayout(fighters, owner.side)
+	return [{"kind": "summon", "who": ec.uid, "by": owner.uid, "pos": ec.pos}]
 
 
 func _riposte(t: SkFighter, a: SkFighter) -> Array:
@@ -429,6 +618,10 @@ func hurt(t: SkFighter, amount: int, by: SkFighter, source: String) -> Array:
 		ev.append_array(_kill_enemy(t, by, source))
 	elif t.echo:
 		t.dead = true
+		lost_echoes.append(t.card)
+		state.collection.erase(t.card)
+		Array(state.character(t.owner).get("pocket", [])).erase(t.card)
+		entries.append({"kind": "broken", "card": t.card, "text": "%s рассыпается — карта потеряна" % t.name})
 		ev.append({"kind": "echo_lost", "who": t.uid})
 		SkFormation.relayout(fighters, t.side)
 	else:
@@ -608,9 +801,15 @@ func auto(max_turns: int = 400) -> String:
 
 ## Итог: здоровье героев — в состояние, кризисы боя кончаются. {outcome, state, entries, rounds}.
 func finish() -> Dictionary:
+	var echo_hp: Dictionary = state.flags.get("echo_hp", {})
 	for f: SkFighter in fighters:
 		if f.is_hero() and state.is_alive(f.card):
 			state.character(f.card)["hp"] = f.hp
 			PsycheRules.reset(state, f.card, "combat")
+		elif f.echo and not f.dead:
+			echo_hp[f.card] = f.hp
+	for card: String in lost_echoes:
+		echo_hp.erase(card)
+	state.flags["echo_hp"] = echo_hp
 	state.rng_state = rng.state
 	return {"outcome": outcome, "state": state, "entries": entries, "rounds": round_no}

@@ -9,6 +9,8 @@ const CRIT_MULT := 1.5
 const RANK_UP := 1.25         # старший ранг бьёт сильнее — за каждый ранг разницы
 const RANK_DOWN := 0.8        # …и получает меньше урона (вместе ≈ ×1,6, как RANK_STEP)
 const PANIC := {"dmg": -0.3, "acc": -10, "dodge": 0}
+const FORESIGHT := 10         # Предвидение на враге: союзникам +10 уклонения от его ударов
+const DARK := ["dusk", "dark"]
 const UPLIFT := {"dmg": 0.25, "acc": 10, "dodge": 10}
 
 
@@ -45,9 +47,17 @@ static func preview(sk: Skirmish, a: SkFighter, s: Dictionary, t: SkFighter) -> 
 		var dod := 0.0
 		if not t.corpse:
 			dod = t.dodge + SkStatus.mod(t, "dodge") + sk.light_mod(t, "dodge") + crisis_mod(sk, t, "dodge")
+			if a.has_status("foresight"):
+				dod += FORESIGHT
+				why.append("Предвидение: уклонение +%d" % FORESIGHT)
 		hit = clampi(int(round(acc - dod)), HIT_MIN, HIT_MAX)
+		if a.has_status("sure"):
+			hit = 100
+			why.append("верный удар")
 		if sk.light_mod(a, "acc") > 0:
 			why.append("%s: враг точнее +%d" % [sk.light_name(), int(sk.light_mod(a, "acc"))])
+		if a.has_status("blind") and not a.tags.has("Слепота"):
+			why.append("ослеплён: точность %d" % SkStatus.BLIND)
 	var lo := 0
 	var hi := 0
 	var base: Array = s.get("dmg", a.dmg)
@@ -61,6 +71,16 @@ static func preview(sk: Skirmish, a: SkFighter, s: Dictionary, t: SkFighter) -> 
 		if buff != 0.0:
 			why.append("усиление и обстановка: %s" % _pct(buff))
 		k *= maxf(0.1, 1.0 + buff)
+		var stealthy := a.has_status("stealth") and s.has("from_stealth")
+		if stealthy:
+			k *= float(s["from_stealth"].get("mult", 1.0))
+			why.append("из тени: %s" % _pct(float(s["from_stealth"].get("mult", 1.0)) - 1.0))
+		if s.has("dark_bonus") and sk.light in DARK:
+			k *= 1.0 + float(s["dark_bonus"].get("mult", 0.0))
+			why.append("в темноте: %s" % _pct(float(s["dark_bonus"].get("mult", 0.0))))
+		if a.has_status("empower"):
+			k *= 2.0
+			why.append("раскрытый Аспект: вдвое")
 		var vs: Dictionary = s.get("vs", {})
 		for tag: String in vs:
 			if t.tags.has(tag):
@@ -72,6 +92,9 @@ static func preview(sk: Skirmish, a: SkFighter, s: Dictionary, t: SkFighter) -> 
 		var prot := 0.0
 		if not t.corpse:
 			prot = clampf(t.prot + SkStatus.mod(t, "prot"), 0.0, SkBuild.PROT_MAX) * (1.0 - float(s.get("ignore_prot", 0.0)))
+			if Array(s.get("ignore_prot_vs", [])).any(func(x: String) -> bool: return t.tags.has(x)):
+				prot = 0.0
+				why.append("броня не в счёт")
 		if prot > 0.0:
 			why.append("защита цели: %s" % _pct(-prot))
 		k *= 1.0 - prot
@@ -79,14 +102,22 @@ static func preview(sk: Skirmish, a: SkFighter, s: Dictionary, t: SkFighter) -> 
 		hi = maxi(lo, int(floor(float(base[1]) * k)))
 	var crit := 0
 	if hi > 0:
-		crit = clampi(a.crit + int(s.get("crit", 0)) + int(SkStatus.mod(a, "crit")) + int(sk.light_mod(a, "crit")), 0, 100)
+		crit = a.crit + int(s.get("crit", 0)) + int(SkStatus.mod(a, "crit")) + int(sk.light_mod(a, "crit"))
+		crit += int(a.status("sure").get("crit", 0))
+		if s.has("dark_bonus") and sk.light in DARK:
+			crit += int(s["dark_bonus"].get("crit", 0))
+		if a.has_status("stealth") and s.has("from_stealth"):
+			crit = maxi(crit, int(s["from_stealth"].get("crit", 0)))
+		crit = clampi(crit, 0, 100)
 	var effects: Array = []
 	for e: Dictionary in s.get("effects", []):
 		var on_self := bool(e.get("self", false))
 		var target := a if on_self else t
 		var ch := int(e.get("chance", 100))
 		var et := str(e["type"])
-		if hostile and not on_self:
+		if not effect_applies(sk, e, target):
+			ch = 0
+		elif hostile and not on_self:
 			if target.immune.has(et):
 				ch = 0
 				why.append("%s: не действует" % SkStatus.NAMES.get(et, et))
@@ -96,6 +127,20 @@ static func preview(sk: Skirmish, a: SkFighter, s: Dictionary, t: SkFighter) -> 
 	return {"hit": hit, "min": lo, "max": hi, "crit": crit, "effects": effects, "why": why}
 
 
+## Условия эффекта: теги цели (if_tag / if_not_tag) и свет (light_only / light_not).
+static func effect_applies(sk: Skirmish, e: Dictionary, t: SkFighter) -> bool:
+	var need: Array = e.get("if_tag", [])
+	if not need.is_empty() and not need.any(func(x: String) -> bool: return t.tags.has(x)):
+		return false
+	if Array(e.get("if_not_tag", [])).any(func(x: String) -> bool: return t.tags.has(x)):
+		return false
+	if e.has("light_only") and not Array(e["light_only"]).has(sk.light):
+		return false
+	if e.has("light_not") and Array(e["light_not"]).has(sk.light):
+		return false
+	return true
+
+
 ## Бросок удара: {hit: bool, crit: bool, dmg: int, effects: [индексы сработавших эффектов]}.
 static func roll(sk: Skirmish, pv: Dictionary) -> Dictionary:
 	var out := {"hit": true, "crit": false, "dmg": 0, "effects": []}
@@ -103,7 +148,7 @@ static func roll(sk: Skirmish, pv: Dictionary) -> Dictionary:
 		out["hit"] = false
 		# промах: эффекты на себя всё равно срабатывают (например, уйти в тень после удара)
 		for i in pv["effects"].size():
-			if bool(pv["effects"][i]["self"]):
+			if bool(pv["effects"][i]["self"]) and int(pv["effects"][i]["chance"]) > 0:
 				out["effects"].append(i)
 		return out
 	if int(pv["max"]) > 0:

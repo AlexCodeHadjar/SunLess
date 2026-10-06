@@ -8,6 +8,9 @@ const GOOD_SHARE := 0.5
 
 
 static func choose(sk: Skirmish, f: SkFighter) -> Dictionary:
+	# Эхо при смерти уводят из боя — иначе карта рассыплется
+	if f.echo and f.hp * 10 < f.hp_max * 3 and not f.skill("ECHO_RECALL").is_empty():
+		return {"skill": "ECHO_RECALL", "target": f.uid, "score": 9.0}
 	var opts: Array = []
 	var can_hit := false
 	for o: Dictionary in sk.options(f):
@@ -80,6 +83,20 @@ static func _hostile(sk: Skirmish, f: SkFighter, s: Dictionary, t: SkFighter) ->
 				v += ch * 0.8
 			"mark", "debuff":
 				v += ch * 1.5
+			"blind":
+				v += ch * 2.0
+			"fear":
+				v += ch * 1.5
+			"foresight":
+				v += ch * (0.3 if t.has_status("foresight") else 1.2)
+			"burn":
+				v += ch * float(src.get("power", 2)) * float(src.get("turns", 2))
+			"remove_buffs":
+				v += 1.5 * t.statuses.filter(func(x: Dictionary) -> bool: return SkStatus.BUFFS.has(str(x["type"]))).size()
+			"unstealth":
+				v += 2.0 if t.has_status("stealth") else 0.0
+			"unstealth_all":
+				v += 2.0 * sk.living(t.side).filter(func(x: SkFighter) -> bool: return x.has_status("stealth")).size()
 			"psyche":
 				if t.is_hero():
 					var low := 1.0 + (100.0 - float(PsycheRules.psyche(sk.state, t.card))) / 100.0
@@ -104,8 +121,25 @@ static func _support(sk: Skirmish, f: SkFighter, s: Dictionary, t: SkFighter) ->
 				var miss := t.hp_max - t.hp
 				if miss * 10 >= t.hp_max * 3 or t.edge:
 					v += minf(float(miss), (float(e.get("min", 2)) + float(e.get("max", 4))) / 2.0) * 1.2 + (6.0 if t.edge else 0.0)
-			"buff", "riposte", "stealth":
+			"buff", "riposte", "stealth", "dodge", "block", "sure", "empower", "ignite":
 				v += 0.3 if t.has_status(et) else 2.0
+			"taunt":
+				v += 1.5 if t.hp * 2 > t.hp_max and not t.has_status("taunt") else 0.1
+			"heal_pct":
+				var miss2 := t.hp_max - t.hp
+				if miss2 * 10 >= t.hp_max * 3 or t.edge:
+					v += minf(float(miss2), t.hp_max * float(e.get("value", 0.25))) * 1.2 + (6.0 if t.edge else 0.0)
+			"cleanse":
+				for ct: String in e.get("types", []):
+					v += 2.5 if t.has_status(ct) else 0.0
+			"extra_turn":
+				v += 3.0
+			"summon":
+				v += 4.0
+			"light_ward":
+				v += 1.0 if sk.light in SkStrike.DARK else 0.1
+			"swap", "steady":
+				v += 0.05
 			"guard":
 				if t != f:
 					v += 2.5 if t.hp * 2 < t.hp_max else 0.6
