@@ -44,6 +44,7 @@ const SUITES := [
 	"res://tests/test_skirmish.gd",
 	"res://tests/test_skirmish_skills.gd",
 	"res://tests/test_skirmish_enemies.gd",
+	"res://tests/test_skirmish_world.gd",
 ]
 
 

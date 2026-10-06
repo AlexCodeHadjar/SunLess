@@ -209,6 +209,7 @@ static func end_day(content: Content, state: RunState) -> Array:
 		state.character(cid)["sorties"] = 0
 		if bed and EdgeRules.on_edge(state, cid):
 			EdgeRules.recover(content, state, cid, "отлежался в лагере", out)
+	SkirmishRules.night_heal(content, state)   # раны «Схватки» затягиваются (docs/24 §8)
 	out.append({"kind": "rest", "text": "Отдых: психика +%d%s" % [int(rest), (", на койке ещё +%d" % int(bed_rest)) if not CampRules.beds(state).is_empty() else ""]})
 	if Array(c.get("services", [])).has("repair"):
 		var fixed := 0

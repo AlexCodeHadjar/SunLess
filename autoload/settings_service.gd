@@ -15,6 +15,7 @@ var values := {
 	"quests_open": true,      # задания справа развёрнуты (docs/20)
 	"tray_open": true,        # ряд героев и усилений внизу открыт (кнопка «Спрятать карты»)
 	"canon_notes": true,
+	"skirmish": false,        # бой в событиях — пошаговая «Схватка» (docs/24; пока переключатель в «Разработчике»)
 	"vol_master": 0.9,
 	"vol_music": 0.55,
 	"vol_ambient": 0.7,

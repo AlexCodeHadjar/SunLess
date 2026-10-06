@@ -326,6 +326,9 @@ func show_arrival(sid: int) -> void:
 	if sq["phase"] == "fork":
 		show_fork(sid)
 		return
+	if sq["phase"] == "combat":   # бой «Схватки» был прерван — продолжить
+		_open_skirmish(sid, sq["pending"]["spec"])
+		return
 	mission_id = sq["mission"]
 	var m: Dictionary = c.missions[mission_id]
 	_clear()
@@ -402,10 +405,37 @@ func _choose(action_id: String) -> void:
 		EventBus.toast.emit(str(r["error"]))
 		return
 	AudioManager.play("roll", -4.0)
-	if r.has("fork"):
+	_after(r)
+
+
+## Ответ резолвера: развилка, бой «Схватки» (пауза) или отчёт.
+func _after(r: Dictionary) -> void:
+	if r.has("skirmish"):
+		_open_skirmish(squad_id, r["skirmish"])
+	elif r.has("fork"):
 		show_fork(squad_id)
 	else:
 		show_report(r)
+
+
+## Пошаговый бой «Схватка» (docs/24 §8): окно прячется, бой — на своём экране; итог продолжает миссию.
+func _open_skirmish(sid: int, spec: Dictionary) -> void:
+	squad_id = sid
+	var c := _content()
+	var sk := Skirmish.create(c, GameState.state, spec)
+	var sq := MissionFlow.squad(GameState.state, sid)
+	var m: Dictionary = c.missions.get(str(sq.get("mission", "")), {})
+	var region := str(c.locations.get(str(m.get("location", "")), {}).get("region", GameState.state.region))
+	visible = false
+	var scr := SkirmishScreen.open(get_tree().root, sk, region, Atmosphere.sky(c, GameState.state))
+	scr.closed.connect(func(fin: Dictionary) -> void:
+		visible = true
+		var r := GameState.finish_skirmish(sid, SkirmishRules.summary(sk, fin))
+		if r.has("error"):
+			EventBus.toast.emit(str(r["error"]))
+			close()
+			return
+		_after(r))
 
 
 # --- развилка (docs/16 §2) ---------------------------------------------------------------
@@ -481,10 +511,7 @@ func _fork_button(opt: Dictionary, sq: Dictionary, run: Dictionary) -> Control:
 			EventBus.toast.emit(str(r["error"]))
 			return
 		AudioManager.play("roll", -4.0)
-		if r.has("fork"):
-			show_fork(squad_id)
-		else:
-			show_report(r))
+		_after(r))
 	return b
 
 
@@ -566,7 +593,7 @@ func _notes(m: Dictionary) -> VBoxContainer:
 
 ## Показ боёв миссии по очереди: экран боя сам начинает запись; закрыли — следующий бой или отчёт.
 func _play_fights(rep: Dictionary, i: int) -> void:
-	var cbs: Array = rep.get("combats", [])
+	var cbs: Array = Array(rep.get("combats", [])).filter(func(cb: Dictionary) -> bool: return cb.has("setup"))   # «Схватку» игрок уже видел
 	if i >= cbs.size() or not is_instance_valid(get_parent()):
 		show_report(rep)
 		return
@@ -752,7 +779,7 @@ func _stage_card(st: Dictionary, rep: Dictionary, combat_index: int) -> Control:
 	var t := _para(str(st.get("text", "")), "serif", 18, Palette.SILVER)
 	t.custom_minimum_size.x = 400
 	v.add_child(t)
-	if st.has("combat") and combat_index < Array(rep.get("combats", [])).size():
+	if st.has("combat") and combat_index < Array(rep.get("combats", [])).size() and Dictionary(rep["combats"][combat_index]).has("setup"):
 		var cb: Dictionary = rep["combats"][combat_index]
 		var w := Button.new()
 		w.text = "Смотреть бой ›"

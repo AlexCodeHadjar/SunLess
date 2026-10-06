@@ -26,7 +26,7 @@ static func shown_tags(content: Content, m: Dictionary, report: Dictionary, hero
 	for t: String in m.get("context", []):
 		add.call(t)
 	for cb: Dictionary in report.get("combats", []):
-		var spec: Dictionary = cb.get("setup", {}).get("spec", {})
+		var spec: Dictionary = cb.get("setup", {}).get("spec", cb.get("spec", {}))   # у «Схватки» — spec в записи
 		for eid: String in spec.get("enemies", []):
 			for t: String in content.enemies.get(eid, {}).get("tags", []):
 				add.call(t)
@@ -51,7 +51,7 @@ static func after_mission(content: Content, state: RunState, m: Dictionary, repo
 	var best: Dictionary = state.journal.get("bestiary", {})
 	for cb: Dictionary in report.get("combats", []):
 		var won := str(cb.get("outcome", "")) == "win"
-		var spec: Dictionary = cb.get("setup", {}).get("spec", {})
+		var spec: Dictionary = cb.get("setup", {}).get("spec", cb.get("spec", {}))   # у «Схватки» — spec в записи
 		var fired := {}
 		for r: Dictionary in cb.get("rounds", []):
 			for l: Dictionary in r.get("ledger", {}).get("links", []):

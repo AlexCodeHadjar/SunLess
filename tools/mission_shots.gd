@@ -145,6 +145,66 @@ func _skirmish() -> void:
 		if is_instance_valid(scr):
 			scr.close()
 		await _wait(0.3)
+	await _skirmish_world()
+
+
+func _sk_screen() -> SkirmishScreen:
+	for layer in get_tree().root.get_children():
+		if layer is CanvasLayer:
+			for ch in layer.get_children():
+				if ch is SkirmishScreen:
+					return ch
+	return null
+
+
+## Настоящий путь (Ф5): «Схватка» включена → событие с боем → пауза миссии → экран боя → отчёт.
+func _skirmish_world() -> void:
+	SettingsService.values["skirmish"] = true
+	GameState.new_mission_run(4243)
+	get_tree().change_scene_to_file("res://scenes/missions/mission_game.tscn")
+	await _wait(2.5)
+	_dismiss_story()
+	await _wait(1.0)
+	var game := get_tree().current_scene
+	GameState.state.missions["MS01"] = {"status": "done", "attempts": 0}
+	GameState.state.missions["MS03"] = {"status": "open", "attempts": 0}
+	GameState.missions_changed.emit()
+	await _wait(0.4)
+	game.call("_open_mission", "MS03")
+	await _wait(0.8)
+	_window().call("_launch")
+	await _wait(6.0)
+	game.call("_open_mission", "MS03")
+	await _wait(0.8)
+	_window().call("_choose", "MS03_fight")
+	await _wait(0.8)
+	if _window() != null and _window().mode == "fork":
+		var r: Dictionary = GameState.resolve_fork(_window().squad_id, "push")
+		_window().call("_after", r)
+	await _wait(2.5)
+	await _shot("sk_world_01_battle")
+	var scr := _sk_screen()
+	if scr != null:
+		scr.auto_heroes = true
+		scr._speed = 2.0
+		if scr._actor != null and not scr._busy:
+			scr._busy = true
+			scr.sk.ai_act(scr._actor)
+			await scr._play(scr._new_events())
+			scr._advance()
+		var t := 0.0
+		while is_instance_valid(scr) and scr.sk.outcome == "" and t < 90.0:
+			await _wait(0.5)
+			t += 0.5
+		await _wait(1.5)
+		await _shot("sk_world_02_result")
+		for b in scr.find_children("*", "Button", true, false):
+			if (b as Button).text == "Дальше":
+				(b as Button).pressed.emit()
+				break
+		await _wait(1.5)
+	await _shot("sk_world_03_report")
+	SettingsService.values["skirmish"] = false
 
 
 func _run() -> void:

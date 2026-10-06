@@ -102,6 +102,11 @@ func _fill() -> void:
 			SkirmishScreen.open(get_tree().root, SkirmishScreen.demo(ContentDB.data, f[1], f[2], 0, f[5]), f[3], f[4]))
 		sk_row.add_child(sb)
 	_list.add_child(sk_row)
+	var mode := CheckButton.new()
+	mode.text = "Бой в событиях — «Схватка» (иначе «Столкновение»)"
+	mode.button_pressed = bool(SettingsService.get_value("skirmish"))
+	mode.toggled.connect(func(on: bool) -> void: SettingsService.set_value("skirmish", on))
+	_list.add_child(mode)
 	var points := _points()
 	if not points.is_empty():
 		_list.add_child(UITheme.label("Свои точки", "sans_bold", 17, Palette.TEXT))

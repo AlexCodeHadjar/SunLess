@@ -215,25 +215,37 @@ func launch_squad(mission_id: String, heroes: Array) -> String:
 func resolve_fork(squad_id: int, option_id: String) -> Dictionary:
 	var mid := str(MissionFlow.squad(state, squad_id).get("mission", ""))
 	var r: Dictionary = MissionResolver.resume(content(), state, squad_id, option_id)
-	if not r["ok"]:
-		return {"error": r["error"]}
-	state = r["state"]
-	if not r.has("fork"):
-		last_outcomes[mid] = str(r["report"].get("outcome", ""))
-	SaveService.save_state(state)
-	missions_changed.emit()
-	EventBus.state_changed.emit()
-	return r["report"]
+	return _after_resolve(mid, r)
 
 
 ## Выбор действия прибывшего отряда. Возвращает отчёт (или {"error": ...}).
 func resolve_squad(squad_id: int, action_id: String) -> Dictionary:
 	var mid := str(MissionFlow.squad(state, squad_id).get("mission", ""))
-	var r: Dictionary = MissionResolver.resolve(content(), state, squad_id, action_id)
+	# режим боя (docs/24): «Схватка» включается в «Разработчике», пока не заменит «Столкновение» целиком
+	if bool(SettingsService.get_value("skirmish")):
+		state.flags["combat"] = "skirmish"
+	elif str(state.flags.get("combat", "")) == "skirmish":
+		state.flags.erase("combat")
+	var r: Dictionary = MissionResolver.resolve(content(), state, squad_id, action_id, SkirmishRules.enabled(content(), state))
+	return _after_resolve(mid, r)
+
+
+## «Схватка» сыграна (docs/24 §8): итог боя — SkirmishRules.summary; миссия продолжается. Ответ — как у resolve_squad.
+func finish_skirmish(squad_id: int, res: Dictionary) -> Dictionary:
+	var mid := str(MissionFlow.squad(state, squad_id).get("mission", ""))
+	return _after_resolve(mid, MissionResolver.resume_combat(content(), res["state"], squad_id, res))
+
+
+## Общий хвост resolve_squad / finish_skirmish: состояние, сохранение, сигналы; в отчёте — fork или skirmish (пауза).
+func _after_resolve(mid: String, r: Dictionary) -> Dictionary:
 	if not r["ok"]:
 		return {"error": r["error"]}
 	state = r["state"]
-	if not r.has("fork"):
+	if r.has("skirmish"):
+		r["report"]["skirmish"] = r["skirmish"]
+	else:
+		r["report"].erase("skirmish")
+	if not r.has("fork") and not r.has("skirmish"):
 		last_outcomes[mid] = str(r["report"].get("outcome", ""))
 	# связи тегов открываются при просмотре боя или при закрытии отчёта (MissionWindow)
 	SaveService.save_state(state)

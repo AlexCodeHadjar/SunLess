@@ -32,6 +32,7 @@ var light := "bright"         # bright | dim | dusk | dark (docs/24 §4.10)
 var field := ""
 var ambush := ""              # "" | heroes (героев застигли) | enemies (врагов застигли)
 var no_retreat := false
+var spar := false             # тренировка: бой до первой грани, без грани и броска смерти — проигрыш бьёт только по психике
 var outcome := ""             # "" | win | loss | retreat
 var log: Array = []           # события по порядку: {kind, …}
 var squad: Array = []         # id героев отряда (для психики и доверия)
@@ -57,6 +58,7 @@ static func create(p_content: Content, state_in: RunState, spec: Dictionary) -> 
 	sk.light = str(spec.get("light", "bright"))
 	sk.ambush = str(spec.get("ambush", ""))
 	sk.no_retreat = bool(spec.get("no_retreat", false))
+	sk.spar = bool(spec.get("spar", false))
 	var heroes: Array = []
 	for cid: String in spec.get("heroes", []):
 		if sk.state.is_alive(cid) and heroes.size() < SkFormation.SIZE:
@@ -81,7 +83,7 @@ static func create(p_content: Content, state_in: RunState, spec: Dictionary) -> 
 	var foes: Array = []
 	var ids: Array = spec.get("enemies", [])
 	if bool(spec.get("pack", false)):
-		ids = SkPack.fill(p_content, ids, sk.rng)
+		ids = SkPack.fill(p_content, ids, sk.rng, maxi(1, heroes.filter(func(h: SkFighter) -> bool: return not h.echo).size()))
 	for eid: String in ids:
 		if p_content.enemies.has(eid):
 			var e := SkBuild.enemy(p_content, eid, float(spec.get("power", 1.0)))
@@ -763,6 +765,10 @@ func hurt(t: SkFighter, amount: int, by: SkFighter, source: String) -> Array:
 		entries.append({"kind": "broken", "card": t.card, "text": "%s рассыпается — карта потеряна" % t.name})
 		ev.append({"kind": "echo_lost", "who": t.uid})
 		SkFormation.relayout(fighters, t.side)
+	elif spar:
+		t.hp = 1
+		outcome = "loss"
+		ev.append({"kind": "end", "outcome": outcome, "why": "spar"})
 	else:
 		ev.append_array(_hero_falls(t))
 	return ev

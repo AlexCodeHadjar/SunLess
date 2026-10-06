@@ -145,8 +145,16 @@ func _build_top() -> void:
 	var fd: Dictionary = sk.content.fields.get(sk.field, {})
 	var fname := str(fd.get("name", "Поле боя"))
 	var ftags := Array(fd.get("tags", [])).filter(func(t: String) -> bool: return t != "суша")
-	fv.add_child(UITheme.label(fname.to_upper() + ("  ·  " + " · ".join(ftags) if not ftags.is_empty() else ""), "caps", 22, Palette.TEXT))
-	fv.add_child(UITheme.label(str(fd.get("text", "")).left(70), "sans", 14, Palette.TEXT_DIM))
+	var fl := UITheme.label(fname.to_upper(), "caps", 22, Palette.TEXT)
+	fl.clip_text = true
+	fl.custom_minimum_size.x = 450
+	fv.add_child(fl)
+	var ft := UITheme.label(" · ".join(ftags.slice(0, 3)), "sans", 15, Palette.TEXT_DIM)
+	ft.clip_text = true
+	ft.custom_minimum_size.x = 450
+	ft.tooltip_text = str(fd.get("text", ""))
+	ft.mouse_filter = Control.MOUSE_FILTER_STOP
+	fv.add_child(ft)
 	var mp := _plate(Vector2(560, 12), Vector2(800, 80))
 	var mv := VBoxContainer.new()
 	mv.alignment = BoxContainer.ALIGNMENT_CENTER

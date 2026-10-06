@@ -6,13 +6,15 @@ extends RefCounted
 
 
 
-static func resolve(content: Content, state_in: RunState, squad_id: int, action_id: String) -> Dictionary:
+## interactive: с «Схваткой» (SkirmishRules.enabled) боевой этап ставит миссию на паузу — ответ {skirmish: spec},
+## бой играет игрок, продолжение — resume_combat. Без него (бот, тесты) бой «Схватки» играет ИИ.
+static func resolve(content: Content, state_in: RunState, squad_id: int, action_id: String, interactive: bool = false) -> Dictionary:
 	var state := state_in.copy()
 	var sq := MissionFlow.squad(state, squad_id)
 	if sq.is_empty():
 		return {"ok": false, "error": "Нет такого отряда"}
 	if sq["phase"] != "arrived":
-		return {"ok": false, "error": "Отряд ещё в пути" if sq["phase"] == "travel" else "Отряд ждёт решения на развилке"}
+		return {"ok": false, "error": "Отряд ещё в пути" if sq["phase"] == "travel" else ("Отряд в бою" if sq["phase"] == "combat" else "Отряд ждёт решения на развилке")}
 	var mid: String = sq["mission"]
 	var m: Dictionary = content.missions.get(mid, {})
 	var a := MissionFlow.action(content, mid, action_id)
@@ -30,7 +32,7 @@ static func resolve(content: Content, state_in: RunState, squad_id: int, action_
 		"entries": [], "edge": {}, "deaths": [], "rest": {}, "combats": [], "opened": [], "forks": []}
 	var run := {"action": action_id, "stages": Array(a.get("stages", [])).duplicate(true), "done": 0, "outcomes": [],
 		"fails": 0, "temp_used": [], "extra_rest": 0.0, "extra_success": [], "guaranteed": bool(a.get("guaranteed", false)), "shielded": {},
-		"xp_mult": float(m.get("xp_mult", 1.0))}   # местные встречи — опыт тегов ×1,5 (docs/17 §5)
+		"xp_mult": float(m.get("xp_mult", 1.0)), "interactive": interactive}   # местные встречи — опыт тегов ×1,5 (docs/17 §5)
 	if bool(a.get("retreat", false)):
 		report["outcome"] = "retreat"
 		report["entries"].append({"kind": "info", "text": "Отряд отступил. Миссия не выполнена."})
@@ -58,7 +60,7 @@ static func _psy(report: Dictionary, run: Dictionary, entries: Array) -> Array:
 
 ## Действие целиком: на развилках — первый вариант (продолжить). Для бота, тестов и прогноза.
 static func resolve_through(content: Content, state_in: RunState, squad_id: int, action_id: String) -> Dictionary:
-	var r := resolve(content, state_in, squad_id, action_id)
+	var r := resolve(content, state_in, squad_id, action_id, false)
 	var guard := 0
 	while r["ok"] and r.has("fork") and guard < 5:
 		r = resume(content, r["state"], squad_id, str(r["fork"]["options"][0]["id"]))
@@ -143,12 +145,13 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 	var fled: Array = run.get("fled", [])
 	while int(run["done"]) < stages.size():
 		var st: Dictionary = stages[int(run["done"])]
+		var resumed := run.has("sk_result")   # продолжение после «Схватки»: подготовка этапа уже была
 		# герои в кризисе психики действуют сами: срывы, упрёки, поддержка (docs/16 §9г)
 		var here: Array = heroes.filter(func(c: String) -> bool: return state.is_alive(c) and not fled.has(c))
-		for cid: String in here:
+		for cid: String in here if not resumed else []:
 			report["entries"].append_array(_psy(report, run, PsycheRules.act(content, state, cid, here, rng)))
 		# Трус в панике сбегает перед этапом
-		for cid: String in heroes:
+		for cid: String in heroes if not resumed else []:
 			if state.is_alive(cid) and not fled.has(cid) and PsycheRules.flees(content, state, cid):
 				fled.append(cid)
 				report["entries"].append({"kind": "panic", "card": cid, "text": "%s сбегает, не выдержав страха" % content.card_name(cid)})
@@ -167,6 +170,26 @@ static func _advance(content: Content, state: RunState, m: Dictionary, sq: Dicti
 			_watch_stage(content, state, m, a, st, rec, report, rng)
 		elif bool(st.get("auto", false)) or bool(run["guaranteed"]):
 			rec["outcome"] = "ok"
+		elif st.has("combat") and SkirmishRules.enabled(content, state):
+			# пошаговый бой «Схватка» (docs/24 §8): игрок играет его на экране — пауза до resume_combat
+			var res: Dictionary = run.get("sk_result", {})
+			if res.is_empty():
+				var spec := SkirmishRules.stage_spec(content, state, m, MissionFlow.boss_stage(state, m, st), alive, rng)
+				if bool(run.get("interactive", false)):
+					sq["phase"] = "combat"
+					sq["pending"] = {"run": run, "report": report, "spec": spec}
+					state.rng_state = rng.state
+					return {"ok": true, "error": "", "state": state, "report": report, "skirmish": spec}
+				state.rng_state = rng.state
+				res = SkirmishRules.auto(content, state, spec)
+				res["spec"] = spec
+			run.erase("sk_result")
+			var after2: RunState = res["state"]
+			rng.state = after2.rng_state
+			_skirmish_stage(content, after2, m, rec, report, res, rng, run)
+			_copy_into(state, after2)
+			sq = MissionFlow.squad(state, int(sq["id"]))
+			GrowthRules.mark_combat(content, state, run, alive, [], rec["outcome"] == "ok")
 		elif st.has("combat"):
 			var after := _combat_stage(content, state, m, a, MissionFlow.boss_stage(state, m, st), alive, rec, report, rng, run)
 			_copy_into(state, after)
@@ -375,6 +398,75 @@ static func _hurt(content: Content, state: RunState, cid: String, report: Dictio
 	if not run.has("shielded"):
 		run["shielded"] = {}
 	EdgeRules.defeat(content, state, cid, MissionFlow.pocket(state, cid), rng, res, report["entries"], run["shielded"], extra)
+
+
+## Итог «Схватки» этапа (docs/24 §4.14): исход, грань, добыча и осколки за победу. res — SkirmishRules.summary.
+static func _skirmish_stage(content: Content, after: RunState, m: Dictionary, rec: Dictionary, report: Dictionary,
+		res: Dictionary, rng: RandomNumberGenerator, run: Dictionary) -> void:
+	var key := str(m.get("id", ""))
+	var spec: Dictionary = res.get("spec", {})
+	var heroes: Array = spec.get("heroes", [])
+	var hero := str(heroes[0]) if not heroes.is_empty() else ""
+	var won := str(res["outcome"]) == "win"
+	rec["hero"] = hero
+	rec["outcome"] = "ok" if won else "fail"
+	rec["combat"] = {"outcome": res["outcome"], "skirmish": true, "rounds": int(res.get("rounds", 0))}
+	if str(res["outcome"]) == "retreat":
+		rec["text"] = "Отряд отступил из боя."
+	report["combats"].append({"stage": rec["name"], "hero": hero, "allies": heroes.slice(1), "rounds": [], "outcome": res["outcome"],
+		"discovered": [], "crises": [], "skirmish": true, "turns": int(res.get("rounds", 0)), "spec": spec})
+	report["entries"].append_array(res.get("entries", []))
+	for cid: String in res.get("edge", []):
+		report["edge"][cid] = int(report["edge"].get(cid, 0)) + 1
+	if won:
+		if not bool(spec.get("spar", false)):
+			var foes: Array = Array(res.get("enemies", [])).map(func(e: String) -> Dictionary: return content.enemies.get(e, {}))
+			var lt := LootRules.roll_fight(content, after, key, foes, rng)
+			if lt != "":
+				run["loot_tier"] = LootRules.better(lt, str(run.get("loot_tier", ""))) if str(run.get("loot_tier", "")) != "" else lt
+			_combat_shards(content, after, key, foes, hero, report, rng)
+		after.enemy_wounds.erase(key)
+	for eid: String in spec.get("enemies", []):
+		after.note(eid, "Бой «%s» · %s" % [m.get("title", key), "победа" if won else ("отступление" if str(res["outcome"]) == "retreat" else "поражение")])
+
+
+## Осколки и Эхо за победу (общее у «Столкновения» и «Схватки»).
+static func _combat_shards(content: Content, after: RunState, key: String, foes: Array, hero: String, report: Dictionary,
+		rng: RandomNumberGenerator) -> void:
+	var shards := 0
+	for e: Dictionary in foes:
+		shards += int(e.get("shards", 0))
+		var echo: Dictionary = e.get("echo", {})
+		if not echo.is_empty() and rng.randf() < float(echo.get("chance", 0.0)):
+			report["entries"].append_array(EffectApplier.add_card(content, after, str(echo["card"])))
+	if shards > 0 and Atmosphere.sky(content, after) == "blood_moon":
+		shards = int(ceil(shards * Atmosphere.BLOOD_LOOT))
+	if shards > 0:
+		shards = int(ceil(shards * ModifierRules.loot_mult(content, after, key)))
+	if shards > 0:
+		report["entries"].append_array(EffectApplier.apply(content, after, {"cmd": "adjust_resource", "resource": "shards", "value": shards}, hero, rng))
+
+
+## Конец «Схватки», сыгранной игроком (docs/24 §8): state_after — состояние после боя (Skirmish.finish), миссия
+## продолжается со следующего этапа. Ответ — как у resolve (может снова быть {skirmish} или {fork}).
+static func resume_combat(content: Content, state_after: RunState, squad_id: int, res: Dictionary) -> Dictionary:
+	var state := state_after.copy()
+	var sq := MissionFlow.squad(state, squad_id)
+	if sq.is_empty() or sq["phase"] != "combat":
+		return {"ok": false, "error": "Отряд не в бою"}
+	var m: Dictionary = content.missions.get(str(sq["mission"]), {})
+	var run: Dictionary = sq["pending"]["run"]
+	var report: Dictionary = sq["pending"]["report"]
+	var r2 := res.duplicate()
+	r2["spec"] = sq["pending"]["spec"]
+	r2["state"] = state
+	run["sk_result"] = r2
+	sq.erase("pending")
+	sq["phase"] = "arrived"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = state.rng_seed
+	rng.state = state.rng_state
+	return _advance(content, state, m, sq, run, report, rng)
 
 
 ## Бой этапа: автобой; состояние после боя (грань смерти, раны врага) становится текущим.
