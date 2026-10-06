@@ -18,6 +18,7 @@ var quests_shots := false   # --mshots-from=quests: задания справа,
 var perf_run := false   # --mshots-from=perf: замер кадра и тяжёлых функций экрана карты (perf.txt в папке снимков)
 var chatter_shots := false   # --mshots-from=chatter: мысли и реплики героев над картами, полдень, шаг к событию
 var icons_shots := false   # --mshots-from=icons: события ромбами — поле, наведение (круг загрузки), карта события, фигура рядом
+var skirmish_shots := false   # --mshots-from=skirmish: экран пошагового боя «Схватка» (docs/24, Ф4)
 var timeline := false   # --mshots-from=timeline: карта по дням во всех главах (для коллажей, tools/map_collage.py)
 
 
@@ -29,6 +30,8 @@ func _ready() -> void:
 			from_ch4 = true
 		if a == "--mshots-from=timeline":
 			timeline = true
+		if a == "--mshots-from=skirmish":
+			skirmish_shots = true
 		if a == "--mshots-from=figure":
 			figure_shots = true
 		if a == "--mshots-from=events":
@@ -104,6 +107,46 @@ func _dismiss_story() -> void:
 	GameState.story_open = false
 
 
+## «Схватка» (docs/24, Ф4): начало боя, выбор навыка и цели (расчёт удара), кадры по ходу, итог.
+func _skirmish() -> void:
+	var c := ContentDB.data
+	var fights := [["shore", ["M04"], "dim", "forgotten_shore", "day", "F_17"], ["boss", ["M02"], "dusk", "mountain_pass", "night", "F_04"]]
+	for fi: Array in fights:
+		var sk := SkirmishScreen.demo(c, fi[1], fi[2], 4242, fi[5])
+		var scr := SkirmishScreen.open(get_tree().root, sk, fi[3], fi[4])
+		await _wait(2.5)
+		await _shot("sk_%s_01_start" % fi[0])
+		if scr._actor != null and scr._actor.side == "hero" and not scr._busy:
+			var ch := SkAI.choose(sk, scr._actor)
+			var s := scr._actor.skill(str(ch.get("skill", "")))
+			if not s.is_empty() and str(ch.get("target", "")) not in ["all", scr._actor.uid]:
+				scr._skill = s
+				scr._targets = sk.targets(scr._actor, s)
+				scr._show_hero(scr._actor)
+				scr._mark_rings()
+				scr._on_hover(str(ch["target"]), true)
+				await _wait(0.6)
+				await _shot("sk_%s_02_target" % fi[0])
+		scr.auto_heroes = true
+		scr._speed = 2.0
+		if scr._actor != null and not scr._busy:
+			scr._busy = true
+			sk.ai_act(scr._actor)
+			await scr._play(scr._new_events())
+			scr._advance()
+		await _wait(3.0)
+		await _shot("sk_%s_03_fight" % fi[0])
+		var t := 0.0
+		while is_instance_valid(scr) and sk.outcome == "" and t < 90.0:
+			await _wait(0.5)
+			t += 0.5
+		await _wait(1.5)
+		await _shot("sk_%s_04_result" % fi[0])
+		if is_instance_valid(scr):
+			scr.close()
+		await _wait(0.3)
+
+
 func _run() -> void:
 	SettingsService.values["roll_speed"] = 0.0
 	if from_ch4:
@@ -112,6 +155,10 @@ func _run() -> void:
 		return
 	if timeline:
 		await _timeline()
+		get_tree().quit()
+		return
+	if skirmish_shots:
+		await _skirmish()
 		get_tree().quit()
 		return
 	if figure_shots:

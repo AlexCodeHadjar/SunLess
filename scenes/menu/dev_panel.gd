@@ -89,6 +89,19 @@ func _fill() -> void:
 		again.pressed.connect(_start_chapter.bind(str(pair[0]), true))
 		row.add_child(again)
 		_list.add_child(row)
+	# «Схватка» (docs/24): пробный бой отряда Берега с картами — экран Ф4
+	_list.add_child(UITheme.label("«Схватка» — пробный бой", "sans_bold", 17, Palette.TEXT))
+	var sk_row := HBoxContainer.new()
+	sk_row.add_theme_constant_override("separation", 8)
+	for f: Array in [["Падальщики", ["M03"], "dim", "forgotten_shore", "day", "F_17"], ["Центурион", ["M04"], "dim", "forgotten_shore", "day", "F_08"],
+			["Горный Король", ["M02"], "dusk", "mountain_pass", "night", "F_04"]]:
+		var sb := Button.new()
+		sb.text = str(f[0])
+		sb.custom_minimum_size = Vector2(176, 40)
+		sb.pressed.connect(func() -> void:
+			SkirmishScreen.open(get_tree().root, SkirmishScreen.demo(ContentDB.data, f[1], f[2], 0, f[5]), f[3], f[4]))
+		sk_row.add_child(sb)
+	_list.add_child(sk_row)
 	var points := _points()
 	if not points.is_empty():
 		_list.add_child(UITheme.label("Свои точки", "sans_bold", 17, Palette.TEXT))
