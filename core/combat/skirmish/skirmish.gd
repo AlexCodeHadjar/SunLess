@@ -79,7 +79,10 @@ static func create(p_content: Content, state_in: RunState, spec: Dictionary) -> 
 		heroes.shuffle()    # застигнутый отряд теряет строй
 	SkFormation.place(heroes)
 	var foes: Array = []
-	for eid: String in spec.get("enemies", []):
+	var ids: Array = spec.get("enemies", [])
+	if bool(spec.get("pack", false)):
+		ids = SkPack.fill(p_content, ids, sk.rng)
+	for eid: String in ids:
 		if p_content.enemies.has(eid):
 			var e := SkBuild.enemy(p_content, eid, float(spec.get("power", 1.0)))
 			e.uid = "e%d" % foes.size()
@@ -192,6 +195,17 @@ func _begin_round() -> void:
 		order.append(f)
 	order.sort_custom(_before)
 	queue = order.map(func(f: SkFighter) -> String: return f.uid)
+	# крупные боссы ходят дважды: второй ход — своим броском, встаёт в очередь по нему
+	for f2: SkFighter in order:
+		for i in range(1, f2.actions):
+			var init2 := f2.speed + int(SkStatus.mod(f2, "speed")) + rng.randi_range(1, 8) - 2
+			var at := queue.size()
+			for j in queue.size():
+				var o := by_uid(str(queue[j]))
+				if o != null and o.init < init2:
+					at = j
+					break
+			queue.insert(at, f2.uid)
 	first_uid = str(queue[0]) if not queue.is_empty() else ""
 	log.append({"kind": "queue", "order": queue.duplicate()})
 
@@ -235,10 +249,26 @@ func _start_turn(f: SkFighter) -> bool:
 	if int(tk["regen"]) > 0 and f.hp < f.hp_max and not f.edge:
 		f.hp = mini(f.hp_max, f.hp + int(tk["regen"]))
 		log.append({"kind": "heal", "who": f.uid, "value": int(tk["regen"])})
+	if int(tk.get("whisper", 0)) > 0:
+		log.append_array(psyche(f, -int(tk["whisper"]), "шёпот Кошмара"))
+	var gr := f.status("grab")
+	if not gr.is_empty():
+		var by := by_uid(str(gr.get("by", "")))
+		if by == null or not by.alive():
+			SkStatus.remove(f, "grab")
 	if bool(tk["stunned"]):
 		log.append({"kind": "stunned", "who": f.uid})
 		return false
-	if f.has_status("fear") and not f.has_status("steady") and rng.randi_range(1, 100) <= 50:
+	if _flees(f):
+		f.removed = true
+		log.append({"kind": "flee", "who": f.uid})
+		SkFormation.relayout(fighters, f.side)
+		log.append_array(_check_end())
+		return false
+	if f.has_status("charm"):
+		log.append_array(_charmed(f))
+		return false
+	if f.has_status("fear") and not f.has_status("steady") and not f.has_status("grab") and rng.randi_range(1, 100) <= 50:
 		if SkFormation.move(fighters, f, 1) != 0:
 			log.append({"kind": "fear", "who": f.uid, "pos": f.pos})
 	return true
@@ -252,6 +282,8 @@ func usable_why(f: SkFighter, s: Dictionary) -> String:
 	if not fr.is_empty() and not f.positions().any(func(p: int) -> bool: return fr.has(p)):
 		return "не с этой позиции"
 	var id := str(s["id"])
+	if str(s.get("kind", "")) == "step" and f.has_status("grab"):
+		return "схвачен"
 	if int(f.cooldown.get(id, 0)) > 0:
 		return "перезарядка: %d" % int(f.cooldown[id])
 	if bool(s.get("once", false)) and int(f.used.get(id, 0)) > 0:
@@ -270,6 +302,10 @@ func usable_why(f: SkFighter, s: Dictionary) -> String:
 			var why := _summon_why(f, str(e.get("card", "")))
 			if why != "":
 				return why
+		elif str(e["type"]) == "summon_enemy" and _room(f.side) <= 0:
+			return "нет места в строю"
+		elif str(e["type"]) == "devour" and (_corpse_near(f) == null or f.hp >= f.hp_max):
+			return "нет трупа рядом"
 	return ""
 
 
@@ -487,7 +523,7 @@ func apply_effect(a: SkFighter, t: SkFighter, e: Dictionary, crit: bool = false)
 			if SkStatus.add(t, {"type": et, "stat": str(e.get("stat", "dmg")), "value": float(e.get("value", 0)), "turns": int(e.get("turns", 2))}):
 				ev.append({"kind": "status", "to": t.uid, "type": et, "stat": str(e.get("stat", ""))})
 		"push", "pull":
-			if t.has_status("steady"):
+			if t.has_status("steady") or t.has_status("grab") or (t.side == "enemy" and t.size > 1 and rng.randi_range(1, 100) <= 50):
 				return []
 			var n := int(e.get("n", 1)) * (1 if et == "push" else -1)
 			if SkFormation.move(fighters, t, n) != 0:
@@ -555,6 +591,91 @@ func apply_effect(a: SkFighter, t: SkFighter, e: Dictionary, crit: bool = false)
 		"light_ward":
 			ward_rounds = maxi(ward_rounds, int(e.get("rounds", 3)))
 			ev.append({"kind": "ward", "rounds": ward_rounds})
+		"charm", "whisper", "acid":
+			if t.corpse:
+				return []
+			var st := {"type": et, "turns": int(e.get("turns", 999 if et == "acid" else 2))}
+			if et == "whisper":
+				st["power"] = int(e.get("power", 3))
+			if SkStatus.add(t, st):
+				ev.append({"kind": "status", "to": t.uid, "type": et})
+		"grab":
+			if t.corpse or t.side == a.side:
+				return []
+			if SkStatus.add(t, {"type": "grab", "by": a.uid, "power": 1, "turns": int(e.get("turns", 3))}):
+				ev.append({"kind": "status", "to": t.uid, "type": "grab", "by": a.uid})
+		"summon_enemy":
+			for i in int(e.get("n", 1)):
+				ev.append_array(_summon_enemy(a, str(e.get("id", ""))))
+		"devour":
+			var c := _corpse_near(a)
+			if c != null:
+				c.corpse = false
+				c.removed = true
+				SkFormation.relayout(fighters, c.side)
+				ev.append({"kind": "devour", "who": a.uid, "corpse": c.uid})
+				ev.append_array(heal(a, int(ceil(a.hp_max * 0.3))))
+	return ev
+
+
+## Свободных мест в строю стороны.
+func _room(side: String) -> int:
+	var used := 0
+	for x: SkFighter in SkFormation.line(fighters, side):
+		used += x.size
+	return SkFormation.SIZE - used
+
+
+## Труп рядом с бойцом (соседняя позиция своей стороны) или null.
+func _corpse_near(f: SkFighter) -> SkFighter:
+	for x: SkFighter in SkFormation.line(fighters, f.side):
+		if x.corpse and (x.pos + x.size == f.pos or f.pos + f.size == x.pos):
+			return x
+	return null
+
+
+## Призыв приспешника в конец строя врага (если есть место).
+func _summon_enemy(by: SkFighter, eid: String) -> Array:
+	if _room(by.side) <= 0 or not content.enemies.has(eid):
+		return []
+	var e := SkBuild.enemy(content, eid)
+	e.side = by.side
+	_xn += 1
+	e.uid = "s%d" % _xn
+	e.pos = 99
+	fighters.append(e)
+	SkFormation.relayout(fighters, by.side)
+	if e.pos + e.size - 1 > SkFormation.SIZE:
+		e.removed = true
+		return []
+	return [{"kind": "summon", "who": e.uid, "by": by.uid, "pos": e.pos}]
+
+
+## Бежит ли раненый: Трус и «бегущие» — при здоровье ниже 25%, Стая без живого Предводителя — тоже (30%).
+func _flees(f: SkFighter) -> bool:
+	if f.side != "enemy" or f.hp * 4 >= f.hp_max:
+		return false
+	var pack := f.tags.has("Стая") and not living(f.side).any(func(x: SkFighter) -> bool: return x.tags.has("Предводитель"))
+	return (f.flee or pack) and rng.randi_range(1, 100) <= 30
+
+
+## Очарованный бьёт своего: первым ударом, который достаёт, по случайному союзнику.
+func _charmed(f: SkFighter) -> Array:
+	var ev: Array = [{"kind": "charmed", "who": f.uid}]
+	for s: Dictionary in f.skills:
+		if str(s.get("side", "")) != "enemy" or bool(s.get("aoe", false)) or usable_why(f, s) != "":
+			continue
+		var base: Array = s.get("dmg", f.dmg)
+		if int(base[1]) <= 0:
+			continue
+		var to: Array = s.get("to", [])
+		var pool := living(f.side).filter(func(x: SkFighter) -> bool: return x != f and x.positions().any(func(p: int) -> bool: return to.has(p)))
+		if pool.is_empty():
+			continue
+		var t: SkFighter = pool[rng.randi_range(0, pool.size() - 1)]
+		ev.append_array(_strike(f, s, t))
+		break
+	SkStatus.remove(f, "charm")
 	return ev
 
 
@@ -611,7 +732,25 @@ func hurt(t: SkFighter, amount: int, by: SkFighter, source: String) -> Array:
 		return _edge_hit(t)
 	t.hp -= amount
 	ev.append({"kind": "dmg", "to": t.uid, "value": amount, "hp": maxi(0, t.hp)})
+	if t.has_status("charm") and source == "hit":
+		SkStatus.remove(t, "charm")
+		ev.append({"kind": "uncharm", "who": t.uid})
+	if amount * 5 >= t.hp_max:
+		for x: SkFighter in fighters:
+			if str(x.status("grab").get("by", "")) == t.uid:
+				SkStatus.remove(x, "grab")
+				ev.append({"kind": "released", "who": x.uid})
 	if t.hp > 0:
+		if t.rage and source == "hit":
+			SkStatus.add(t, {"type": "rage", "charges": 1})
+		while t.phase_i < t.phases.size() and t.hp <= t.hp_max * float(t.phases[t.phase_i].get("at", 0.5)):
+			var ph: Dictionary = t.phases[t.phase_i]
+			for sid: String in ph.get("add", []):
+				var sx := SkBuild.skill(content, sid)
+				if not sx.is_empty() and t.skill(sid).is_empty():
+					t.skills.insert(maxi(0, t.skills.size() - 2), sx)
+			t.phase_i += 1
+			ev.append({"kind": "phase", "who": t.uid, "text": str(ph.get("text", ""))})
 		return ev
 	t.hp = 0
 	if t.side == "enemy":
@@ -632,6 +771,9 @@ func hurt(t: SkFighter, amount: int, by: SkFighter, source: String) -> Array:
 func _kill_enemy(t: SkFighter, by: SkFighter, source: String) -> Array:
 	var ev: Array = [{"kind": "kill", "who": t.uid, "by": by.uid if by != null else ""}]
 	t.statuses = []
+	for x: SkFighter in fighters:
+		if str(x.status("grab").get("by", "")) == t.uid:
+			SkStatus.remove(x, "grab")
 	if t.no_corpse or t.size > 1 or source == "dot":
 		t.dead = true
 		SkFormation.relayout(fighters, t.side)

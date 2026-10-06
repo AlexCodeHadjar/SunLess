@@ -44,6 +44,8 @@ static func choose(sk: Skirmish, f: SkFighter) -> Dictionary:
 static func should_retreat(sk: Skirmish) -> bool:
 	var hs := sk.heroes_alive()
 	var on_edge := hs.filter(func(h: SkFighter) -> bool: return h.edge).size()
+	if on_edge > 0 and sk.retreat_chance() > 0 and sk.living("enemy").any(func(e: SkFighter) -> bool: return e.actions > 1):
+		return true    # от босса с двумя ходами — уходить, как только кто-то на грани
 	return on_edge > 0 and on_edge * 2 >= hs.size() and sk.retreat_chance() > 0
 
 
@@ -85,6 +87,14 @@ static func _hostile(sk: Skirmish, f: SkFighter, s: Dictionary, t: SkFighter) ->
 				v += ch * 1.5
 			"blind":
 				v += ch * 2.0
+			"charm":
+				v += ch * 3.0
+			"whisper":
+				v += ch * float(src.get("power", 3)) * 1.5
+			"grab":
+				v += ch * 2.0
+			"acid":
+				v += ch * (1.5 if t.prot > 0.0 else 0.5)
 			"fear":
 				v += ch * 1.5
 			"foresight":
@@ -140,6 +150,8 @@ static func _support(sk: Skirmish, f: SkFighter, s: Dictionary, t: SkFighter) ->
 				v += 1.0 if sk.light in SkStrike.DARK else 0.1
 			"swap", "steady":
 				v += 0.05
+			"summon_enemy", "devour":
+				v += 3.0
 			"guard":
 				if t != f:
 					v += 2.5 if t.hp * 2 < t.hp_max else 0.6

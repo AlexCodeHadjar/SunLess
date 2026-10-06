@@ -9,9 +9,11 @@ extends RefCounted
 ## точность −10, в начале хода 50% — шаг назад), sure (верный удар: следующий удар попадает, крит +N), empower
 ## (следующий удар вдвое), ignite (удары поджигают), steady (не сдвинуть), weak («Слабость после грани»).
 
-const STACKING := ["bleed", "poison"]
-const DOT := ["bleed", "poison", "burn"]
-const CHARGES := ["dodge", "block"]     # жетоны: не истекают, тратятся
+const STACKING := ["bleed", "poison", "acid"]
+const DOT := ["bleed", "poison", "burn", "grab"]
+const CHARGES := ["dodge", "block", "rage"]     # жетоны: не истекают, тратятся (Ярость копится)
+const ACID := -0.1            # Разъедание: защита −10% за наложение, до трёх
+const RAGE := 0.1             # Ярость: урон +10% за удар, до трёх
 const CHARGES_MAX := 3
 const STUN_GUARD := 40        # после оглушения: +40% сопротивления оглушению
 const BLIND := -25
@@ -20,10 +22,11 @@ const NAMES := {"bleed": "Кровотечение", "poison": "Яд", "burn": "
 	"guard": "Под защитой", "guarding": "Защищает", "riposte": "Контратака", "stealth": "Скрытность", "buff": "Усиление",
 	"debuff": "Ослабление", "weak": "Слабость после грани", "stun_guard": "Стойкость к оглушению", "dodge": "Уклон",
 	"block": "Панцирь", "taunt": "Приманка", "foresight": "Предвидение", "blind": "Ослепление", "fear": "Страх",
-	"sure": "Верный удар", "empower": "Раскрытый Аспект", "ignite": "Пламя на клинке", "steady": "Не сдвинуть"}
+	"sure": "Верный удар", "empower": "Раскрытый Аспект", "ignite": "Пламя на клинке", "steady": "Не сдвинуть",
+	"charm": "Очарование", "grab": "Захват", "whisper": "Кошмарный шёпот", "acid": "Разъедание", "rage": "Ярость"}
 const RESIST := {"bleed": "bleed", "poison": "poison", "stun": "stun", "debuff": "debuff", "mark": "debuff", "push": "move",
-	"pull": "move", "blind": "debuff", "fear": "debuff"}
-const BUFFS := ["buff", "riposte", "dodge", "block", "sure", "empower", "ignite", "taunt"]   # «снять усиления»
+	"pull": "move", "blind": "debuff", "fear": "debuff", "charm": "debuff", "whisper": "debuff", "grab": "move"}
+const BUFFS := ["buff", "riposte", "dodge", "block", "sure", "empower", "ignite", "taunt", "rage"]   # «снять усиления»
 
 
 ## Наложить состояние (уже прошедшее бросок). false — иммунитет.
@@ -32,6 +35,8 @@ static func add(f: SkFighter, st: Dictionary) -> bool:
 	if f.immune.has(t):
 		return false
 	if t in STACKING:
+		if t == "acid" and f.statuses.filter(func(s: Dictionary) -> bool: return str(s["type"]) == "acid").size() >= 3:
+			return false
 		f.statuses.append(st.duplicate())
 		return true
 	for i in f.statuses.size():
@@ -96,6 +101,13 @@ static func mod(f: SkFighter, stat: String) -> float:
 			v += BLIND
 		elif t == "fear" and stat == "acc":
 			v += FEAR
+		elif t == "acid" and stat == "prot":
+			v += ACID
+		elif t == "rage":
+			if stat == "dmg":
+				v += RAGE * int(s.get("charges", 1))
+			elif stat == "prot":
+				v -= 0.05 * int(s.get("charges", 1))
 	return v
 
 
@@ -103,11 +115,14 @@ static func mod(f: SkFighter, stat: String) -> float:
 ## {dot, regen, stunned}
 static func tick(f: SkFighter) -> Dictionary:
 	var dot := 0
+	var whisper := 0
 	for s: Dictionary in f.statuses:
 		if str(s["type"]) in DOT:
 			dot += int(s.get("power", 1))
+		elif str(s["type"]) == "whisper":
+			whisper += int(s.get("power", 3))
 	var stunned := f.has_status("stun")
-	var regen := f.regen if not f.has_status("burn") else 0   # огонь гасит регенерацию
+	var regen := f.regen if not f.has_status("burn") and not f.has_status("acid") else 0   # огонь и кислота гасят регенерацию
 	var keep: Array = []
 	for s: Dictionary in f.statuses:
 		var t := str(s["type"])
@@ -124,4 +139,4 @@ static func tick(f: SkFighter) -> Dictionary:
 	f.statuses = keep
 	if stunned:
 		add(f, {"type": "stun_guard", "turns": 2})
-	return {"dot": dot, "regen": regen, "stunned": stunned}
+	return {"dot": dot, "regen": regen, "stunned": stunned, "whisper": whisper}

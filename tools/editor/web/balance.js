@@ -1,6 +1,7 @@
 // Экран «Сила»: баланс противников и персонажей + статистика боёв (tools/combat_stats.gd).
 // Противник: ранг, класс, множитель силы (power), природное оружие по тегам. Персонаж: характеристики по стадиям,
 // ранг, оружие. Статистика: для каждого боя — шанс лучшего отряда из доступных в этот момент героев с их усилениями.
+// «Схватка» (docs/24): каждый враг со своим строем против отряда Берега — tools/skirmish_sim.gd --enemies.
 "use strict";
 
 const CLASS_MULT = [1.0, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5];
@@ -9,12 +10,13 @@ const RANK_NAMES = ["Спящий", "Пробуждённый", "Вознесё�
 const CLASS_NAMES = ["", "Зверь", "Монстр", "Демон", "Дьявол", "Тиран", "Ужас", "Титан"];
 
 const BalanceView = {
-  stats: null, open: new Set(), tab: "enemies",
+  stats: null, sk: null, open: new Set(), tab: "enemies",
 
   async render(root) {
     this.root = root;
     root.innerHTML = "";
     if (this.stats === null) await this.loadStats();
+    if (this.sk === null) { try { this.sk = await (await fetch("/api/skirmish")).json(); } catch (_) { this.sk = {}; } }
     const wrap = h("section", { class: "grid-wrap bal" });
     root.append(wrap);
     const st = this.stats;
@@ -22,8 +24,8 @@ const BalanceView = {
       h("div", { class: "bal-head" },
         h("h2", null, "Сила противников и персонажей"),
         h("div", { class: "bal-tabs" },
-          ["enemies", "heroes"].map((t) => h("button", { class: this.tab === t ? "on" : "", onclick: () => { this.tab = t; this.render(root); } },
-            t === "enemies" ? "Противники" : "Персонажи"))),
+          ["enemies", "heroes", "skirmish"].map((t) => h("button", { class: this.tab === t ? "on" : "", onclick: () => { this.tab = t; this.render(root); } },
+            { enemies: "Противники", heroes: "Персонажи", skirmish: "Схватка" }[t]))),
         h("div", { class: "bal-stats-info" },
           st && st.generated ? `Статистика боёв: ${st.generated.replace("T", " ")} · прогонов бота ${st.seeds}` : "Статистики боёв ещё нет",
           h("button", { class: "btn ghost", onclick: () => this.recompute() }, "Пересчитать статистику"))),
@@ -32,7 +34,7 @@ const BalanceView = {
         h("b", null, "Лучший"), " — лучший состав из героев, доступных игроку в момент этого боя, с разложенными кармашками; ",
         h("b", null, "обычный"), " — в среднем по всем составам; ", h("b", null, "один"), " — лучший герой в одиночку; ",
         h("b", null, "без усилений"), " — лучший отряд с пустыми кармашками. После правок: «Сохранить», затем «Пересчитать статистику»."),
-      this.tab === "enemies" ? this.enemies() : this.heroes());
+      this.tab === "enemies" ? this.enemies() : this.tab === "heroes" ? this.heroes() : this.skirmish());
   },
 
   async loadStats() {
@@ -123,6 +125,49 @@ const BalanceView = {
     return h("table", { class: "bal-table" },
       h("thead", null, h("tr", null, ["", "id", "Противник", "Ранг", "Класс", "Сила ×", "Оружие", "Сила", "Боёв", "Лучший", "Обычный", ""].map((t) => h("th", null, t)))),
       body);
+  },
+
+  // «Схватка»: параметры врага в пошаговом бою и итоги боёв ИИ против ИИ (tools/skirmish_sim.gd --enemies).
+  skirmish() {
+    const sk = this.sk || {};
+    const kinds = { normal: "обычный", elite: "элита", boss: "босс" };
+    const head = h("div", { class: "bal-stats-info" },
+      sk.generated ? `«Схватка»: ${sk.generated.replace("T", " ")} · боёв на врага ${sk.fights} · отряд: ${(sk.party || []).map((c) => cardName(c)).join(", ")} (без карт)` : "Статистики «Схватки» ещё нет",
+      h("button", { class: "btn ghost", onclick: () => this.recomputeSkirmish() }, "Пересчитать «Схватку»"));
+    const body = h("tbody");
+    for (const r of sk.enemies || []) {
+      body.append(h("tr", null,
+        h("td", { class: "mono" }, r.id),
+        h("td", null, h("a", { href: "#", onclick: (ev) => { ev.preventDefault(); App.go("cards", { card: r.id }); } }, r.name),
+          h("div", { class: "muted small" }, (r.skills || []).join(", "))),
+        h("td", null, kinds[r.kind] || r.kind), h("td", { class: "num" }, r.rank),
+        h("td", { class: "num" }, r.size > 1 ? `${r.size} поз.` : "1"), h("td", { class: "num" }, r.actions),
+        h("td", { class: "num" }, r.hp), h("td", { class: "num" }, `${r.dmg[0]}–${r.dmg[1]}`),
+        h("td", { class: "num" }, r.speed), h("td", { class: "num" }, r.dodge), h("td", { class: "num" }, Math.round(r.prot * 100) + "%"),
+        h("td", { class: "small" }, (r.line || []).map((id) => cardName(id)).join(", ")),
+        this.pct(r.win), h("td", { class: "num" }, r.rounds), h("td", { class: "num" }, r.deaths)));
+    }
+    return h("div", null, head,
+      h("p", { class: "muted bal-legend" }, "Пошаговый бой (docs/24): параметры врага и его строй, затем бои ИИ против ИИ. ",
+        h("b", null, "Гибель"), " — сколько героев погибает в среднем за бой (бот отступает, когда отряд на грани). Числа правятся в tools/gen_skirmish.py."),
+      h("table", { class: "bal-table" },
+        h("thead", null, h("tr", null, ["id", "Враг · навыки", "Тип", "Ранг", "Размер", "Ходов", "Здоровье", "Урон", "Скорость", "Уклон.", "Защита", "Строй", "Побед", "Раундов", "Гибель"].map((t) => h("th", null, t)))),
+        body));
+  },
+
+  async recomputeSkirmish() {
+    const r = await (await fetch("/api/godot/skirmish", { method: "POST", body: "{}" })).json();
+    if (!r.ok) { toast(r.error, "err", 8000); return; }
+    toast("«Схватка»: бои ИИ против ИИ…", "info");
+    const poll = async () => {
+      const j = await (await fetch("/api/job?name=skirmish")).json();
+      if (j.running) { setTimeout(poll, 1500); return; }
+      if (j.code !== 0) { modal("«Схватка» — ошибка", h("pre", { class: "log" }, j.log.slice(-4000))); return; }
+      this.sk = null;
+      toast("«Схватка» пересчитана", "ok");
+      if (App.view === "balance") this.render(this.root);
+    };
+    setTimeout(poll, 1500);
   },
 
   heroes() {

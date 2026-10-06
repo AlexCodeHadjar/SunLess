@@ -18,6 +18,10 @@ empower (следующий удар вдвое), ignite (удары поджи�
 unstealth_all, remove_buffs, swap (поменяться местами с союзником), extra_turn, summon {card} / recall (Эхо),
 light_ward {rounds} (тьма не бьёт по психике). У эффекта: self (на себя), if_tag / if_not_tag (теги цели),
 light_only / light_not (свет), dark_double (в сумраке и тьме — вдвое).
+Ф3 (враги): charm (Очарование: бьёт своих), grab (Захват: не шагнуть и не сдвинуть, 1 урона в ход), whisper
+{power} (Кошмарный шёпот: −психика в начале хода), acid (Разъедание: защита −10% до конца боя, до −30%),
+summon_enemy {id, n} (призыв приспешников в свободные позиции). У врага (enemies): skills, size, actions (ходов за
+раунд), phases [{at: доля здоровья, add: [навыки], text}], escort / minions (состав строя), flee (бегство при ранах).
 Навык Ф2: need {first, hp_below, light_not}, cost {psyche}, uses (раз за бой), lifesteal, from_stealth {mult, crit},
 dark_bonus {mult, crit}, ignore_prot_vs [теги], pierce_stealth, adjacent / owner (цели-союзники), not_self, weapon.
 """
@@ -250,6 +254,90 @@ ECHO_SKILLS = [
 		effects=[{"type": "guard", "turns": 1}, {"type": "riposte", "turns": 2, "self": True}]),
 	sk("ECHO_RECALL", "Отозвать", side="self", frm=ALL, to=[], kind="recall"),
 ]
+# --- враги (docs/24 §6): особые навыки элиты и боссов, размер, ходы, фазы, свита ---
+ENEMY_SKILLS = [
+	sk("X_PIERCE", "Пронзающий бросок", frm=(2, 3, 4), to=ALL, acc=85, mult=1.3, ranged=True,
+		effects=[{"type": "bleed", "power": 2, "turns": 3, "chance": 70}], tags=["Колющий"]),
+	sk("X_FORMATION", "Строй Легиона", side="ally", frm=ALL, to=ALL, not_self=True, cooldown=2,
+		effects=[{"type": "guard", "turns": 2}, {"type": "riposte", "turns": 2, "self": True}]),
+	sk("X_SHELL", "Панцирь Демона", side="self", frm=ALL, to=[], cooldown=3, effects=[{"type": "block", "charges": 2}]),
+	sk("X_CRACK", "Раскол", frm=(1, 2), to=(1, 2), aoe=True, acc=80, mult=0.9,
+		effects=[{"type": "push", "n": 1, "chance": 70}, {"type": "acid", "chance": 60}], tags=["Дробящий"]),
+	sk("X_DEVOUR_SOUL", "Пожрать душу", frm=(1, 2, 3), to=(1, 2, 3), acc=85, mult=1.2, lifesteal=0.5,
+		effects=[{"type": "psyche", "value": -10, "chance": 100}], tags=["Пожирание душ"]),
+	sk("X_COLONY", "Ярость колонии", side="ally", frm=ALL, to=ALL, aoe=True, cooldown=3,
+		effects=[{"type": "buff", "stat": "dmg", "value": 0.2, "turns": 2}]),
+	sk("X_DARK_LUNGE", "Тёмный выпад", frm=(1, 2), to=(1, 2, 3), acc=90, mult=1.5, ignore_prot=0.5, cooldown=1, tags=["Режущий", "Тьма"]),
+	sk("X_CURSE", "Проклятие", frm=ALL, to=ALL, acc=90, dmg=[0, 0], ranged=True, cooldown=1,
+		effects=[{"type": "debuff", "stat": "dmg", "value": -0.25, "turns": 2, "chance": 90}, {"type": "whisper", "power": 3, "turns": 3, "chance": 90}]),
+	sk("X_ROAR", "Рёв Короля", frm=ALL, to=ALL, aoe=True, acc=100, dmg=[0, 0], ranged=True, cooldown=2,
+		effects=[{"type": "psyche", "value": -8, "chance": 100}, {"type": "fear", "turns": 2, "chance": 50}]),
+	sk("X_RAISE", "Поднять мёртвых", side="self", frm=(2, 3, 4), to=[], cooldown=3, effects=[{"type": "summon_enemy", "id": "M27", "n": 2}]),
+	sk("X_DEATH_WHISPER", "Шёпот смерти", frm=(2, 3, 4), to=ALL, aoe=True, acc=90, dmg=[0, 0], ranged=True, cooldown=2,
+		effects=[{"type": "whisper", "power": 3, "turns": 3, "chance": 80}]),
+	sk("X_BONE_BOLT", "Костяной снаряд", frm=(2, 3, 4), to=ALL, acc=85, dmg=[3, 6], ranged=True, tags=["Кость"]),
+	sk("X_MIND_PRESS", "Ментальное давление", frm=ALL, to=ALL, aoe=True, acc=100, dmg=[0, 0], ranged=True, cooldown=1,
+		effects=[{"type": "psyche", "value": -8, "chance": 100}, {"type": "charm", "turns": 1, "chance": 25}]),
+	sk("X_CORAL_SPIKES", "Коралловые шипы", frm=(1, 2), to=(1, 2), aoe=True, acc=85, mult=0.8,
+		effects=[{"type": "bleed", "power": 2, "turns": 3, "chance": 80}], tags=["Коралл"]),
+	sk("X_HERMIT_SHELL", "Уйти в раковину", side="self", frm=ALL, to=[], cooldown=3,
+		effects=[{"type": "block", "charges": 3}, {"type": "riposte", "turns": 2}]),
+	sk("X_CRUSH", "Раздавить", frm=(1, 2), to=(1, 2), acc=85, mult=1.6, effects=[{"type": "stun", "chance": 60}], tags=["Дробящий"]),
+	sk("X_UNDER", "Удар из-под земли", frm=ALL, to=ALL, acc=90, mult=1.3, pierce_stealth=True, cooldown=1, tags=["Пепел"]),
+	sk("X_HEAT", "Жар", frm=ALL, to=(1, 2, 3), aoe=True, acc=85, mult=0.6, ranged=True,
+		effects=[{"type": "burn", "power": 2, "turns": 2, "chance": 80}], tags=["Жар", "Огонь"]),
+	sk("X_COIL", "Обвить", frm=(1, 2), to=(1, 2, 3), acc=85, mult=0.7, effects=[{"type": "grab", "turns": 3, "chance": 80}]),
+	sk("X_LANTERN", "Фонарь Ловчего", frm=ALL, to=ALL, aoe=True, acc=100, dmg=[0, 0], ranged=True, pierce_stealth=True, cooldown=2,
+		effects=[{"type": "unstealth"}, {"type": "mark", "turns": 2, "chance": 100}]),
+	sk("X_HUNT", "Охота началась", side="self", frm=ALL, to=[], cooldown=3,
+		effects=[{"type": "buff", "stat": "speed", "value": 4, "turns": 2}, {"type": "stealth", "turns": 1}]),
+	sk("X_GLASS_SWARM", "Рой стекла", frm=ALL, to=ALL, aoe=True, acc=80, mult=0.5, ranged=True,
+		effects=[{"type": "bleed", "power": 1, "turns": 3, "chance": 70}], tags=["Стекло", "Рой"]),
+	sk("X_GLASS_RING", "Звон стекла", frm=ALL, to=ALL, aoe=True, acc=100, dmg=[0, 0], ranged=True, cooldown=2,
+		effects=[{"type": "psyche", "value": -6, "chance": 100}, {"type": "blind", "turns": 1, "chance": 40}]),
+	sk("X_CALL_SWARM", "Призвать рой", side="self", frm=ALL, to=[], cooldown=4, effects=[{"type": "summon_enemy", "id": "M38", "n": 1}]),
+	sk("X_CHARM", "Зов", frm=(2, 3, 4), to=ALL, acc=85, dmg=[0, 0], ranged=True, cooldown=2,
+		effects=[{"type": "charm", "turns": 1, "chance": 70}], tags=["Очарование"]),
+	sk("X_GRAB", "Схватить", frm=(1, 2, 3), to=ALL, acc=85, mult=0.6,
+		effects=[{"type": "pull", "n": 3, "chance": 90}, {"type": "grab", "turns": 3, "chance": 80}], tags=["Удушение"]),
+	sk("X_ACID", "Едкий плевок", frm=(2, 3, 4), to=ALL, acc=85, mult=0.8, ranged=True,
+		effects=[{"type": "acid", "chance": 80}], tags=["Кислота"]),
+	sk("X_DEVOUR", "Пожрать падаль", side="self", frm=(1, 2), to=[], cooldown=2, effects=[{"type": "devour"}]),
+]
+# особые навыки и свойства врагов; «skills» добавляются к удару природным оружием и навыкам от тегов
+ENEMY = {
+	"M04": {"skills": ["X_PIERCE", "X_FORMATION"], "escort": ["M03", "M03"]},
+	"M05": {"skills": ["X_SHELL", "X_CRACK"], "size": 2, "escort": ["M03", "M04"]},
+	"M11": {"skills": ["X_DEVOUR_SOUL"]},
+	"M21": {"skills": ["X_COLONY"]},
+	"M25": {"skills": ["X_DARK_LUNGE"], "escort": ["M27", "M27"]},
+	"M35": {"skills": ["X_CURSE"], "escort": ["M24"]},
+	"M02": {"skills": ["X_ROAR"], "actions": 2, "minions": ["M01", "M01"],
+		"phases": [{"at": 0.5, "add": ["X_CRUSH"], "text": "Горный Король в ярости — бьёт, не разбирая"}]},
+	"M26": {"skills": ["X_RAISE", "X_DEATH_WHISPER", "X_BONE_BOLT"], "minions": ["M27", "M27"],
+		"phases": [{"at": 0.5, "add": ["X_CURSE"], "text": "Повелитель Мёртвых проклинает живых"}]},
+	"M37": {"skills": ["X_MIND_PRESS", "X_CORAL_SPIKES"], "size": 2, "actions": 2, "minions": ["M36"],
+		"phases": [{"at": 0.5, "add": ["X_CHARM"], "text": "Багровый Ужас пробуждается — свет зовёт"}]},
+	"MW1": {"skills": ["X_HERMIT_SHELL", "X_CRUSH"], "actions": 2,
+		"phases": [{"at": 0.4, "add": ["X_CORAL_SPIKES"], "text": "Раковина треснула — Отшельник в ярости"}]},
+	"MW2": {"skills": ["X_UNDER", "X_HEAT", "X_COIL"], "actions": 2,
+		"phases": [{"at": 0.5, "add": ["X_DEVOUR"], "text": "Пепельный Змей раскаляется"}]},
+	"MW3": {"skills": ["X_LANTERN", "X_HUNT"], "actions": 2,
+		"phases": [{"at": 0.5, "add": ["X_DARK_LUNGE"], "text": "Охота началась всерьёз"}]},
+	"MW4": {"skills": ["X_GLASS_SWARM", "X_GLASS_RING", "X_CALL_SWARM"], "actions": 2,
+		"phases": [{"at": 0.5, "add": ["X_ACID"], "text": "Стеклянная Королева треснула — осколки режут"}]},
+	"M03": {"skills": ["X_DEVOUR"]},
+	"M28": {"skills": ["X_DEVOUR"]},
+	"M08": {"skills": ["X_GRAB"]},
+	"M09": {"skills": ["X_GRAB"]},
+	"M12": {"skills": ["X_GRAB"]},
+	"M10": {"skills": ["X_CHARM"], "size": 2},
+	"M34": {"skills": ["X_CHARM"]},
+	"M06": {"skills": ["X_ACID"]},
+	"M33": {"flee": True},
+	"M38": {"flee": True},
+}
+
 ECHOES = {
 	"U12": {"base": "M03", "name": "Эхо Падальщика", "skills": ["E_CLAWS", "E_SHELL", "ECHO_RECALL"]},
 	"L16": {"base": "M04", "name": "Эхо Центуриона", "skills": ["E_SICKLE", "E_LEGION", "ECHO_RECALL"]},
@@ -272,13 +360,15 @@ TAG_PROPS = {
 	"Разумный": {"smart": True},
 	"Слепота": {"immune": ["blind"]},
 	"Регенерация": {"regen": 2},
+	"Ярость": {"rage": True}, "Жажда крови": {"rage": True},
+	"Трус": {"flee": True},
 }
 
 # --- параметры врагов по типу (docs/24 §6.1) ---
 KINDS = {
 	"normal": {"hp": 14, "speed": 4, "acc": 0, "dodge": 5, "res": 20, "dmg": 1.0, "crit": 5},
 	"elite": {"hp": 26, "speed": 5, "acc": 5, "dodge": 10, "res": 30, "dmg": 1.15, "crit": 6},
-	"boss": {"hp": 50, "speed": 4, "acc": 10, "dodge": 5, "res": 40, "dmg": 1.3, "crit": 8},
+	"boss": {"hp": 44, "speed": 4, "acc": 8, "dodge": 5, "res": 40, "dmg": 1.0, "crit": 6},
 }
 
 # --- свет (docs/24 §4.10) ---
@@ -301,7 +391,7 @@ def main():
 		skills[n["skill"]["id"]] = n["skill"]
 	for _, s in TAG_SKILLS:
 		skills[s["id"]] = s
-	for s in GENERIC + ECHO_SKILLS + list(ABILITY_SKILLS.values()) + list(CARD_SKILLS.values()):
+	for s in GENERIC + ECHO_SKILLS + ENEMY_SKILLS + list(ABILITY_SKILLS.values()) + list(CARD_SKILLS.values()):
 		skills[s["id"]] = s
 	for lst in HERO_SKILLS.values():
 		for s in lst:
@@ -320,6 +410,7 @@ def main():
 		"cards": dict({k: v["id"] for k, v in ABILITY_SKILLS.items()}, **{k: v["id"] for k, v in CARD_SKILLS.items()}),
 		"card_passive": CARD_PASSIVE,
 		"echoes": ECHOES,
+		"enemies": ENEMY,
 	}
 	io.open(OUT, "w", encoding="utf-8", newline="\n").write(json.dumps(data, ensure_ascii=False, indent=1) + "\n")
 	print("навыков: %d → %s" % (len(skills), OUT))

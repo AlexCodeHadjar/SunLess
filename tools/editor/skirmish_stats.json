@@ -1,0 +1,1305 @@
+{
+	"enemies": [
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				3,
+				6
+			],
+			"dodge": 10,
+			"edges": 0.0,
+			"hp": 26,
+			"id": "H_AURO",
+			"kind": "elite",
+			"line": [
+				"H_AURO"
+			],
+			"name": "Ауро из Девяти",
+			"prot": 0.1,
+			"rank": 1,
+			"rounds": 2.6,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Стойка дуэлянта"
+			],
+			"speed": 6,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				3,
+				7
+			],
+			"dodge": 15,
+			"edges": 0.0,
+			"hp": 29,
+			"id": "H_CASTER",
+			"kind": "elite",
+			"line": [
+				"H_CASTER"
+			],
+			"name": "Кастер",
+			"prot": 0.0,
+			"rank": 0,
+			"rounds": 2.8,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Стойка дуэлянта"
+			],
+			"speed": 8,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "H_GOLEM",
+			"kind": "normal",
+			"line": [
+				"H_GOLEM",
+				"H_GOLEM"
+			],
+			"name": "Учебный голем",
+			"prot": 0.3,
+			"rank": 0,
+			"rounds": 4.1,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Сомкнуться"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				4,
+				8
+			],
+			"dodge": 10,
+			"edges": 0.0,
+			"hp": 33,
+			"id": "H_NEPHIS",
+			"kind": "elite",
+			"line": [
+				"H_NEPHIS"
+			],
+			"name": "Нефис",
+			"prot": 0.1,
+			"rank": 0,
+			"rounds": 2.8,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Стойка дуэлянта"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M01",
+			"kind": "normal",
+			"line": [
+				"M01",
+				"M01",
+				"M01",
+				"M01"
+			],
+			"name": "Личинка Горного Короля",
+			"prot": 0.0,
+			"rank": 0,
+			"rounds": 4.4,
+			"size": 1,
+			"skills": [
+				"Налететь роем"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 2,
+			"deaths": 0.08,
+			"dmg": [
+				2,
+				6
+			],
+			"dodge": -5,
+			"edges": 1.0,
+			"hp": 83,
+			"id": "M02",
+			"kind": "boss",
+			"line": [
+				"M02",
+				"M01",
+				"M01"
+			],
+			"name": "Горный Король",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.9,
+			"size": 2,
+			"skills": [
+				"Рвущий удар",
+				"Взгляд бездны",
+				"Приказ",
+				"Рёв Короля"
+			],
+			"speed": 2,
+			"win": 0.08
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 10,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M03",
+			"kind": "normal",
+			"line": [
+				"M03",
+				"M03"
+			],
+			"name": "Падальщик Карапакса",
+			"prot": 0.25,
+			"rank": 1,
+			"rounds": 4.3,
+			"size": 1,
+			"skills": [
+				"Рвущий удар",
+				"Пожрать падаль"
+			],
+			"speed": 6,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.33,
+			"dmg": [
+				2,
+				6
+			],
+			"dodge": 15,
+			"edges": 0.5,
+			"hp": 29,
+			"id": "M04",
+			"kind": "elite",
+			"line": [
+				"M04",
+				"M03",
+				"M03"
+			],
+			"name": "Центурион Карапакса",
+			"prot": 0.25,
+			"rank": 1,
+			"rounds": 7.6,
+			"size": 1,
+			"skills": [
+				"Метнуть",
+				"Пронзающий бросок",
+				"Строй Легиона"
+			],
+			"speed": 7,
+			"win": 0.92
+		},
+		{
+			"actions": 1,
+			"deaths": 0.42,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 10,
+			"edges": 0.92,
+			"hp": 41,
+			"id": "M05",
+			"kind": "elite",
+			"line": [
+				"M05",
+				"M03",
+				"M04"
+			],
+			"name": "Демон Карапакса",
+			"prot": 0.25,
+			"rank": 1,
+			"rounds": 10.7,
+			"size": 2,
+			"skills": [
+				"Натиск",
+				"Приказ",
+				"Сомкнуться",
+				"Панцирь Демона",
+				"Раскол"
+			],
+			"speed": 5,
+			"win": 0.83
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M06",
+			"kind": "normal",
+			"line": [
+				"M06",
+				"M06",
+				"M06",
+				"M06"
+			],
+			"name": "Красные многоножки",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.8,
+			"size": 1,
+			"skills": [
+				"Плевок кислотой",
+				"Едкий плевок"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 5,
+			"edges": 0.17,
+			"hp": 14,
+			"id": "M07",
+			"kind": "normal",
+			"line": [
+				"M07",
+				"M07",
+				"M07",
+				"M07"
+			],
+			"name": "Плотоядные черви",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.5,
+			"size": 1,
+			"skills": [
+				"Налететь роем"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				3
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M08",
+			"kind": "normal",
+			"line": [
+				"M08",
+				"M08"
+			],
+			"name": "Плотоядные цветы",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.4,
+			"size": 1,
+			"skills": [
+				"Захват",
+				"Схватить"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				3
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M09",
+			"kind": "normal",
+			"line": [
+				"M09",
+				"M09"
+			],
+			"name": "Прозрачные щупальца",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.3,
+			"size": 1,
+			"skills": [
+				"Захват",
+				"Схватить"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 18,
+			"id": "M10",
+			"kind": "normal",
+			"line": [
+				"M10",
+				"M10"
+			],
+			"name": "Древо Души",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.8,
+			"size": 2,
+			"skills": [
+				"Натиск",
+				"Взгляд бездны",
+				"Зов"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.17,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 10,
+			"edges": 0.25,
+			"hp": 36,
+			"id": "M11",
+			"kind": "elite",
+			"line": [
+				"M11"
+			],
+			"name": "Отродье Мерзкой Птицы",
+			"prot": 0.0,
+			"rank": 4,
+			"rounds": 6.3,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Пожрать душу"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				3
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M12",
+			"kind": "normal",
+			"line": [
+				"M12",
+				"M12"
+			],
+			"name": "Щупальцевый обитатель",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.4,
+			"size": 1,
+			"skills": [
+				"Захват",
+				"Схватить"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 16,
+			"id": "M15",
+			"kind": "normal",
+			"line": [
+				"M15",
+				"M15"
+			],
+			"name": "Кровавый Изверг",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.7,
+			"size": 1,
+			"skills": [
+				"Натиск"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				3,
+				6
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 16,
+			"id": "M16",
+			"kind": "normal",
+			"line": [
+				"M16",
+				"M16"
+			],
+			"name": "Живые статуи / Каменная Святая",
+			"prot": 0.3,
+			"rank": 1,
+			"rounds": 4.1,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Приказ",
+				"Стойка дуэлянта"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				3,
+				6
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 16,
+			"id": "M17",
+			"kind": "normal",
+			"line": [
+				"M17",
+				"M17"
+			],
+			"name": "Живые статуи / Каменная Святая",
+			"prot": 0.3,
+			"rank": 1,
+			"rounds": 4.1,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Приказ",
+				"Стойка дуэлянта"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.5,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 10,
+			"edges": 1.0,
+			"hp": 14,
+			"id": "M18",
+			"kind": "normal",
+			"line": [
+				"M18",
+				"M18",
+				"M18",
+				"M18"
+			],
+			"name": "Железные пауки выводка",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 6.4,
+			"size": 1,
+			"skills": [
+				"Налететь роем",
+				"Сеть"
+			],
+			"speed": 6,
+			"win": 0.75
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M19",
+			"kind": "normal",
+			"line": [
+				"M19",
+				"M19"
+			],
+			"name": "Дикобразоподобный монстр",
+			"prot": 0.2,
+			"rank": 1,
+			"rounds": 3.8,
+			"size": 1,
+			"skills": [
+				"Метнуть",
+				"Град метательных"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M20",
+			"kind": "normal",
+			"line": [
+				"M20",
+				"M20"
+			],
+			"name": "Василиск",
+			"prot": 0.15,
+			"rank": 1,
+			"rounds": 3.6,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Окаменяющий взгляд"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 10,
+			"edges": 0.0,
+			"hp": 33,
+			"id": "M21",
+			"kind": "elite",
+			"line": [
+				"M21"
+			],
+			"name": "Колония термитов",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.6,
+			"size": 1,
+			"skills": [
+				"Налететь роем",
+				"Ярость колонии"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				4,
+				7
+			],
+			"dodge": -5,
+			"edges": 0.17,
+			"hp": 20,
+			"id": "M23",
+			"kind": "normal",
+			"line": [
+				"M23",
+				"M23"
+			],
+			"name": "Катящийся Камень",
+			"prot": 0.3,
+			"rank": 1,
+			"rounds": 5.5,
+			"size": 2,
+			"skills": [
+				"Сокрушить"
+			],
+			"speed": 2,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 15,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M24",
+			"kind": "normal",
+			"line": [
+				"M24",
+				"M24"
+			],
+			"name": "Посланник Шпиля",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 3.8,
+			"size": 1,
+			"skills": [
+				"Рвущий удар",
+				"Пикирование"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.17,
+			"dmg": [
+				4,
+				8
+			],
+			"dodge": 10,
+			"edges": 0.92,
+			"hp": 36,
+			"id": "M25",
+			"kind": "elite",
+			"line": [
+				"M25",
+				"M27",
+				"M27"
+			],
+			"name": "Чёрный Рыцарь",
+			"prot": 0.1,
+			"rank": 2,
+			"rounds": 6.6,
+			"size": 1,
+			"skills": [
+				"Выпад",
+				"Удар из мрака",
+				"Стойка дуэлянта",
+				"Тёмный выпад"
+			],
+			"speed": 5,
+			"win": 0.92
+		},
+		{
+			"actions": 1,
+			"deaths": 0.25,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 5,
+			"edges": 0.58,
+			"hp": 66,
+			"id": "M26",
+			"kind": "boss",
+			"line": [
+				"M26",
+				"M27",
+				"M27"
+			],
+			"name": "Повелитель Мёртвых",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 8.1,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Приказ",
+				"Поднять мёртвых",
+				"Шёпот смерти",
+				"Костяной снаряд"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.08,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 5,
+			"edges": 0.08,
+			"hp": 14,
+			"id": "M27",
+			"kind": "normal",
+			"line": [
+				"M27",
+				"M27",
+				"M27",
+				"M27"
+			],
+			"name": "Скелеты",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.4,
+			"size": 1,
+			"skills": [
+				"Налететь роем"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				3,
+				5
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M28",
+			"kind": "normal",
+			"line": [
+				"M28",
+				"M28"
+			],
+			"name": "Пожиратель Трупов",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 3.7,
+			"size": 1,
+			"skills": [
+				"Укус",
+				"Пожрать падаль"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M29",
+			"kind": "normal",
+			"line": [
+				"M29",
+				"M29"
+			],
+			"name": "Железные пауки / Матриарх",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.3,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Сеть"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M30",
+			"kind": "normal",
+			"line": [
+				"M30",
+				"M30"
+			],
+			"name": "Железные пауки / Матриарх",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.3,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Сеть"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 14,
+			"id": "M31",
+			"kind": "normal",
+			"line": [
+				"M31",
+				"M31"
+			],
+			"name": "Железные пауки / Матриарх",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.3,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Сеть"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.17,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 15,
+			"edges": 0.5,
+			"hp": 16,
+			"id": "M32",
+			"kind": "normal",
+			"line": [
+				"M32",
+				"M32",
+				"M32",
+				"M32"
+			],
+			"name": "Гигантская саранча",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 6.1,
+			"size": 1,
+			"skills": [
+				"Налететь роем",
+				"Пикирование"
+			],
+			"speed": 4,
+			"win": 0.83
+		},
+		{
+			"actions": 1,
+			"deaths": 0.08,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 5,
+			"edges": 0.17,
+			"hp": 14,
+			"id": "M33",
+			"kind": "normal",
+			"line": [
+				"M33",
+				"M33",
+				"M33",
+				"M33"
+			],
+			"name": "Пожиратель Плоти",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.3,
+			"size": 1,
+			"skills": [
+				"Налететь роем"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 16,
+			"id": "M34",
+			"kind": "normal",
+			"line": [
+				"M34",
+				"M34"
+			],
+			"name": "Кровавый Цветок",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.7,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Зов"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 20,
+			"edges": 0.0,
+			"hp": 29,
+			"id": "M35",
+			"kind": "elite",
+			"line": [
+				"M35",
+				"M24"
+			],
+			"name": "Проклятый Посланник",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 5.3,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Пикирование",
+				"Проклятие"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				4
+			],
+			"dodge": 5,
+			"edges": 0.0,
+			"hp": 16,
+			"id": "M36",
+			"kind": "normal",
+			"line": [
+				"M36",
+				"M36"
+			],
+			"name": "Коралловые големы Семерых",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 3.7,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Приказ"
+			],
+			"speed": 4,
+			"win": 1.0
+		},
+		{
+			"actions": 2,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 5,
+			"edges": 1.0,
+			"hp": 89,
+			"id": "M37",
+			"kind": "boss",
+			"line": [
+				"M37",
+				"M36"
+			],
+			"name": "Багровый Ужас",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 3.6,
+			"size": 2,
+			"skills": [
+				"Натиск",
+				"Взгляд бездны",
+				"Ментальное давление",
+				"Коралловые шипы"
+			],
+			"speed": 4,
+			"win": 0.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.08,
+			"dmg": [
+				1,
+				2
+			],
+			"dodge": 15,
+			"edges": 0.33,
+			"hp": 14,
+			"id": "M38",
+			"kind": "normal",
+			"line": [
+				"M38",
+				"M38",
+				"M38",
+				"M38"
+			],
+			"name": "Осадная орда",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 5.6,
+			"size": 1,
+			"skills": [
+				"Налететь роем"
+			],
+			"speed": 4,
+			"win": 0.92
+		},
+		{
+			"actions": 1,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 10,
+			"edges": 0.08,
+			"hp": 29,
+			"id": "MT1",
+			"kind": "elite",
+			"line": [
+				"MT1"
+			],
+			"name": "Отражение Пробуждённого",
+			"prot": 0.0,
+			"rank": 1,
+			"rounds": 2.8,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Взгляд бездны",
+				"Удар из мрака"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 1,
+			"deaths": 0.17,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 10,
+			"edges": 0.33,
+			"hp": 29,
+			"id": "MT2",
+			"kind": "elite",
+			"line": [
+				"MT2"
+			],
+			"name": "Отражение Вознесённого",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 4.0,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Взгляд бездны",
+				"Удар из мрака"
+			],
+			"speed": 5,
+			"win": 1.0
+		},
+		{
+			"actions": 2,
+			"deaths": 0.17,
+			"dmg": [
+				2,
+				6
+			],
+			"dodge": -5,
+			"edges": 1.17,
+			"hp": 83,
+			"id": "MW1",
+			"kind": "boss",
+			"line": [
+				"MW1"
+			],
+			"name": "Багровый Отшельник",
+			"prot": 0.25,
+			"rank": 2,
+			"rounds": 4.6,
+			"size": 2,
+			"skills": [
+				"Рвущий удар",
+				"Сомкнуться",
+				"Уйти в раковину",
+				"Раздавить"
+			],
+			"speed": 2,
+			"win": 0.0
+		},
+		{
+			"actions": 2,
+			"deaths": 0.42,
+			"dmg": [
+				5,
+				9
+			],
+			"dodge": 0,
+			"edges": 1.5,
+			"hp": 83,
+			"id": "MW2",
+			"kind": "boss",
+			"line": [
+				"MW2"
+			],
+			"name": "Пепельный Змей",
+			"prot": 0.15,
+			"rank": 2,
+			"rounds": 3.0,
+			"size": 2,
+			"skills": [
+				"Сокрушить",
+				"Удар из-под земли",
+				"Жар",
+				"Обвить"
+			],
+			"speed": 4,
+			"win": 0.0
+		},
+		{
+			"actions": 2,
+			"deaths": 0.0,
+			"dmg": [
+				2,
+				5
+			],
+			"dodge": 5,
+			"edges": 0.83,
+			"hp": 66,
+			"id": "MW3",
+			"kind": "boss",
+			"line": [
+				"MW3"
+			],
+			"name": "Ловчий Теней",
+			"prot": 0.0,
+			"rank": 2,
+			"rounds": 3.5,
+			"size": 1,
+			"skills": [
+				"Натиск",
+				"Удар из мрака",
+				"Взять след",
+				"Фонарь Ловчего",
+				"Охота началась"
+			],
+			"speed": 4,
+			"win": 0.17
+		},
+		{
+			"actions": 2,
+			"deaths": 0.25,
+			"dmg": [
+				1,
+				4
+			],
+			"dodge": -5,
+			"edges": 1.25,
+			"hp": 83,
+			"id": "MW4",
+			"kind": "boss",
+			"line": [
+				"MW4"
+			],
+			"name": "Стеклянная Королева",
+			"prot": 0.0,
+			"rank": 3,
+			"rounds": 5.8,
+			"size": 2,
+			"skills": [
+				"Ужалить",
+				"Взгляд бездны",
+				"Приказ",
+				"Рой стекла",
+				"Звон стекла",
+				"Призвать рой"
+			],
+			"speed": 2,
+			"win": 0.0
+		}
+	],
+	"fights": 12,
+	"generated": "2026-10-06T10:01:37",
+	"party": [
+		"P01",
+		"P02",
+		"P03",
+		"P04"
+	]
+}

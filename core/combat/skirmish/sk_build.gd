@@ -54,6 +54,8 @@ static func apply_tags(content: Content, f: SkFighter) -> float:
 		f.size = maxi(f.size, int(p.get("size", 1)))
 		f.smart = f.smart or bool(p.get("smart", false))
 		f.no_corpse = f.no_corpse or bool(p.get("no_corpse", false))
+		f.rage = f.rage or bool(p.get("rage", false))
+		f.flee = f.flee or bool(p.get("flee", false))
 		for k: String in p.get("res", {}):
 			f.res[k] = int(f.res.get(k, 0)) + int(p["res"][k])
 		for im: String in p.get("immune", []):
@@ -194,6 +196,8 @@ static func enemy(content: Content, eid: String, power: float = 1.0) -> SkFighte
 		f.res[key] = int(k.get("res", 20))
 	var hp_k := apply_tags(content, f)
 	f.size = maxi(f.size, int(e.get("size", 1)))
+	if int(_data(content).get("enemies", {}).get(eid, {}).get("size", 1)) > 1 and not f.tags.has("Гигант"):
+		hp_k += 0.25    # крупный и без тега Гигант — тоже крепче
 	f.hp_max = maxi(1, int(round(float(k.get("hp", 14)) * (1.0 + (cm - 1.0) * CLASS_HP) * (1.0 + hp_k) * power)))
 	f.hp = f.hp_max
 	f.rank = int(e.get("rank", 0))
@@ -210,6 +214,17 @@ static func enemy(content: Content, eid: String, power: float = 1.0) -> SkFighte
 		var s := skill(content, str(ts["skill"]))
 		if not s.is_empty() and Array(ts["tags"]).any(func(t: String) -> bool: return f.tags.has(t)):
 			f.skills.append(s)
+	# особое врага (docs/24 §6.2): навыки элиты и боссов, размер, ходы, фазы, бегство
+	var ed: Dictionary = _data(content).get("enemies", {}).get(eid, {})
+	for id: String in ed.get("skills", []):
+		var sx := skill(content, id)
+		if not sx.is_empty():
+			f.skills.append(sx)
+	f.size = maxi(f.size, int(ed.get("size", 1)))
+	f.actions = int(ed.get("actions", 1))
+	f.phases = Array(ed.get("phases", [])).duplicate(true)
+	if ed.has("flee"):
+		f.flee = bool(ed["flee"])
 	f.skills.append_array(_generic(content))
 	var ranged: Array = _data(content).get("ranged_tags", [])
 	f.pref = [3, 4] if f.tags.any(func(t: String) -> bool: return ranged.has(t)) else _pref(f)

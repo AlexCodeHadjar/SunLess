@@ -791,6 +791,795 @@
    "to": [],
    "kind": "recall"
   },
+  "X_PIERCE": {
+   "id": "X_PIERCE",
+   "name": "Пронзающий бросок",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 1.3,
+   "ranged": true,
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 2,
+     "turns": 3,
+     "chance": 70
+    }
+   ],
+   "tags": [
+    "Колющий"
+   ]
+  },
+  "X_FORMATION": {
+   "id": "X_FORMATION",
+   "name": "Строй Легиона",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "not_self": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "guard",
+     "turns": 2
+    },
+    {
+     "type": "riposte",
+     "turns": 2,
+     "self": true
+    }
+   ]
+  },
+  "X_SHELL": {
+   "id": "X_SHELL",
+   "name": "Панцирь Демона",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "block",
+     "charges": 2
+    }
+   ]
+  },
+  "X_CRACK": {
+   "id": "X_CRACK",
+   "name": "Раскол",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "aoe": true,
+   "acc": 80,
+   "mult": 0.9,
+   "effects": [
+    {
+     "type": "push",
+     "n": 1,
+     "chance": 70
+    },
+    {
+     "type": "acid",
+     "chance": 60
+    }
+   ],
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "X_DEVOUR_SOUL": {
+   "id": "X_DEVOUR_SOUL",
+   "name": "Пожрать душу",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 1.2,
+   "lifesteal": 0.5,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": -10,
+     "chance": 100
+    }
+   ],
+   "tags": [
+    "Пожирание душ"
+   ]
+  },
+  "X_COLONY": {
+   "id": "X_COLONY",
+   "name": "Ярость колонии",
+   "side": "ally",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "dmg",
+     "value": 0.2,
+     "turns": 2
+    }
+   ]
+  },
+  "X_DARK_LUNGE": {
+   "id": "X_DARK_LUNGE",
+   "name": "Тёмный выпад",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 90,
+   "mult": 1.5,
+   "ignore_prot": 0.5,
+   "cooldown": 1,
+   "tags": [
+    "Режущий",
+    "Тьма"
+   ]
+  },
+  "X_CURSE": {
+   "id": "X_CURSE",
+   "name": "Проклятие",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 90,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "debuff",
+     "stat": "dmg",
+     "value": -0.25,
+     "turns": 2,
+     "chance": 90
+    },
+    {
+     "type": "whisper",
+     "power": 3,
+     "turns": 3,
+     "chance": 90
+    }
+   ]
+  },
+  "X_ROAR": {
+   "id": "X_ROAR",
+   "name": "Рёв Короля",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": -8,
+     "chance": 100
+    },
+    {
+     "type": "fear",
+     "turns": 2,
+     "chance": 50
+    }
+   ]
+  },
+  "X_RAISE": {
+   "id": "X_RAISE",
+   "name": "Поднять мёртвых",
+   "side": "self",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "summon_enemy",
+     "id": "M27",
+     "n": 2
+    }
+   ]
+  },
+  "X_DEATH_WHISPER": {
+   "id": "X_DEATH_WHISPER",
+   "name": "Шёпот смерти",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 90,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "whisper",
+     "power": 3,
+     "turns": 3,
+     "chance": 80
+    }
+   ]
+  },
+  "X_BONE_BOLT": {
+   "id": "X_BONE_BOLT",
+   "name": "Костяной снаряд",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "dmg": [
+    3,
+    6
+   ],
+   "ranged": true,
+   "tags": [
+    "Кость"
+   ]
+  },
+  "X_MIND_PRESS": {
+   "id": "X_MIND_PRESS",
+   "name": "Ментальное давление",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 1,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": -8,
+     "chance": 100
+    },
+    {
+     "type": "charm",
+     "turns": 1,
+     "chance": 25
+    }
+   ]
+  },
+  "X_CORAL_SPIKES": {
+   "id": "X_CORAL_SPIKES",
+   "name": "Коралловые шипы",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "aoe": true,
+   "acc": 85,
+   "mult": 0.8,
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 2,
+     "turns": 3,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Коралл"
+   ]
+  },
+  "X_HERMIT_SHELL": {
+   "id": "X_HERMIT_SHELL",
+   "name": "Уйти в раковину",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "block",
+     "charges": 3
+    },
+    {
+     "type": "riposte",
+     "turns": 2
+    }
+   ]
+  },
+  "X_CRUSH": {
+   "id": "X_CRUSH",
+   "name": "Раздавить",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2
+   ],
+   "acc": 85,
+   "mult": 1.6,
+   "effects": [
+    {
+     "type": "stun",
+     "chance": 60
+    }
+   ],
+   "tags": [
+    "Дробящий"
+   ]
+  },
+  "X_UNDER": {
+   "id": "X_UNDER",
+   "name": "Удар из-под земли",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 90,
+   "mult": 1.3,
+   "pierce_stealth": true,
+   "cooldown": 1,
+   "tags": [
+    "Пепел"
+   ]
+  },
+  "X_HEAT": {
+   "id": "X_HEAT",
+   "name": "Жар",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "aoe": true,
+   "acc": 85,
+   "mult": 0.6,
+   "ranged": true,
+   "effects": [
+    {
+     "type": "burn",
+     "power": 2,
+     "turns": 2,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Жар",
+    "Огонь"
+   ]
+  },
+  "X_COIL": {
+   "id": "X_COIL",
+   "name": "Обвить",
+   "side": "enemy",
+   "from": [
+    1,
+    2
+   ],
+   "to": [
+    1,
+    2,
+    3
+   ],
+   "acc": 85,
+   "mult": 0.7,
+   "effects": [
+    {
+     "type": "grab",
+     "turns": 3,
+     "chance": 80
+    }
+   ]
+  },
+  "X_LANTERN": {
+   "id": "X_LANTERN",
+   "name": "Фонарь Ловчего",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "pierce_stealth": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "unstealth"
+    },
+    {
+     "type": "mark",
+     "turns": 2,
+     "chance": 100
+    }
+   ]
+  },
+  "X_HUNT": {
+   "id": "X_HUNT",
+   "name": "Охота началась",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 3,
+   "effects": [
+    {
+     "type": "buff",
+     "stat": "speed",
+     "value": 4,
+     "turns": 2
+    },
+    {
+     "type": "stealth",
+     "turns": 1
+    }
+   ]
+  },
+  "X_GLASS_SWARM": {
+   "id": "X_GLASS_SWARM",
+   "name": "Рой стекла",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 80,
+   "mult": 0.5,
+   "ranged": true,
+   "effects": [
+    {
+     "type": "bleed",
+     "power": 1,
+     "turns": 3,
+     "chance": 70
+    }
+   ],
+   "tags": [
+    "Стекло",
+    "Рой"
+   ]
+  },
+  "X_GLASS_RING": {
+   "id": "X_GLASS_RING",
+   "name": "Звон стекла",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "aoe": true,
+   "acc": 100,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "psyche",
+     "value": -6,
+     "chance": 100
+    },
+    {
+     "type": "blind",
+     "turns": 1,
+     "chance": 40
+    }
+   ]
+  },
+  "X_CALL_SWARM": {
+   "id": "X_CALL_SWARM",
+   "name": "Призвать рой",
+   "side": "self",
+   "from": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "to": [],
+   "cooldown": 4,
+   "effects": [
+    {
+     "type": "summon_enemy",
+     "id": "M38",
+     "n": 1
+    }
+   ]
+  },
+  "X_CHARM": {
+   "id": "X_CHARM",
+   "name": "Зов",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "dmg": [
+    0,
+    0
+   ],
+   "ranged": true,
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "charm",
+     "turns": 1,
+     "chance": 70
+    }
+   ],
+   "tags": [
+    "Очарование"
+   ]
+  },
+  "X_GRAB": {
+   "id": "X_GRAB",
+   "name": "Схватить",
+   "side": "enemy",
+   "from": [
+    1,
+    2,
+    3
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 0.6,
+   "effects": [
+    {
+     "type": "pull",
+     "n": 3,
+     "chance": 90
+    },
+    {
+     "type": "grab",
+     "turns": 3,
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Удушение"
+   ]
+  },
+  "X_ACID": {
+   "id": "X_ACID",
+   "name": "Едкий плевок",
+   "side": "enemy",
+   "from": [
+    2,
+    3,
+    4
+   ],
+   "to": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "acc": 85,
+   "mult": 0.8,
+   "ranged": true,
+   "effects": [
+    {
+     "type": "acid",
+     "chance": 80
+    }
+   ],
+   "tags": [
+    "Кислота"
+   ]
+  },
+  "X_DEVOUR": {
+   "id": "X_DEVOUR",
+   "name": "Пожрать падаль",
+   "side": "self",
+   "from": [
+    1,
+    2
+   ],
+   "to": [],
+   "cooldown": 2,
+   "effects": [
+    {
+     "type": "devour"
+    }
+   ]
+  },
   "C_A01": {
    "id": "C_A01",
    "name": "Тень-разведчик",
@@ -2810,6 +3599,15 @@
   },
   "Регенерация": {
    "regen": 2
+  },
+  "Ярость": {
+   "rage": true
+  },
+  "Жажда крови": {
+   "rage": true
+  },
+  "Трус": {
+   "flee": true
   }
  },
  "kinds": {
@@ -2832,13 +3630,13 @@
    "crit": 6
   },
   "boss": {
-   "hp": 50,
+   "hp": 44,
    "speed": 4,
-   "acc": 10,
+   "acc": 8,
    "dodge": 5,
    "res": 40,
-   "dmg": 1.3,
-   "crit": 8
+   "dmg": 1.0,
+   "crit": 6
   }
  },
  "light": {
@@ -2999,6 +3797,228 @@
     "E_LEGION",
     "ECHO_RECALL"
    ]
+  }
+ },
+ "enemies": {
+  "M04": {
+   "skills": [
+    "X_PIERCE",
+    "X_FORMATION"
+   ],
+   "escort": [
+    "M03",
+    "M03"
+   ]
+  },
+  "M05": {
+   "skills": [
+    "X_SHELL",
+    "X_CRACK"
+   ],
+   "size": 2,
+   "escort": [
+    "M03",
+    "M04"
+   ]
+  },
+  "M11": {
+   "skills": [
+    "X_DEVOUR_SOUL"
+   ]
+  },
+  "M21": {
+   "skills": [
+    "X_COLONY"
+   ]
+  },
+  "M25": {
+   "skills": [
+    "X_DARK_LUNGE"
+   ],
+   "escort": [
+    "M27",
+    "M27"
+   ]
+  },
+  "M35": {
+   "skills": [
+    "X_CURSE"
+   ],
+   "escort": [
+    "M24"
+   ]
+  },
+  "M02": {
+   "skills": [
+    "X_ROAR"
+   ],
+   "actions": 2,
+   "minions": [
+    "M01",
+    "M01"
+   ],
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_CRUSH"
+     ],
+     "text": "Горный Король в ярости — бьёт, не разбирая"
+    }
+   ]
+  },
+  "M26": {
+   "skills": [
+    "X_RAISE",
+    "X_DEATH_WHISPER",
+    "X_BONE_BOLT"
+   ],
+   "minions": [
+    "M27",
+    "M27"
+   ],
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_CURSE"
+     ],
+     "text": "Повелитель Мёртвых проклинает живых"
+    }
+   ]
+  },
+  "M37": {
+   "skills": [
+    "X_MIND_PRESS",
+    "X_CORAL_SPIKES"
+   ],
+   "size": 2,
+   "actions": 2,
+   "minions": [
+    "M36"
+   ],
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_CHARM"
+     ],
+     "text": "Багровый Ужас пробуждается — свет зовёт"
+    }
+   ]
+  },
+  "MW1": {
+   "skills": [
+    "X_HERMIT_SHELL",
+    "X_CRUSH"
+   ],
+   "actions": 2,
+   "phases": [
+    {
+     "at": 0.4,
+     "add": [
+      "X_CORAL_SPIKES"
+     ],
+     "text": "Раковина треснула — Отшельник в ярости"
+    }
+   ]
+  },
+  "MW2": {
+   "skills": [
+    "X_UNDER",
+    "X_HEAT",
+    "X_COIL"
+   ],
+   "actions": 2,
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_DEVOUR"
+     ],
+     "text": "Пепельный Змей раскаляется"
+    }
+   ]
+  },
+  "MW3": {
+   "skills": [
+    "X_LANTERN",
+    "X_HUNT"
+   ],
+   "actions": 2,
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_DARK_LUNGE"
+     ],
+     "text": "Охота началась всерьёз"
+    }
+   ]
+  },
+  "MW4": {
+   "skills": [
+    "X_GLASS_SWARM",
+    "X_GLASS_RING",
+    "X_CALL_SWARM"
+   ],
+   "actions": 2,
+   "phases": [
+    {
+     "at": 0.5,
+     "add": [
+      "X_ACID"
+     ],
+     "text": "Стеклянная Королева треснула — осколки режут"
+    }
+   ]
+  },
+  "M03": {
+   "skills": [
+    "X_DEVOUR"
+   ]
+  },
+  "M28": {
+   "skills": [
+    "X_DEVOUR"
+   ]
+  },
+  "M08": {
+   "skills": [
+    "X_GRAB"
+   ]
+  },
+  "M09": {
+   "skills": [
+    "X_GRAB"
+   ]
+  },
+  "M12": {
+   "skills": [
+    "X_GRAB"
+   ]
+  },
+  "M10": {
+   "skills": [
+    "X_CHARM"
+   ],
+   "size": 2
+  },
+  "M34": {
+   "skills": [
+    "X_CHARM"
+   ]
+  },
+  "M06": {
+   "skills": [
+    "X_ACID"
+   ]
+  },
+  "M33": {
+   "flee": true
+  },
+  "M38": {
+   "flee": true
   }
  }
 }

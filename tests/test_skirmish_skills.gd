@@ -4,7 +4,8 @@ extends TestCase
 
 const EFFECTS := ["bleed", "poison", "burn", "stun", "mark", "guard", "riposte", "stealth", "buff", "debuff", "push", "pull",
 	"heal", "heal_pct", "psyche", "dodge", "block", "taunt", "foresight", "blind", "fear", "sure", "empower", "ignite",
-	"steady", "cleanse", "unstealth", "unstealth_all", "remove_buffs", "reveal", "swap", "extra_turn", "summon", "light_ward"]
+	"steady", "cleanse", "unstealth", "unstealth_all", "remove_buffs", "reveal", "swap", "extra_turn", "summon", "light_ward",
+	"charm", "grab", "whisper", "acid", "summon_enemy", "devour"]
 
 
 func _run(c: Content) -> RunState:
