@@ -30,38 +30,38 @@ def sk(id, name, side="enemy", frm=(1, 2), to=(1, 2), **kw):
 
 # --- навыки оружия героев (docs/24 §5.2): ключ — id оружия в weapons.json ---
 WEAPONS = {
-	"Меч": {"dmg": [4, 8], "skill": sk("W_SWORD", "Рубящий удар", frm=(1, 2), to=(1, 2), acc=85, mult=1.0,
+	"Меч": {"dmg": [6, 11], "skill": sk("W_SWORD", "Рубящий удар", frm=(1, 2), to=(1, 2), acc=85, mult=1.0,
 		vs={"Мягкое тело": 1.2, "Человек": 1.2}, tags=["Режущий"])},
-	"Кинжал": {"dmg": [3, 6], "skill": sk("W_DAGGER", "Укол", frm=(1, 2, 3), to=(1, 2), acc=95, mult=1.0, crit=8,
+	"Кинжал": {"dmg": [4, 8], "skill": sk("W_DAGGER", "Укол", frm=(1, 2, 3), to=(1, 2), acc=95, mult=1.0, crit=8,
 		vs={"Мягкое тело": 1.3}, tags=["Колющий"])},
-	"Копьё": {"dmg": [4, 7], "skill": sk("W_SPEAR", "Выпад копьём", frm=(1, 2, 3), to=(1, 2, 3), acc=85, mult=1.0,
+	"Копьё": {"dmg": [5, 10], "skill": sk("W_SPEAR", "Выпад копьём", frm=(1, 2, 3), to=(1, 2, 3), acc=85, mult=1.0,
 		vs={"Гигант": 1.25, "Летучий": 1.25}, tags=["Колющий"])},
-	"Тяжёлое оружие": {"dmg": [6, 11], "skill": sk("W_HEAVY", "Сокрушить", frm=(1, 2), to=(1, 2), acc=75, mult=1.0,
+	"Тяжёлое оружие": {"dmg": [8, 14], "skill": sk("W_HEAVY", "Сокрушить", frm=(1, 2), to=(1, 2), acc=75, mult=1.0,
 		ignore_prot=0.5, effects=[{"type": "stun", "chance": 30}], vs={"Камень": 1.25, "Конструкт": 1.25, "Кость": 1.15}, tags=["Дробящий"])},
-	"Лук": {"dmg": [3, 7], "skill": sk("W_BOW", "Выстрел", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=85, mult=1.0, ranged=True,
+	"Лук": {"dmg": [4, 9], "skill": sk("W_BOW", "Выстрел", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=85, mult=1.0, ranged=True,
 		tags=["Колющий"])},
-	"Без оружия": {"dmg": [1, 3], "skill": sk("W_FIST", "Удар", frm=(1, 2), to=(1,), acc=90, mult=1.0, tags=["Дробящий"])},
+	"Без оружия": {"dmg": [2, 4], "skill": sk("W_FIST", "Удар", frm=(1, 2), to=(1,), acc=90, mult=1.0, tags=["Дробящий"])},
 }
 
 # --- природное оружие врагов (weapons.json natural) → разброс и удар ---
 NATURAL = {
-	"Когти": {"dmg": [3, 6], "skill": sk("N_CLAWS", "Рвущий удар", acc=85, mult=1.0,
+	"Когти": {"dmg": [2, 5], "skill": sk("N_CLAWS", "Рвущий удар", acc=85, mult=1.0,
 		effects=[{"type": "bleed", "power": 1, "turns": 3, "chance": 60}], tags=["Режущий"])},
-	"Клыки": {"dmg": [3, 7], "skill": sk("N_FANGS", "Укус", acc=85, mult=1.0, crit=5, tags=["Колющий"])},
-	"Жало": {"dmg": [2, 4], "skill": sk("N_STING", "Ужалить", frm=(1, 2, 3), to=(1, 2, 3), acc=85, mult=1.0,
+	"Клыки": {"dmg": [3, 5], "skill": sk("N_FANGS", "Укус", acc=85, mult=1.0, crit=5, tags=["Колющий"])},
+	"Жало": {"dmg": [1, 3], "skill": sk("N_STING", "Ужалить", frm=(1, 2, 3), to=(1, 2, 3), acc=85, mult=1.0,
 		effects=[{"type": "poison", "power": 2, "turns": 3, "chance": 80}], tags=["Колющий", "Яд"])},
-	"Кислота": {"dmg": [2, 5], "skill": sk("N_ACID", "Плевок кислотой", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=80, mult=1.0, ranged=True,
+	"Кислота": {"dmg": [2, 4], "skill": sk("N_ACID", "Плевок кислотой", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=80, mult=1.0, ranged=True,
 		effects=[{"type": "debuff", "stat": "prot", "value": -0.1, "turns": 3, "chance": 80}], tags=["Кислота"])},
-	"Щупальца": {"dmg": [2, 4], "skill": sk("N_TENTACLE", "Захват", frm=(1, 2, 3), to=(1, 2, 3, 4), acc=85, mult=1.0,
+	"Щупальца": {"dmg": [1, 3], "skill": sk("N_TENTACLE", "Захват", frm=(1, 2, 3), to=(1, 2, 3, 4), acc=85, mult=1.0,
 		effects=[{"type": "pull", "n": 1, "chance": 80}], tags=["Удушение"])},
-	"Тяжёлый удар": {"dmg": [5, 9], "skill": sk("N_SLAM", "Сокрушить", frm=(1, 2), to=(1, 2), aoe=True, acc=75, mult=1.0,
+	"Тяжёлый удар": {"dmg": [4, 7], "skill": sk("N_SLAM", "Сокрушить", frm=(1, 2), to=(1, 2), aoe=True, acc=75, mult=1.0,
 		effects=[{"type": "stun", "chance": 60}, {"type": "push", "n": 1, "chance": 60}], tags=["Дробящий"])},
-	"Дальний удар": {"dmg": [3, 6], "skill": sk("N_THROW", "Метнуть", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=85, mult=1.0, ranged=True,
+	"Дальний удар": {"dmg": [2, 5], "skill": sk("N_THROW", "Метнуть", frm=(2, 3, 4), to=(1, 2, 3, 4), acc=85, mult=1.0, ranged=True,
 		tags=["Колющий"])},
-	"Клинок": {"dmg": [4, 7], "skill": sk("N_BLADE", "Выпад", frm=(1, 2), to=(1, 2, 3), acc=85, mult=1.0, tags=["Режущий"])},
-	"Рой": {"dmg": [1, 3], "skill": sk("N_SWARM", "Налететь роем", frm=(1, 2, 3, 4), to=(1, 2, 3, 4), aoe=True, acc=80, mult=1.0,
+	"Клинок": {"dmg": [3, 6], "skill": sk("N_BLADE", "Выпад", frm=(1, 2), to=(1, 2, 3), acc=85, mult=1.0, tags=["Режущий"])},
+	"Рой": {"dmg": [1, 2], "skill": sk("N_SWARM", "Налететь роем", frm=(1, 2, 3, 4), to=(1, 2, 3, 4), aoe=True, acc=80, mult=1.0,
 		tags=["Рой"])},
-	"Натиск": {"dmg": [3, 5], "skill": sk("N_RUSH", "Натиск", acc=85, mult=1.0, tags=["Дробящий"])},
+	"Натиск": {"dmg": [2, 4], "skill": sk("N_RUSH", "Натиск", acc=85, mult=1.0, tags=["Дробящий"])},
 }
 
 # --- навыки врагов от тегов (docs/24 §6.2; Ф1 — состояния Darkest Dungeon) ---
@@ -100,7 +100,7 @@ TAG_PROPS = {
 	"Мягкое тело": {"res": {"bleed": -25}},
 	"Нежить": {"immune": ["poison"]}, "Кость": {"immune": ["bleed"]}, "Бесформенный": {"immune": ["bleed"], "no_corpse": True},
 	"Скорость": {"speed": 2, "dodge": 5}, "Первый удар": {"speed": 1, "first": 8},
-	"Гигант": {"size": 2, "dodge": -10, "hp": 0.5, "speed": -2, "res": {"move": 50}},
+	"Гигант": {"size": 2, "dodge": -10, "hp": 0.25, "speed": -2, "res": {"move": 50}},
 	"Летучий": {"dodge": 10},
 	"Скрытность": {"dodge": 5, "stealth_start": True},
 	"Стойкость": {"res": {"stun": 20, "move": 20}},
@@ -112,8 +112,8 @@ TAG_PROPS = {
 # --- параметры врагов по типу (docs/24 §6.1) ---
 KINDS = {
 	"normal": {"hp": 14, "speed": 4, "acc": 0, "dodge": 5, "res": 20, "dmg": 1.0, "crit": 5},
-	"elite": {"hp": 30, "speed": 5, "acc": 5, "dodge": 10, "res": 30, "dmg": 1.15, "crit": 6},
-	"boss": {"hp": 70, "speed": 4, "acc": 10, "dodge": 5, "res": 40, "dmg": 1.3, "crit": 8},
+	"elite": {"hp": 26, "speed": 5, "acc": 5, "dodge": 10, "res": 30, "dmg": 1.15, "crit": 6},
+	"boss": {"hp": 50, "speed": 4, "acc": 10, "dodge": 5, "res": 40, "dmg": 1.3, "crit": 8},
 }
 
 # --- свет (docs/24 §4.10) ---
